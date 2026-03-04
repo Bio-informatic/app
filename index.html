@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Super Mario Clone</title>
+    <link rel="stylesheet" href="style.css?v=20260304">
+</head>
+
+<body>
+    <div id="game-container">
+        <canvas id="gameCanvas" width="1024" height="768"></canvas>
+        <div id="ui-layer">
+            <p>Controls: Arrow Keys to Move, Z/Space to Jump | C for Watch | F for Ground Pound</p>
+        </div>
+        <div id="level-complete-modal">
+            <h1 id="modal-title">LEVEL COMPLETE!</h1>
+            <p id="modal-message">You are the chosen one.</p>
+            <button id="btn-next-level" class="btn btn-primary">Next Level ▶</button>
+            <button id="btn-restart" class="btn">↺ Restart Level</button>
+        </div>
+        <!-- Omnitrix Intro Popup (shows on watch collect) -->
+        <div id="omnitrix-intro">
+            <div id="omnitrix-intro-inner">
+                <div class="omnitrix-logo">⌚</div>
+                <h2>OMNITRIX ACQUIRED</h2>
+                <p id="omnitrix-intro-text">You are in the very first steps to save the universe!<br>Keep going... or
+                    quit if you're a pu$$y.</p>
+                <button id="btn-omnitrix-ok" class="btn btn-primary">Let's Go! ▶</button>
+            </div>
+        </div>
+
+        <!-- Omnitrix Watch Panel (toggle with C) -->
+        <div id="omnitrix-panel">
+            <div id="omnitrix-panel-header">
+                <span class="omnitrix-logo-small">⌚</span>
+                <span>OMNITRIX</span>
+                <span class="panel-hint">[C] to close</span>
+            </div>
+            <div id="alien-grid">
+                <!-- 10 slots, filled by JS -->
+            </div>
+            <div id="panel-hint-bar">Press <b>0–9</b> to transform • <b>C</b> to close</div>
+        </div>
+
+    </div>
+    <script type="module" src="game.js?v=20260304b"></script>
+</body>
+
+</html>
