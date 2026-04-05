@@ -139,7 +139,9 @@ export class Mario {
 
                 // Check for mystery block
                 if (hitTile === 3 && this.onBlockHit) {
-                    this.onBlockHit(3, (gridLeft * level.tileSize), gridTop * level.tileSize);
+                    // Determine which column was actually hit
+                    const hitX = (level.tiles[gridTop][gridLeft] === 3) ? gridLeft : gridRight;
+                    this.onBlockHit(3, hitX * level.tileSize, gridTop * level.tileSize);
                 }
             }
             this.grounded = false;

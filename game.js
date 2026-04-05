@@ -121,14 +121,27 @@ let gameState = 'PLAYING';
 const shockwaves = []; // {x, y, radius, maxRadius, alpha}
 let screenShake = 0;
 
+let specialBoxPos = null;   // {x, y} column/row of the one box with the upgrade
+let levelTitleTimer = 0;     // timestamp when current level loaded (for title fade)
+
 function assignBlockHit() {
-    mario.onBlockHit = (tileType, x, y) => {
+    mario.onBlockHit = (tileType, bx, by) => {
         if (tileType === 3) {
-            if (currentLevelIndex === 1) {
-                entities.push(new OmnitrixItem(x, y - 32));
-            } else {
-                entities.push(new FourArmsItem(x, y - 32));
+            const gx = Math.round(bx / level.tileSize);
+            const gy = Math.round(by / level.tileSize);
+
+            if (level.tiles[gy] && level.tiles[gy][gx] === 3) {
+                level.tiles[gy][gx] = 8; // Change to used box
             }
+
+            // Decide item
+            let ItemClass = Goomba;
+            if (specialBoxPos && gx === specialBoxPos.x && gy === specialBoxPos.y) {
+                if (currentLevelIndex == 1) ItemClass = OmnitrixItem;
+                else if (currentLevelIndex == 2) ItemClass = FourArmsItem;
+            }
+
+            entities.push(new ItemClass(bx, by - 32));
         }
     };
 }
@@ -142,14 +155,25 @@ function loadLevel(index, carryOverState = null) {
 
     if (carryOverState && carryOverState.hasWatch) {
         mario.hasWatch = true;
-        // Restore alien transformation if Mario was transformed when he died
         if (carryOverState.alienState === 'FOURARMS') {
             mario.transformToFourArms();
         }
     }
 
-    assignBlockHit();
+    // ── Pick ONE random box per level to have the special item ──
+    specialBoxPos = null;
+    const allBoxes = [];
+    for (let y = 0; y < level.rows; y++) {
+        for (let x = 0; x < level.cols; x++) {
+            if (level.tiles[y][x] === 3) allBoxes.push({ x, y });
+        }
+    }
+    if (allBoxes.length > 0) {
+        specialBoxPos = allBoxes[Math.floor(Math.random() * allBoxes.length)];
+        console.log(`Special item for Level ${index} hidden at:`, specialBoxPos);
+    }
 
+    assignBlockHit();
     entities.length = 0;
     level.entities.forEach(entityData => {
         if (entityData.type === 'goomba') {
@@ -157,11 +181,10 @@ function loadLevel(index, carryOverState = null) {
         }
     });
 
+    levelTitleTimer = performance.now(); // start title fade
     gameState = 'PLAYING';
     modal.style.display = 'none';
     closeOmnitrixPanel();
-
-    // Toggle Level 2 theme on canvas background
     canvas.classList.toggle('level2-theme', index === 2);
 }
 
@@ -404,6 +427,34 @@ function gameLoop(timestamp) {
         }
 
         ctx.restore();
+
+        // ── Level Title Fade ──────────────────────────────────────
+        const titleAge = performance.now() - levelTitleTimer;
+        const titleDur = 3500;
+        if (titleAge < titleDur) {
+            const alpha = titleAge < titleDur - 600
+                ? Math.min(1, titleAge / 400)
+                : (titleDur - titleAge) / 600;
+            const titles = [
+                '',
+                'Find the Mystery Watch!',
+                'The Four Arms Level',
+            ];
+            const subtitle = titles[currentLevelIndex] || `Level ${currentLevelIndex}`;
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.fillStyle = 'rgba(0,0,0,0.65)';
+            ctx.fillRect(GAME_WIDTH / 2 - 230, GAME_HEIGHT / 3 - 38, 460, 80);
+            ctx.fillStyle = '#FFD700';
+            ctx.font = 'bold 16px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(`LEVEL ${currentLevelIndex}`, GAME_WIDTH / 2, GAME_HEIGHT / 3 - 10);
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = 'bold 26px sans-serif';
+            ctx.fillText(subtitle, GAME_WIDTH / 2, GAME_HEIGHT / 3 + 24);
+            ctx.textAlign = 'left';
+            ctx.restore();
+        }
 
         // ── HUD ───────────────────────────────
         ctx.fillStyle = 'rgba(0,0,0,0.45)';
