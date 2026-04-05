@@ -23,7 +23,7 @@ export class Level {
             const lavaChar = 'L';
 
             const MAX_GAP_TILES = 5;
-            const GROUND_Y = ROWS - 3;
+            const GROUND_Y = ROWS - 6;
 
             // 1. Initialize empty map
             for (let y = 0; y < ROWS; y++) {

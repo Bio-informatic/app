@@ -13,10 +13,11 @@ body {
 
 #game-container {
     position: relative;
-    border: 4px solid #fff;
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-    width: 1024px;
-    height: 768px;
+    border: none;
+    box-shadow: none;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
 }
 
 canvas {
@@ -32,6 +33,11 @@ canvas {
 canvas.level2-theme {
     background-color: #2A0A0A;
     /* Dark red sky for Four Arms level */
+}
+
+canvas.level3-theme {
+    background-color: #0A0000;
+    /* Dark hell sky for Heatblast level */
 }
 
 #ui-layer {
@@ -226,6 +232,14 @@ canvas.level2-theme {
 
 .alien-slot.locked .slot-name {
     color: #444;
+}
+
+.alien-slot .slot-lives {
+    font-size: 8px;
+    color: #FF6666;
+    text-align: center;
+    line-height: 1;
+    letter-spacing: 1px;
 }
 
 #panel-hint-bar {

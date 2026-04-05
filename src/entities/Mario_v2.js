@@ -30,6 +30,16 @@ export class Mario {
 
         // Lava resistance
         this.lavaTimer = 0;           // How long in lava (Heatblast gets 2s grace)
+
+        // Alien countdown timer
+        this.alienTimer = 0;              // Timestamp when transformation started
+        this.alienTimerDuration = 15000;  // 15 seconds
+        this.alienTimerRemaining = 0;     // Seconds left (for HUD display)
+
+        // Double jump (5 per level)
+        this.doubleJumpsRemaining = 5;
+        this.canDoubleJump = false;       // true after first jump, false after landing or using
+        this._jumpWasDown = false;        // edge-detection for key press
     }
 
     transformToFourArms() {
@@ -37,6 +47,7 @@ export class Mario {
         this.state = 'FOURARMS';
         this.transforming = true;
         this.transformTimer = performance.now();
+        this.alienTimer = performance.now();
         this.y -= 16;
         this.width = 48;
         this.height = 64;
@@ -47,16 +58,37 @@ export class Mario {
         this.state = 'HEATBLAST';
         this.transforming = true;
         this.transformTimer = performance.now();
+        this.alienTimer = performance.now();
         // Heatblast is similar size to Four Arms
         if (this.height < 64) this.y -= (64 - this.height);
         this.width = 48;
         this.height = 64;
     }
 
+    revertToSmall() {
+        if (this.state === 'SMALL') return;
+        this.state = 'SMALL';
+        this.y += (this.height - 32);
+        this.width = 32;
+        this.height = 32;
+        this.groundPounding = false;
+        this.alienTimer = 0;
+        this.alienTimerRemaining = 0;
+    }
+
     update(deltaTime, level) {
         if (this.transforming) {
             if (performance.now() - this.transformTimer > 1000) {
                 this.transforming = false;
+            }
+        }
+
+        // Alien countdown timer — revert to SMALL after 15 seconds
+        if (this.alienTimer > 0 && (this.state === 'FOURARMS' || this.state === 'HEATBLAST')) {
+            const elapsed = performance.now() - this.alienTimer;
+            this.alienTimerRemaining = Math.max(0, Math.ceil((this.alienTimerDuration - elapsed) / 1000));
+            if (elapsed >= this.alienTimerDuration) {
+                this.revertToSmall();
             }
         }
 
@@ -79,9 +111,19 @@ export class Mario {
         this.handleHorizontalCollisions(level);
 
         // Jump
-        if ((this.input.isDown('Space') || this.input.isDown('ArrowUp')) && this.grounded) {
+        const jumpPressed = this.input.isDown('Space') || this.input.isDown('ArrowUp');
+        const jumpJustPressed = jumpPressed && !this._jumpWasDown;
+        this._jumpWasDown = jumpPressed;
+
+        if (jumpPressed && this.grounded) {
             this.vy = this.state === 'FOURARMS' ? -14 : -12;
             this.grounded = false;
+            this.canDoubleJump = true;
+        } else if (jumpJustPressed && !this.grounded && this.canDoubleJump && this.doubleJumpsRemaining > 0) {
+            // Double jump — higher boost
+            this.vy = this.state === 'FOURARMS' ? -18 : -16;
+            this.canDoubleJump = false;
+            this.doubleJumpsRemaining--;
         }
 
         // Ground Pound (Four Arms only, triggered by game.js)
@@ -170,6 +212,7 @@ export class Mario {
                 this.y = gridBottom * level.tileSize - this.height;
                 this.vy = 0;
                 this.grounded = true;
+                this.canDoubleJump = false;
 
                 if (this.groundPounding) {
                     this.groundPounding = false;

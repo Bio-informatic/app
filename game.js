@@ -12,8 +12,17 @@ import { Goombaba } from './src/entities/Goombaba.js';
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-const GAME_WIDTH = 1024;
-const GAME_HEIGHT = 768;
+let GAME_WIDTH = window.innerWidth;
+let GAME_HEIGHT = window.innerHeight;
+
+function resizeCanvas() {
+    GAME_WIDTH = window.innerWidth;
+    GAME_HEIGHT = window.innerHeight;
+    canvas.width = GAME_WIDTH;
+    canvas.height = GAME_HEIGHT;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
 
 // ─── UI Elements ─────────────────────────────
 const modal = document.getElementById('level-complete-modal');
@@ -29,16 +38,16 @@ const alienGrid = document.getElementById('alien-grid');
 
 // ─── Alien Roster Definition ─────────────────
 const ALIENS = [
-    { key: '0', name: 'Four Arms', icon: '💪', unlocked: false },
-    { key: '1', name: 'Heatblast', icon: '🔥', unlocked: false },
-    { key: '2', name: '???', icon: '👾', unlocked: false },
-    { key: '3', name: '???', icon: '👾', unlocked: false },
-    { key: '4', name: '???', icon: '👾', unlocked: false },
-    { key: '5', name: '???', icon: '👾', unlocked: false },
-    { key: '6', name: '???', icon: '👾', unlocked: false },
-    { key: '7', name: '???', icon: '👾', unlocked: false },
-    { key: '8', name: '???', icon: '👾', unlocked: false },
-    { key: '9', name: '???', icon: '👾', unlocked: false },
+    { key: '0', name: 'Four Arms', icon: '💪', unlocked: false, lives: 25 },
+    { key: '1', name: 'Heatblast', icon: '🔥', unlocked: false, lives: 25 },
+    { key: '2', name: '???', icon: '👾', unlocked: false, lives: 25 },
+    { key: '3', name: '???', icon: '👾', unlocked: false, lives: 25 },
+    { key: '4', name: '???', icon: '👾', unlocked: false, lives: 25 },
+    { key: '5', name: '???', icon: '👾', unlocked: false, lives: 25 },
+    { key: '6', name: '???', icon: '👾', unlocked: false, lives: 25 },
+    { key: '7', name: '???', icon: '👾', unlocked: false, lives: 25 },
+    { key: '8', name: '???', icon: '👾', unlocked: false, lives: 25 },
+    { key: '9', name: '???', icon: '👾', unlocked: false, lives: 25 },
 ];
 
 // ─── Build the alien grid HTML ────────────────
@@ -47,14 +56,17 @@ function renderAlienGrid() {
     let introMsg = '';
     ALIENS.forEach((alien, i) => {
         const slot = document.createElement('div');
-        slot.className = 'alien-slot ' + (alien.unlocked ? 'unlocked' : 'locked');
+        const isUsable = alien.unlocked && alien.lives > 0;
+        slot.className = 'alien-slot ' + (isUsable ? 'unlocked' : 'locked');
+        const livesDisplay = alien.unlocked ? `<span class="slot-lives">♥${alien.lives}</span>` : '';
         slot.innerHTML = `
             <span class="slot-key">[${alien.key}]</span>
             <span class="slot-icon">${alien.icon}</span>
             <span class="slot-name">${alien.unlocked ? alien.name : '???'}</span>
+            ${livesDisplay}
         `;
-        if (alien.unlocked) {
-            slot.title = `Press ${alien.key} to transform into ${alien.name}`;
+        if (isUsable) {
+            slot.title = `Press ${alien.key} to transform into ${alien.name} (${alien.lives} uses left)`;
             slot.addEventListener('click', () => activateAlien(i));
             if (alien.introMessage) introMsg = alien.introMessage;
         }
@@ -96,7 +108,13 @@ btnOmnitrixOk.addEventListener('click', () => {
 // ─── Alien Activation ────────────────────────
 function activateAlien(index) {
     const alien = ALIENS[index];
-    if (!alien.unlocked) return;
+    if (!alien.unlocked || alien.lives <= 0) return;
+
+    // Decrement lives
+    alien.lives--;
+    if (alien.lives <= 0) {
+        alien.unlocked = false;
+    }
 
     closeOmnitrixPanel();
     alien.introMessage = null;
@@ -163,7 +181,7 @@ function loadLevel(index, carryOverState = null) {
     currentLevelIndex = index;
     level = new Level(index);
 
-    const startY = (level.rows - 4) * level.tileSize;
+    const startY = (level.rows - 7) * level.tileSize;
     mario = new Mario(100, startY, input);
 
     if (carryOverState && carryOverState.hasWatch) {
@@ -220,8 +238,23 @@ btnNext.addEventListener('click', () => {
 });
 
 btnRestart.addEventListener('click', () => {
-    loadLevel(currentLevelIndex, { hasWatch: mario.hasWatch, alienState: mario.state });
+    deathPenalty();
+    loadLevel(currentLevelIndex, { hasWatch: mario.hasWatch });
 });
+
+function deathPenalty() {
+    // Each unlocked alien loses 1 life; lock if lives reach 0
+    ALIENS.forEach(alien => {
+        if (alien.unlocked) {
+            alien.lives--;
+            if (alien.lives <= 0) {
+                alien.unlocked = false;
+            }
+        }
+        alien.introMessage = null;
+    });
+    renderAlienGrid();
+}
 
 function showLevelModal(title, message, showNext) {
     gameState = 'WON';
@@ -307,6 +340,9 @@ function gameLoop(timestamp) {
         let camX = mario.x - GAME_WIDTH / 2;
         camX = Math.max(0, Math.min(camX, level.width - GAME_WIDTH));
 
+        // Vertical camera: anchor ground to bottom of viewport
+        let camY = level.height - GAME_HEIGHT;
+
         // Screen shake offset
         let shakeX = 0, shakeY = 0;
         if (screenShake > 0) {
@@ -314,7 +350,7 @@ function gameLoop(timestamp) {
             shakeY = (Math.random() - 0.5) * screenShake;
             screenShake -= 0.5;
         }
-        ctx.translate(-camX + shakeX, shakeY);
+        ctx.translate(-camX + shakeX, -camY + shakeY);
 
         if (gameState === 'PLAYING') {
             mario.update(deltaTime, level);
@@ -500,13 +536,14 @@ function gameLoop(timestamp) {
                 });
             }
 
-            if (mario.y > GAME_HEIGHT + 100) {
+            if (mario.y > level.height + 100) {
                 gameState = 'GAMEOVER';
             }
 
         } else if (gameState === 'GAMEOVER') {
             if (input.isDown('Space')) {
-                loadLevel(currentLevelIndex, { hasWatch: mario.hasWatch, alienState: mario.state });
+                deathPenalty();
+                loadLevel(currentLevelIndex, { hasWatch: mario.hasWatch });
             }
         }
 
@@ -590,7 +627,41 @@ function gameLoop(timestamp) {
         let hudAction = '';
         if (mario.state === 'FOURARMS') hudAction = gpReady ? ' [F]🥊' : ' [F]⏳';
         else if (mario.state === 'HEATBLAST') hudAction = ` [F]🔥×${mario.fireballPower}`;
-        ctx.fillText(`Level ${currentLevelIndex}${hudWatch}${hudAlien}${hudAction}`, 18, 30);
+        const hudDoubleJump = mario.doubleJumpsRemaining > 0 ? ` ⬆⬆×${mario.doubleJumpsRemaining}` : '';
+        ctx.fillText(`Level ${currentLevelIndex}${hudWatch}${hudAlien}${hudAction}${hudDoubleJump}`, 18, 30);
+
+        // ── Alien Countdown Timer HUD ─────────
+        if (mario.alienTimer > 0 && (mario.state === 'FOURARMS' || mario.state === 'HEATBLAST')) {
+            const timerBarW = 160;
+            const timerBarH = 10;
+            const timerX = 8;
+            const timerY = 46;
+            const ratio = mario.alienTimerRemaining / (mario.alienTimerDuration / 1000);
+
+            // Background
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.fillRect(timerX, timerY, timerBarW + 50, timerBarH + 8);
+
+            // Bar track
+            ctx.fillStyle = '#333';
+            ctx.fillRect(timerX + 4, timerY + 4, timerBarW, timerBarH);
+
+            // Colored bar (green → yellow → red)
+            const r = Math.floor(255 * (1 - ratio));
+            const g = Math.floor(255 * ratio);
+            ctx.fillStyle = `rgb(${r}, ${g}, 0)`;
+            ctx.fillRect(timerX + 4, timerY + 4, timerBarW * ratio, timerBarH);
+
+            // Border
+            ctx.strokeStyle = '#888';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(timerX + 4, timerY + 4, timerBarW, timerBarH);
+
+            // Text
+            ctx.fillStyle = mario.alienTimerRemaining <= 3 ? '#FF4444' : '#FFD700';
+            ctx.font = 'bold 11px sans-serif';
+            ctx.fillText(`🔄 ${mario.alienTimerRemaining}s`, timerX + timerBarW + 10, timerY + 13);
+        }
 
         // ── Boss HP Bar (screen-space) ────────
         if (goombaba && !goombaba.dead && currentLevelIndex === 3) {
