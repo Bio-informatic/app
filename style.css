@@ -40,6 +40,11 @@ canvas.level3-theme {
     /* Dark hell sky for Heatblast level */
 }
 
+canvas.level4-theme {
+    background-color: #050520;
+    /* Deep navy cyber highway for XLR8 level */
+}
+
 #ui-layer {
     position: absolute;
     top: 10px;

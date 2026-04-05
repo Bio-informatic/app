@@ -5,9 +5,13 @@ import { Input } from './src/core/Input.js';
 import { FourArmsItem } from './src/entities/FourArmsItem.js';
 import { OmnitrixItem } from './src/entities/OmnitrixItem.js';
 import { HeatblastItem } from './src/entities/HeatblastItem.js';
+import { XLR8Item } from './src/entities/XLR8Item.js';
 import { Fireball } from './src/entities/Fireball.js';
 import { LavaGoomba } from './src/entities/LavaGoomba.js';
 import { Goombaba } from './src/entities/Goombaba.js';
+import { ShieldDrone } from './src/entities/ShieldDrone.js';
+import { LaserTurret } from './src/entities/LaserTurret.js';
+import { Turtumba } from './src/entities/Turtumba.js';
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -40,7 +44,7 @@ const alienGrid = document.getElementById('alien-grid');
 const ALIENS = [
     { key: '0', name: 'Four Arms', icon: '💪', unlocked: false, lives: 25 },
     { key: '1', name: 'Heatblast', icon: '🔥', unlocked: false, lives: 25 },
-    { key: '2', name: '???', icon: '👾', unlocked: false, lives: 25 },
+    { key: '2', name: 'XLR8', icon: '⚡', unlocked: false, lives: 25 },
     { key: '3', name: '???', icon: '👾', unlocked: false, lives: 25 },
     { key: '4', name: '???', icon: '👾', unlocked: false, lives: 25 },
     { key: '5', name: '???', icon: '👾', unlocked: false, lives: 25 },
@@ -124,6 +128,8 @@ function activateAlien(index) {
         mario.transformToFourArms();
     } else if (alien.name === 'Heatblast') {
         mario.transformToHeatblast();
+    } else if (alien.name === 'XLR8') {
+        mario.transformToXLR8();
     }
 }
 
@@ -146,6 +152,10 @@ let levelTitleTimer = 0;
 let goombaba = null;
 let bossDefeated = false;
 
+// Turtumba boss reference
+let turtumba = null;
+let turtumbaDefeated = false;
+
 function assignBlockHit() {
     mario.onBlockHit = (tileType, bx, by) => {
         if (tileType === 3) {
@@ -161,6 +171,7 @@ function assignBlockHit() {
                 if (currentLevelIndex === 1) ItemClass = OmnitrixItem;
                 else if (currentLevelIndex === 2) ItemClass = FourArmsItem;
                 else if (currentLevelIndex === 3) ItemClass = HeatblastItem;
+                else if (currentLevelIndex === 4) ItemClass = XLR8Item;
             }
 
             if (ItemClass) {
@@ -210,6 +221,8 @@ function loadLevel(index, carryOverState = null) {
     entities.length = 0;
     goombaba = null;
     bossDefeated = false;
+    turtumba = null;
+    turtumbaDefeated = false;
 
     level.entities.forEach(entityData => {
         if (entityData.type === 'goomba') {
@@ -219,6 +232,15 @@ function loadLevel(index, carryOverState = null) {
         } else if (entityData.type === 'goombaba') {
             goombaba = new Goombaba(entityData.x, entityData.y, entities);
             entities.push(goombaba);
+        } else if (entityData.type === 'shield_drone') {
+            entities.push(new ShieldDrone(entityData.x, entityData.y));
+        } else if (entityData.type === 'laser_turret') {
+            const turret = new LaserTurret(entityData.x, entityData.y);
+            if (entityData.facingLeft !== undefined) turret.facingLeft = entityData.facingLeft;
+            entities.push(turret);
+        } else if (entityData.type === 'turtumba') {
+            turtumba = new Turtumba(entityData.x, entityData.y);
+            entities.push(turtumba);
         }
     });
 
@@ -228,6 +250,7 @@ function loadLevel(index, carryOverState = null) {
     closeOmnitrixPanel();
     canvas.classList.toggle('level2-theme', index === 2);
     canvas.classList.toggle('level3-theme', index === 3);
+    canvas.classList.toggle('level4-theme', index === 4);
 }
 
 loadLevel(1);
@@ -316,6 +339,15 @@ window.addEventListener('keydown', (e) => {
                 entities.push(new Fireball(fx, fy, dir, mario.fireballPower));
                 console.log(`FIREBALL! Power: ${mario.fireballPower}`);
             }
+        } else if (mario.state === 'XLR8') {
+            // Speed Dash
+            const now = performance.now();
+            if (now - mario.dashCooldown > mario.dashCooldownMs && !mario.dashActive) {
+                mario.dashActive = true;
+                mario.dashTimer = now;
+                mario.dashCooldown = now;
+                console.log('XLR8 SPEED DASH!');
+            }
         }
     }
 
@@ -355,6 +387,21 @@ function gameLoop(timestamp) {
         if (gameState === 'PLAYING') {
             mario.update(deltaTime, level);
 
+            // ── Slow Zone check (Turtumba’s turtle effect) ─────
+            let inSlowZone = false;
+            if (currentLevelIndex === 4 && level.slowZoneStart > 0 && turtumba && !turtumba.dead) {
+                if (mario.x >= level.slowZoneStart) {
+                    inSlowZone = true;
+                    // XLR8 is immune to slow effect
+                    if (mario.state !== 'XLR8') {
+                        // Reverse 90% of the horizontal movement (10x slow)
+                        mario.x -= mario.vx * 0.9;
+                        // Slow vertical too
+                        mario.vy = Math.max(-2, Math.min(mario.vy, 2));
+                    }
+                }
+            }
+
             // ── Lava Death ──────────────────────
             if (mario.lavaDeath) {
                 mario.lavaDeath = false;
@@ -383,8 +430,10 @@ function gameLoop(timestamp) {
                 } else if (currentLevelIndex === 2) {
                     showLevelModal('LEVEL 2 COMPLETE!', 'Four Arms has proven his strength!', true);
                 } else if (currentLevelIndex === 3) {
+                    showLevelModal('LEVEL 3 COMPLETE!', 'You escaped HELL! The flames are behind you.', true);
+                } else if (currentLevelIndex === 4) {
                     mario.victory = true;
-                    showLevelModal('LEVEL 3 COMPLETE!', 'You escaped HELL! The universe is safe… for now.', false);
+                    showLevelModal('LEVEL 4 COMPLETE!', 'XLR8 — nothing can catch you! The universe is safe… for now.', false);
                 } else {
                     mario.victory = true;
                     showLevelModal('YOU WIN!', 'The universe is safe… for now.', false);
@@ -463,7 +512,7 @@ function gameLoop(timestamp) {
                             entity.dead = true;
                             mario.vy = -8;
                         } else {
-                            if (mario.state === 'FOURARMS' || mario.state === 'HEATBLAST') {
+                            if (mario.state === 'FOURARMS' || mario.state === 'HEATBLAST' || mario.state === 'XLR8') {
                                 mario.state = 'SMALL';
                                 mario.width = 32;
                                 mario.height = 32;
@@ -482,12 +531,54 @@ function gameLoop(timestamp) {
                             entity.takeDamage(1);
                             mario.vy = -12;
                         } else {
-                            if (mario.state === 'FOURARMS' || mario.state === 'HEATBLAST') {
+                            if (mario.state === 'FOURARMS' || mario.state === 'HEATBLAST' || mario.state === 'XLR8') {
                                 mario.state = 'SMALL';
                                 mario.width = 32;
                                 mario.height = 32;
                                 mario.y += 32;
                                 mario.vy = -8;
+                            } else {
+                                gameState = 'GAMEOVER';
+                            }
+                        }
+
+                    } else if (entity.type === 'shield_drone') {
+                        // Shield Drone — only XLR8 dash can kill through shield
+                        if (mario.dashActive) {
+                            entity.dead = true;
+                            screenShake = 6;
+                        } else if (mario.vy > 0 && mario.y + mario.height < entity.y + entity.height / 2 + 10 && !entity.shieldActive) {
+                            // Can stomp if shield somehow down
+                            entity.dead = true;
+                            mario.vy = -8;
+                        } else {
+                            // Shield blocks — bounce back and take damage
+                            if (mario.state === 'FOURARMS' || mario.state === 'HEATBLAST' || mario.state === 'XLR8') {
+                                mario.revertToSmall();
+                                mario.vy = -5;
+                            } else {
+                                gameState = 'GAMEOVER';
+                            }
+                        }
+
+                    } else if (entity.type === 'xlr8_item') {
+                        entity.dead = true;
+                        ALIENS[2].unlocked = true;
+                        ALIENS[2].introMessage = 'I am XLR8! Super speed! Press F for Speed Dash — nothing can stop me! ⚡';
+                        renderAlienGrid();
+                        openOmnitrixPanel();
+
+                    } else if (entity.type === 'turtumba') {
+                        // Turtumba — only XLR8 dash can damage
+                        if (mario.dashActive) {
+                            entity.takeDamage(1);
+                            mario.vy = -8;
+                            screenShake = 8;
+                        } else {
+                            // Touching without dash = damage
+                            if (mario.state === 'FOURARMS' || mario.state === 'HEATBLAST' || mario.state === 'XLR8') {
+                                mario.revertToSmall();
+                                mario.vy = -5;
                             } else {
                                 gameState = 'GAMEOVER';
                             }
@@ -505,6 +596,20 @@ function gameLoop(timestamp) {
                         goombaba = null;
                         screenShake = 20;
                         console.log('GOOMBABA DEFEATED!');
+                    }
+                    // Check if Turtumba died — place finish flag
+                    if (entities[i] === turtumba) {
+                        turtumbaDefeated = true;
+                        turtumba = null;
+                        screenShake = 25;
+                        console.log('TURTUMBA DEFEATED!');
+                        // Place finish flag at the right edge of the arena
+                        const flagX = level.cols - 2;
+                        for (let fy = 4; fy < level.rows; fy++) {
+                            level.tiles[fy][flagX] = 5;
+                        }
+                        // Also set the finishCols for Level draw
+                        level.finishCols.set(flagX, { topRow: 4, bottomRow: level.rows - 1 });
                     }
                     entities.splice(i, 1);
                 }
@@ -538,6 +643,50 @@ function gameLoop(timestamp) {
 
             if (mario.y > level.height + 100) {
                 gameState = 'GAMEOVER';
+            }
+
+            // ── Laser Turret beam collision ───────
+            if (!mario.dashActive) {
+                entities.forEach(entity => {
+                    if (entity.dead || entity.type !== 'laser_turret') return;
+                    const beam = entity.getLaserRect();
+                    if (beam && checkEntityCollision(mario, beam)) {
+                        if (mario.state === 'FOURARMS' || mario.state === 'HEATBLAST' || mario.state === 'XLR8') {
+                            mario.revertToSmall();
+                            mario.vy = -5;
+                        } else {
+                            gameState = 'GAMEOVER';
+                        }
+                    }
+                });
+            }
+
+            // ── Speed Panel & Electric Fence tile checks ────
+            if (mario.grounded) {
+                const footY = Math.floor((mario.y + mario.height) / level.tileSize);
+                const footX = Math.floor((mario.x + mario.width / 2) / level.tileSize);
+                // Speed panel — tile right above ground where mario stands
+                const standY = Math.floor((mario.y + mario.height - 1) / level.tileSize);
+                if (level.tiles[standY] && level.tiles[standY][footX] === 10) {
+                    // Temporary speed boost
+                    mario.vx *= 1.5;
+                }
+            }
+            // Electric fence collision
+            {
+                const mCX = Math.floor((mario.x + mario.width / 2) / level.tileSize);
+                const mCY = Math.floor((mario.y + mario.height / 2) / level.tileSize);
+                if (level.tiles[mCY] && level.tiles[mCY][mCX] === 11) {
+                    const fenceOn = (performance.now() % 4000) < 2000;
+                    if (fenceOn && !mario.dashActive) {
+                        if (mario.state === 'FOURARMS' || mario.state === 'HEATBLAST' || mario.state === 'XLR8') {
+                            mario.revertToSmall();
+                            mario.vy = -5;
+                        } else {
+                            gameState = 'GAMEOVER';
+                        }
+                    }
+                }
             }
 
         } else if (gameState === 'GAMEOVER') {
@@ -582,6 +731,24 @@ function gameLoop(timestamp) {
             ctx.fill();
         }
 
+        // ── Turtumba Slow Zone green overlay (world-space) ────
+        if (currentLevelIndex === 4 && level.slowZoneStart > 0 && turtumba && !turtumba.dead) {
+            const now = performance.now();
+            const pulse = 0.08 + Math.sin(now / 800) * 0.04;
+            ctx.fillStyle = `rgba(0, 255, 0, ${pulse})`;
+            ctx.fillRect(level.slowZoneStart, 0, level.width - level.slowZoneStart, level.height);
+            // Slow zone border line
+            ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)';
+            ctx.lineWidth = 3;
+            ctx.setLineDash([8, 8]);
+            ctx.beginPath();
+            ctx.moveTo(level.slowZoneStart, 0);
+            ctx.lineTo(level.slowZoneStart, level.height);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.lineWidth = 1;
+        }
+
         ctx.restore();
 
         // ── Level Title Fade ──────────────────────────────────────
@@ -596,13 +763,18 @@ function gameLoop(timestamp) {
                 'Find the Mystery Watch!',
                 'The Four Arms Level',
                 'Welcome to HELL 🔥',
+                'XLR8 — LIGHT SPEED! ⚡',
             ];
             const subtitle = titles[currentLevelIndex] || `Level ${currentLevelIndex}`;
             ctx.save();
             ctx.globalAlpha = alpha;
-            ctx.fillStyle = currentLevelIndex === 3 ? 'rgba(80,0,0,0.75)' : 'rgba(0,0,0,0.65)';
+            let titleBg = 'rgba(0,0,0,0.65)';
+            let titleColor = '#FFD700';
+            if (currentLevelIndex === 3) { titleBg = 'rgba(80,0,0,0.75)'; titleColor = '#FF4400'; }
+            else if (currentLevelIndex === 4) { titleBg = 'rgba(0,5,32,0.80)'; titleColor = '#00FFFF'; }
+            ctx.fillStyle = titleBg;
             ctx.fillRect(GAME_WIDTH / 2 - 230, GAME_HEIGHT / 3 - 38, 460, 80);
-            ctx.fillStyle = currentLevelIndex === 3 ? '#FF4400' : '#FFD700';
+            ctx.fillStyle = titleColor;
             ctx.font = 'bold 16px sans-serif';
             ctx.textAlign = 'center';
             ctx.fillText(`LEVEL ${currentLevelIndex}`, GAME_WIDTH / 2, GAME_HEIGHT / 3 - 10);
@@ -623,15 +795,18 @@ function gameLoop(timestamp) {
         let hudAlien = '';
         if (mario.state === 'FOURARMS') hudAlien = ' 💪';
         else if (mario.state === 'HEATBLAST') hudAlien = ' 🔥';
+        else if (mario.state === 'XLR8') hudAlien = ' ⚡';
         const gpReady = mario.state === 'FOURARMS' && (performance.now() - mario.groundPoundCooldown > 1500);
+        const dashReady = mario.state === 'XLR8' && (performance.now() - mario.dashCooldown > mario.dashCooldownMs);
         let hudAction = '';
         if (mario.state === 'FOURARMS') hudAction = gpReady ? ' [F]🥊' : ' [F]⏳';
         else if (mario.state === 'HEATBLAST') hudAction = ` [F]🔥×${mario.fireballPower}`;
+        else if (mario.state === 'XLR8') hudAction = dashReady ? ' [F]⚡DASH' : (mario.dashActive ? ' ⚡DASHING!' : ' [F]⏳');
         const hudDoubleJump = mario.doubleJumpsRemaining > 0 ? ` ⬆⬆×${mario.doubleJumpsRemaining}` : '';
         ctx.fillText(`Level ${currentLevelIndex}${hudWatch}${hudAlien}${hudAction}${hudDoubleJump}`, 18, 30);
 
         // ── Alien Countdown Timer HUD ─────────
-        if (mario.alienTimer > 0 && (mario.state === 'FOURARMS' || mario.state === 'HEATBLAST')) {
+        if (mario.alienTimer > 0 && (mario.state === 'FOURARMS' || mario.state === 'HEATBLAST' || mario.state === 'XLR8')) {
             const timerBarW = 160;
             const timerBarH = 10;
             const timerX = 8;
@@ -699,6 +874,55 @@ function gameLoop(timestamp) {
             ctx.textAlign = 'center';
             ctx.fillText('GOOMBABA DEFEATED! → REACH THE EXIT!', GAME_WIDTH / 2, 80);
             ctx.textAlign = 'left';
+        }
+
+        // ── Turtumba HP Bar (screen-space) ────────
+        if (turtumba && !turtumba.dead && currentLevelIndex === 4) {
+            const barW = 300;
+            const barH = 16;
+            const barX = GAME_WIDTH / 2 - barW / 2;
+            const barY = 50;
+            const hpRatio = turtumba.hp / turtumba.maxHp;
+
+            ctx.fillStyle = 'rgba(0,20,0,0.7)';
+            ctx.fillRect(barX - 4, barY - 4, barW + 8, barH + 24);
+
+            ctx.fillStyle = '#333';
+            ctx.fillRect(barX, barY, barW, barH);
+            const r = Math.floor(255 * (1 - hpRatio));
+            const g = Math.floor(255 * hpRatio);
+            ctx.fillStyle = `rgb(${r}, ${g}, 0)`;
+            ctx.fillRect(barX, barY, barW * hpRatio, barH);
+            ctx.strokeStyle = '#00FF00';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(barX, barY, barW, barH);
+            ctx.lineWidth = 1;
+
+            ctx.fillStyle = '#00FF66';
+            ctx.font = 'bold 12px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(`🐢 TURTUMBA — ${turtumba.hp}/${turtumba.maxHp}`, GAME_WIDTH / 2, barY + barH + 14);
+            ctx.textAlign = 'left';
+        }
+
+        // Turtumba defeated message
+        if (turtumbaDefeated && currentLevelIndex === 4) {
+            ctx.fillStyle = '#00FF66';
+            ctx.font = 'bold 20px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('TURTUMBA DEFEATED! → REACH THE FLAG!', GAME_WIDTH / 2, 80);
+            ctx.textAlign = 'left';
+        }
+
+        // Slow zone warning
+        if (currentLevelIndex === 4 && level.slowZoneStart > 0 && turtumba && !turtumba.dead) {
+            if (mario.x >= level.slowZoneStart && mario.state !== 'XLR8') {
+                ctx.fillStyle = '#00FF00';
+                ctx.font = 'bold 16px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('⚠️ SLOW ZONE — Transform to XLR8 to move freely!', GAME_WIDTH / 2, 110);
+                ctx.textAlign = 'left';
+            }
         }
 
         // ── GAME OVER ─────────────────────────

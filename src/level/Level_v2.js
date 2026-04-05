@@ -9,10 +9,10 @@ export class Level {
 
         let map = [];
 
-        if (levelIndex === 1 || levelIndex === 2 || levelIndex === 3) {
+        if (levelIndex === 1 || levelIndex === 2 || levelIndex === 3 || levelIndex === 4) {
             // ── Unified Procedural Map Generation ────────────────────────
             const ROWS = 24;
-            const COLS = levelIndex === 3 ? 200 : 150;
+            const COLS = levelIndex === 4 ? 250 : (levelIndex === 3 ? 200 : 150);
             const TS = this.tileSize;
             const skyChar = '.';
             const groundChar = '1';
@@ -40,7 +40,7 @@ export class Level {
             // 3. Finish flag at far right (Level 1 & 2 only)
             //    Level 3 has a boss arena instead — finish unlocks after Goombaba dies
             const finishX = COLS - 1;
-            if (levelIndex !== 3) {
+            if (levelIndex !== 3 && levelIndex !== 4) {
                 for (let y = 4; y < ROWS; y++) {
                     map[y][finishX] = finishChar;
                 }
@@ -48,10 +48,16 @@ export class Level {
 
             let curX = 12;
             let mysteryCount = 0;
-            const targetMysteryCount = levelIndex === 1 ? 7 : (levelIndex === 3 ? 10 : 15);
+            const targetMysteryCount = levelIndex === 1 ? 7 : (levelIndex === 4 ? 5 : (levelIndex === 3 ? 10 : 15));
 
             // Level 3: Boss arena at the end (last 20 columns)
-            const bossZoneStart = levelIndex === 3 ? COLS - 22 : COLS;
+            // Level 4: Turtumba slow zone at the end (last 52 columns)
+            let bossZoneStart = COLS;
+            if (levelIndex === 3) bossZoneStart = COLS - 22;
+            else if (levelIndex === 4) bossZoneStart = COLS - 52;
+
+            // Store slow zone bounds for game.js
+            this.slowZoneStart = levelIndex === 4 ? bossZoneStart * TS : -1;
 
             while (curX < bossZoneStart - 10) {
                 const roll = Math.random();
@@ -132,7 +138,9 @@ export class Level {
                 if (Math.random() > 0.6) {
                     const goombaY = hasGroundBricks ? baseTopY - 1 : GROUND_Y - 1;
                     if (goombaY > 1) {
-                        const goombaType = levelIndex === 3 ? 'lava_goomba' : 'goomba';
+                        let goombaType = 'goomba';
+                        if (levelIndex === 3) goombaType = 'lava_goomba';
+                        else if (levelIndex === 4) goombaType = 'shield_drone';
                         this.entities.push({ x: (curX + 1) * TS, y: goombaY * TS, type: goombaType });
                     }
                 }
@@ -182,6 +190,74 @@ export class Level {
                 }
             }
 
+            // ── Level 4: Speed Panels & Electric Fences & Laser Turrets ────
+            if (levelIndex === 4) {
+                const speedPanelChar = 'S';
+                const efenceChar = 'E';
+
+                // Place speed boost panels on ground randomly (avoid boss zone)
+                for (let i = 0; i < 15; i++) {
+                    const sx = Math.floor(Math.random() * (bossZoneStart - 40)) + 20;
+                    const panelW = Math.floor(Math.random() * 4) + 3;
+                    for (let px = 0; px < panelW; px++) {
+                        if (sx + px < bossZoneStart - 5 && map[GROUND_Y - 1][sx + px] === skyChar) {
+                            map[GROUND_Y - 1][sx + px] = speedPanelChar;
+                        }
+                    }
+                }
+
+                // Place electric fences (avoid boss zone)
+                for (let i = 0; i < 10; i++) {
+                    const fx = Math.floor(Math.random() * (bossZoneStart - 40)) + 25;
+                    if (map[GROUND_Y - 1][fx] === skyChar) {
+                        for (let fy = GROUND_Y - 3; fy < GROUND_Y; fy++) {
+                            map[fy][fx] = efenceChar;
+                        }
+                    }
+                }
+
+                // Place laser turrets on some brick walls
+                let turretCount = 0;
+                for (let y = 2; y < GROUND_Y - 1 && turretCount < 6; y++) {
+                    for (let x = 15; x < bossZoneStart - 10 && turretCount < 6; x++) {
+                        if (map[y][x] === brickChar && map[y][x + 1] === skyChar && Math.random() < 0.03) {
+                            this.entities.push({
+                                x: (x + 1) * TS,
+                                y: y * TS,
+                                type: 'laser_turret',
+                                facingLeft: false
+                            });
+                            turretCount++;
+                        }
+                    }
+                }
+
+                // ── Turtumba Boss Arena (last 50 blocks) ──────
+                // Clear the arena — flat ground
+                for (let y = GROUND_Y; y < ROWS; y++) {
+                    for (let x = bossZoneStart; x < COLS; x++) {
+                        map[y][x] = groundChar;
+                    }
+                }
+                // Clear sky above arena
+                for (let y = 0; y < GROUND_Y; y++) {
+                    for (let x = bossZoneStart; x < COLS; x++) {
+                        map[y][x] = skyChar;
+                    }
+                }
+                // Walls on sides of arena
+                for (let y = GROUND_Y - 6; y < GROUND_Y; y++) {
+                    map[y][bossZoneStart] = brickChar;
+                    map[y][COLS - 1] = brickChar;
+                }
+                // Place Turtumba boss in center of arena
+                this.entities.push({
+                    x: (bossZoneStart + 25) * TS,
+                    y: (GROUND_Y - 2) * TS,
+                    type: 'turtumba'
+                });
+            }
+
             // Convert to strings
             for (let y = 0; y < ROWS; y++) {
                 map[y] = map[y].join('');
@@ -206,6 +282,8 @@ export class Level {
                 else if (char === '4') this.tiles[y][x] = 4;
                 else if (char === 'U') this.tiles[y][x] = 7;
                 else if (char === 'L') this.tiles[y][x] = 9;  // Lava
+                else if (char === 'S') this.tiles[y][x] = 10; // Speed panel
+                else if (char === 'E') this.tiles[y][x] = 11; // Electric fence
                 else if (char === 'F') {
                     this.tiles[y][x] = 5;
                     if (!this.finishCols.has(x)) {
@@ -225,6 +303,22 @@ export class Level {
 
     // ── Theme palettes ─────────────────────────────────────────────
     getTheme() {
+        if (this.levelIndex === 4) {
+            return {
+                sky:            '#050520',
+                ground:         '#1A1A2E',
+                groundStroke:   '#0A0A1E',
+                brick:          '#3A3A5A',
+                brickStroke:    '#22224A',
+                mystery:        '#00FFFF',
+                pipe:           '#1A1A3E',
+                unstable:       '#2A2A4A',
+                unstableStroke: '#1A1A3A',
+                cloud:          'rgba(0, 255, 255, 0.08)',
+                speedPanel:     '#00AAAA',
+                efence:         '#FFFF00',
+            };
+        }
         if (this.levelIndex === 3) {
             return {
                 sky:            '#0A0000',
@@ -299,7 +393,30 @@ export class Level {
         }
 
         // Clouds
-        if (this.levelIndex !== 3) {
+        if (this.levelIndex === 4) {
+            // Digital grid lines
+            ctx.strokeStyle = 'rgba(0, 255, 255, 0.04)';
+            ctx.lineWidth = 1;
+            for (let gx = 0; gx < this.width; gx += 128) {
+                ctx.beginPath();
+                ctx.moveTo(gx, 0);
+                ctx.lineTo(gx, this.height);
+                ctx.stroke();
+            }
+            for (let gy = 0; gy < this.height; gy += 128) {
+                ctx.beginPath();
+                ctx.moveTo(0, gy);
+                ctx.lineTo(this.width, gy);
+                ctx.stroke();
+            }
+            // Holographic cyan streaks
+            ctx.fillStyle = t.cloud;
+            for (let i = 0; i < 20; i++) {
+                const cx = i * 400 + 60;
+                ctx.fillRect(cx, 30 + Math.sin(i * 0.5) * 15, 120, 3);
+                ctx.fillRect(cx + 30, 20 + Math.sin(i * 0.5) * 15, 60, 2);
+            }
+        } else if (this.levelIndex !== 3) {
             ctx.fillStyle = t.cloud;
             for (let i = 0; i < 20; i++) {
                 const cx = i * 350 + 60;
@@ -432,6 +549,60 @@ export class Level {
                         if (y > 0 && this.tiles[y - 1] && this.tiles[y - 1][x] === 0) {
                             ctx.fillStyle = 'rgba(255, 100, 0, 0.4)';
                             ctx.fillRect(px, py - 4, ts, 6);
+                        }
+                        break;
+                    }
+
+                    case 10: { // Speed boost panel
+                        const now = performance.now();
+                        ctx.fillStyle = '#0A0A2E';
+                        ctx.fillRect(px, py, ts, ts);
+                        // Animated teal strips
+                        ctx.fillStyle = '#00AAAA';
+                        ctx.fillRect(px, py + 8, ts, 4);
+                        ctx.fillRect(px, py + 20, ts, 4);
+                        // Flowing light effect
+                        const flowX = (now / 5 + x * 20) % ts;
+                        ctx.fillStyle = '#00FFFF';
+                        ctx.fillRect(px + flowX, py + 8, 8, 4);
+                        ctx.fillRect(px + ((flowX + 16) % ts), py + 20, 8, 4);
+                        // Arrow chevrons
+                        ctx.strokeStyle = '#00FFFF';
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(px + 8, py + 14);
+                        ctx.lineTo(px + 16, py + 10);
+                        ctx.lineTo(px + 24, py + 14);
+                        ctx.stroke();
+                        break;
+                    }
+
+                    case 11: { // Electric fence
+                        const now = performance.now();
+                        const cycle = now % 4000;
+                        const fenceOn = cycle < 2000; // 2s on, 2s off
+                        // Post
+                        ctx.fillStyle = '#2A2A4A';
+                        ctx.fillRect(px + 12, py, 8, ts);
+                        if (fenceOn) {
+                            // Crackling electric barrier
+                            ctx.globalAlpha = 0.6 + Math.sin(now / 30) * 0.3;
+                            ctx.fillStyle = '#FFFF00';
+                            ctx.fillRect(px + 4, py, 24, ts);
+                            ctx.fillStyle = '#00FFFF';
+                            ctx.fillRect(px + 8, py + 2, 16, ts - 4);
+                            // Sparks
+                            for (let s = 0; s < 3; s++) {
+                                const sx = px + 8 + Math.random() * 16;
+                                const sy = py + Math.random() * ts;
+                                ctx.fillStyle = '#FFFFFF';
+                                ctx.fillRect(sx, sy, 2, 2);
+                            }
+                            ctx.globalAlpha = 1.0;
+                        } else {
+                            // Dim post only
+                            ctx.fillStyle = '#1A1A3A';
+                            ctx.fillRect(px + 14, py + 2, 4, ts - 4);
                         }
                         break;
                     }

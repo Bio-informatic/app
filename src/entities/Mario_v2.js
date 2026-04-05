@@ -40,6 +40,15 @@ export class Mario {
         this.doubleJumpsRemaining = 5;
         this.canDoubleJump = false;       // true after first jump, false after landing or using
         this._jumpWasDown = false;        // edge-detection for key press
+
+        // XLR8 Speed Dash
+        this.dashActive = false;
+        this.dashTimer = 0;
+        this.dashDuration = 500;     // 0.5s burst
+        this.dashCooldown = 0;
+        this.dashCooldownMs = 2000;  // 2s cooldown
+        this.dashTrail = [];         // Speed trail particles
+        this.lavaDeath = false;
     }
 
     transformToFourArms() {
@@ -72,8 +81,20 @@ export class Mario {
         this.width = 32;
         this.height = 32;
         this.groundPounding = false;
+        this.dashActive = false;
         this.alienTimer = 0;
         this.alienTimerRemaining = 0;
+    }
+
+    transformToXLR8() {
+        if (this.state === 'XLR8') return;
+        this.state = 'XLR8';
+        this.transforming = true;
+        this.transformTimer = performance.now();
+        this.alienTimer = performance.now();
+        if (this.height < 56) this.y -= (56 - this.height);
+        this.width = 40;
+        this.height = 56;
     }
 
     update(deltaTime, level) {
@@ -84,7 +105,7 @@ export class Mario {
         }
 
         // Alien countdown timer — revert to SMALL after 15 seconds
-        if (this.alienTimer > 0 && (this.state === 'FOURARMS' || this.state === 'HEATBLAST')) {
+        if (this.alienTimer > 0 && (this.state === 'FOURARMS' || this.state === 'HEATBLAST' || this.state === 'XLR8')) {
             const elapsed = performance.now() - this.alienTimer;
             this.alienTimerRemaining = Math.max(0, Math.ceil((this.alienTimerDuration - elapsed) / 1000));
             if (elapsed >= this.alienTimerDuration) {
@@ -96,14 +117,34 @@ export class Mario {
         this.vy += this.gravity;
 
         // Horizontal Movement
+        let moveSpeed = this.speed;
+        if (this.state === 'XLR8') moveSpeed = this.speed * 2.5;
+        if (this.dashActive) moveSpeed = this.speed * 4;
+
         if (this.input.isDown('ArrowRight')) {
-            this.vx = this.speed;
+            this.vx = moveSpeed;
             this.facingRight = true;
         } else if (this.input.isDown('ArrowLeft')) {
-            this.vx = -this.speed;
+            this.vx = -moveSpeed;
             this.facingRight = false;
         } else {
             this.vx = 0;
+        }
+
+        // XLR8 Speed Dash update
+        if (this.dashActive) {
+            if (performance.now() - this.dashTimer > this.dashDuration) {
+                this.dashActive = false;
+            }
+            // Speed trail
+            this.dashTrail.push({ x: this.x, y: this.y, alpha: 1.0 });
+            if (this.dashTrail.length > 8) this.dashTrail.shift();
+        } else {
+            // Fade trail
+            for (let i = this.dashTrail.length - 1; i >= 0; i--) {
+                this.dashTrail[i].alpha -= 0.1;
+                if (this.dashTrail[i].alpha <= 0) this.dashTrail.splice(i, 1);
+            }
         }
 
         // Move X
@@ -175,21 +216,26 @@ export class Mario {
         if (this.y > 2000) this.y = 0;
     }
 
+    // Non-solid tiles: 0 (air), 9 (lava), 10 (speed panel), 11 (electric fence)
+    isSolid(tile) {
+        return tile !== 0 && tile !== 9 && tile !== 10 && tile !== 11;
+    }
+
     handleHorizontalCollisions(level) {
         const gridTop = Math.floor(this.y / level.tileSize);
         const gridBottom = Math.floor((this.y + this.height - 0.1) / level.tileSize);
 
         if (this.vx > 0) {
             const gridRight = Math.floor((this.x + this.width) / level.tileSize);
-            if (level.tiles[gridTop] && level.tiles[gridTop][gridRight] !== 0 && level.tiles[gridTop][gridRight] !== 9 ||
-                level.tiles[gridBottom] && level.tiles[gridBottom][gridRight] !== 0 && level.tiles[gridBottom][gridRight] !== 9) {
+            if (level.tiles[gridTop] && this.isSolid(level.tiles[gridTop][gridRight]) ||
+                level.tiles[gridBottom] && this.isSolid(level.tiles[gridBottom][gridRight])) {
                 this.x = gridRight * level.tileSize - this.width;
                 this.vx = 0;
             }
         } else if (this.vx < 0) {
             const gridLeft = Math.floor(this.x / level.tileSize);
-            if (level.tiles[gridTop] && level.tiles[gridTop][gridLeft] !== 0 && level.tiles[gridTop][gridLeft] !== 9 ||
-                level.tiles[gridBottom] && level.tiles[gridBottom][gridLeft] !== 0 && level.tiles[gridBottom][gridLeft] !== 9) {
+            if (level.tiles[gridTop] && this.isSolid(level.tiles[gridTop][gridLeft]) ||
+                level.tiles[gridBottom] && this.isSolid(level.tiles[gridBottom][gridLeft])) {
                 this.x = (gridLeft + 1) * level.tileSize;
                 this.vx = 0;
             }
@@ -204,9 +250,9 @@ export class Mario {
             const gridBottom = Math.floor((this.y + this.height) / level.tileSize);
             let leftTile = level.tiles[gridBottom] ? level.tiles[gridBottom][gridLeft] : 0;
             let rightTile = level.tiles[gridBottom] ? level.tiles[gridBottom][gridRight] : 0;
-            // Lava tiles (9) don't count as solid ground (you sink through)
-            if (leftTile === 9) leftTile = 0;
-            if (rightTile === 9) rightTile = 0;
+            // Non-solid tiles can be passed through
+            if (!this.isSolid(leftTile)) leftTile = 0;
+            if (!this.isSolid(rightTile)) rightTile = 0;
 
             if (leftTile !== 0 || rightTile !== 0) {
                 this.y = gridBottom * level.tileSize - this.height;
@@ -226,8 +272,8 @@ export class Mario {
             const gridTop = Math.floor(this.y / level.tileSize);
             let hitTile = 0;
             if (level.tiles[gridTop]) {
-                if (level.tiles[gridTop][gridLeft] !== 0 && level.tiles[gridTop][gridLeft] !== 9) hitTile = level.tiles[gridTop][gridLeft];
-                else if (level.tiles[gridTop][gridRight] !== 0 && level.tiles[gridTop][gridRight] !== 9) hitTile = level.tiles[gridTop][gridRight];
+                if (this.isSolid(level.tiles[gridTop][gridLeft])) hitTile = level.tiles[gridTop][gridLeft];
+                else if (this.isSolid(level.tiles[gridTop][gridRight])) hitTile = level.tiles[gridTop][gridRight];
             }
 
             if (hitTile !== 0) {
@@ -248,13 +294,17 @@ export class Mario {
             for (let i = 0; i < 20; i++) {
                 const rx = this.x + Math.random() * this.width;
                 const ry = this.y + Math.random() * this.height;
-                const colors = this.state === 'HEATBLAST'
-                    ? ['#FF4400', '#FFCC00', '#8B0000', '#FFD700']
-                    : ['#C80000', '#FFF', '#000', '#00FF00'];
+                let colors;
+                if (this.state === 'HEATBLAST') colors = ['#FF4400', '#FFCC00', '#8B0000', '#FFD700'];
+                else if (this.state === 'XLR8') colors = ['#00FFFF', '#0A0A2E', '#000', '#00AAFF'];
+                else colors = ['#C80000', '#FFF', '#000', '#00FF00'];
                 ctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
                 ctx.fillRect(rx, ry, 4, 4);
             }
-            ctx.strokeStyle = this.state === 'HEATBLAST' ? '#FF4400' : '#C80000';
+            let strokeColor = '#C80000';
+            if (this.state === 'HEATBLAST') strokeColor = '#FF4400';
+            else if (this.state === 'XLR8') strokeColor = '#00FFFF';
+            ctx.strokeStyle = strokeColor;
             ctx.strokeRect(this.x, this.y, this.width, this.height);
             return;
         }
@@ -263,6 +313,8 @@ export class Mario {
             this.drawHeatblast(ctx);
         } else if (this.state === 'FOURARMS') {
             this.drawFourArms(ctx);
+        } else if (this.state === 'XLR8') {
+            this.drawXLR8(ctx);
         } else {
             this.drawMario(ctx);
         }
@@ -456,6 +508,181 @@ export class Mario {
         ctx.arc(0, -15, 14, 0, Math.PI * 2);
         ctx.fill();
         ctx.globalAlpha = 1.0;
+
+        ctx.restore();
+    }
+
+    drawXLR8(ctx) {
+        const centerX = this.x + 20;
+        const bottomY = this.y + 56;
+        const now = performance.now();
+
+        // Draw speed trail afterimages
+        for (const trail of this.dashTrail) {
+            ctx.save();
+            ctx.globalAlpha = trail.alpha * 0.35;
+            ctx.translate(trail.x + 20, trail.y + 56);
+            ctx.scale(2, 2);
+            // Silhouette afterimage
+            ctx.fillStyle = '#00CCCC';
+            ctx.beginPath();
+            ctx.ellipse(0, -14, 6, 12, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+
+        ctx.save();
+        ctx.translate(centerX, bottomY);
+        ctx.scale(2, 2);
+
+        // === BALL WHEELS (feet) ===
+        // Large distinct roller spheres
+        ctx.fillStyle = '#666677';
+        ctx.beginPath(); ctx.arc(-5, 0, 4, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(5, 0, 4, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#111'; // Wheel hub/axle
+        ctx.beginPath(); ctx.arc(-5, 0, 1.5, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(5, 0, 1.5, 0, Math.PI * 2); ctx.fill();
+
+        // === LEGS ===
+        // Thin digitigrade legs
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.strokeStyle = '#111116';
+        ctx.beginPath();
+        // Back leg
+        ctx.moveTo(-5, 0); ctx.lineTo(-8, -6); ctx.lineTo(-4, -12);
+        // Front leg
+        ctx.moveTo(5, 0); ctx.lineTo(2, -6); ctx.lineTo(4, -12);
+        ctx.stroke();
+
+        // === TAIL ===
+        // Thick at base, tapering out long and low
+        ctx.fillStyle = '#111116';
+        ctx.beginPath();
+        ctx.moveTo(-6, -14);
+        ctx.lineTo(-20, -18);
+        ctx.lineTo(-22, -17);
+        ctx.lineTo(-6, -10);
+        ctx.closePath();
+        ctx.fill();
+        // Tail cyan stripes
+        ctx.strokeStyle = '#00E5FF';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(-16, -14); ctx.lineTo(-14, -16);
+        ctx.moveTo(-10, -12); ctx.lineTo(-8, -14);
+        ctx.stroke();
+
+        // === BODY/TORSO ===
+        // Sharp forward arched posture
+        ctx.fillStyle = '#111116';
+        ctx.beginPath();
+        ctx.moveTo(-7, -13);
+        ctx.lineTo(3, -11); // waist
+        ctx.lineTo(8, -22); // chest jutting forward
+        ctx.lineTo(-4, -22); // back
+        ctx.closePath();
+        ctx.fill();
+
+        // Cyan torso stripes
+        ctx.strokeStyle = '#00E5FF';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(0, -13); ctx.lineTo(6, -16); // lower stripe
+        ctx.moveTo(2, -16); ctx.lineTo(7, -19); // upper stripe
+        ctx.stroke();
+
+        // === OMNITRIX ===
+        ctx.fillStyle = '#39FF14'; // Bright green
+        ctx.beginPath();
+        ctx.arc(4, -18, 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#111';
+        ctx.fillRect(3, -19, 2, 2);
+
+        // === ARMS & CLAWS ===
+        ctx.strokeStyle = '#111116';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        // Front arm reaching forward
+        ctx.moveTo(6, -20); ctx.lineTo(12, -18); ctx.lineTo(16, -16);
+        ctx.stroke();
+        // Claws (Cyan/Silver)
+        ctx.fillStyle = '#00E5FF';
+        ctx.fillRect(16, -17, 3, 1);
+        ctx.fillRect(15, -15, 3, 1);
+
+        // === HEAD & HELMET ===
+        // The most iconic part — cone shape sweeping back, visor covering face
+        ctx.fillStyle = '#111116';
+        ctx.beginPath();
+        ctx.moveTo(1, -22); // neck base
+        ctx.lineTo(10, -25); // forehead
+        ctx.lineTo(-4, -32); // tip of helmet in back
+        ctx.lineTo(-5, -28);
+        ctx.lineTo(-12, -31); // lower spike
+        ctx.lineTo(-6, -26); 
+        ctx.lineTo(-4, -22); // back of neck
+        ctx.closePath();
+        ctx.fill();
+
+        // White Face Plate (jaw area)
+        ctx.fillStyle = '#DDDDDD';
+        ctx.beginPath();
+        ctx.moveTo(2, -22);
+        ctx.lineTo(8, -25);
+        ctx.lineTo(7, -21);
+        ctx.lineTo(4, -20);
+        ctx.closePath();
+        ctx.fill();
+
+        // Cyan Visor mask
+        ctx.fillStyle = '#00E5FF';
+        ctx.beginPath();
+        ctx.moveTo(0, -25);
+        ctx.lineTo(10, -25);
+        ctx.lineTo(9, -23);
+        ctx.lineTo(1, -22);
+        ctx.closePath();
+        ctx.fill();
+
+        // Eye glow
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(5, -24, 2, 1);
+
+        // === SPEED EFFECTS ===
+        if (this.dashActive) {
+            ctx.strokeStyle = '#00FFFF';
+            ctx.lineWidth = 0.6;
+            for (let i = 0; i < 6; i++) {
+                const ly = -28 + i * 5;
+                const lx = -14 - Math.random() * 10;
+                ctx.beginPath();
+                ctx.moveTo(lx, ly);
+                ctx.lineTo(lx - 10, ly);
+                ctx.stroke();
+            }
+            // Glow aura
+            ctx.globalAlpha = 0.15;
+            ctx.fillStyle = '#00FFFF';
+            ctx.beginPath();
+            ctx.ellipse(1, -16, 10, 14, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1.0;
+        } else if (this.vx !== 0) {
+            // Subtle speed lines when running
+            ctx.strokeStyle = 'rgba(0,255,255,0.2)';
+            ctx.lineWidth = 0.4;
+            for (let i = 0; i < 3; i++) {
+                const ly = -22 + i * 6;
+                ctx.beginPath();
+                ctx.moveTo(-10, ly);
+                ctx.lineTo(-14, ly);
+                ctx.stroke();
+            }
+        }
 
         ctx.restore();
     }
