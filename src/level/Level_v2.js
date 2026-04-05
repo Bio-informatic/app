@@ -9,10 +9,10 @@ export class Level {
 
         let map = [];
 
-        if (levelIndex === 1 || levelIndex === 2) {
-            // ── Mechanics-driven Procedural Map Generation ────────────────
+        if (levelIndex === 1 || levelIndex === 2 || levelIndex === 3) {
+            // ── Unified Procedural Map Generation ────────────────────────
             const ROWS = 24;
-            const COLS = 150;
+            const COLS = levelIndex === 3 ? 200 : 150;
             const TS = this.tileSize;
             const skyChar = '.';
             const groundChar = '1';
@@ -20,9 +20,10 @@ export class Level {
             const mysteryChar = '3';
             const finishChar = 'F';
             const unstableChar = 'U';
+            const lavaChar = 'L';
 
             const MAX_GAP_TILES = 5;
-            const GROUND_Y = ROWS - 3; // Surface of the ground is row 21
+            const GROUND_Y = ROWS - 3;
 
             // 1. Initialize empty map
             for (let y = 0; y < ROWS; y++) {
@@ -36,36 +37,46 @@ export class Level {
                 }
             }
 
-            // 3. Finish flag at far right
+            // 3. Finish flag at far right (Level 1 & 2 only)
+            //    Level 3 has a boss arena instead — finish unlocks after Goombaba dies
             const finishX = COLS - 1;
-            for (let y = 4; y < ROWS; y++) {
-                map[y][finishX] = finishChar;
+            if (levelIndex !== 3) {
+                for (let y = 4; y < ROWS; y++) {
+                    map[y][finishX] = finishChar;
+                }
             }
 
-            let curX = 12; // Start placing obstacles here
+            let curX = 12;
             let mysteryCount = 0;
-            const targetMysteryCount = levelIndex === 1 ? 7 : 15;
+            const targetMysteryCount = levelIndex === 1 ? 7 : (levelIndex === 3 ? 10 : 15);
 
-            while (curX < COLS - 25) {
+            // Level 3: Boss arena at the end (last 20 columns)
+            const bossZoneStart = levelIndex === 3 ? COLS - 22 : COLS;
+
+            while (curX < bossZoneStart - 10) {
                 const roll = Math.random();
-                
-                // Level 2 Pits & Unstable Ground
-                if (roll < 0.25 && levelIndex === 2) {
+
+                // Pits — Level 2: unstable/gap, Level 3: LAVA
+                if (roll < 0.25 && levelIndex >= 2) {
                     const gapWidth = Math.floor(Math.random() * (MAX_GAP_TILES - 2)) + 2;
                     for (let y = GROUND_Y; y < ROWS; y++) {
                         for (let gx = 0; gx < gapWidth; gx++) {
-                            if (curX + gx < finishX - 3) {
-                                map[y][curX + gx] = (Math.random() > 0.5) ? unstableChar : skyChar;
+                            if (curX + gx < bossZoneStart - 3) {
+                                if (levelIndex === 3) {
+                                    map[y][curX + gx] = lavaChar;
+                                } else {
+                                    map[y][curX + gx] = (Math.random() > 0.5) ? unstableChar : skyChar;
+                                }
                             }
                         }
                     }
                     curX += gapWidth + 2;
-                    continue; // Leave the pit open, move on to next section
+                    continue;
                 }
-                
+
                 // ── Generate Bricks ─────────────────────────
-                let width = Math.floor(Math.random() * 4) + 3; // 3 to 6 wide
-                if (curX + width >= finishX - 3) width = finishX - 3 - curX;
+                let width = Math.floor(Math.random() * 4) + 3;
+                if (curX + width >= bossZoneStart - 3) width = bossZoneStart - 3 - curX;
                 if (width < 1) break;
 
                 let hasGroundBricks = Math.random() < 0.5;
@@ -76,31 +87,27 @@ export class Level {
                 }
 
                 let baseTopY = GROUND_Y;
-                
+
                 // Brick Rule 1: Attached to ground, 1 to 3 blocks high
                 if (hasGroundBricks) {
-                    const height = Math.floor(Math.random() * 3) + 1; // 1, 2, or 3 blocks tall
+                    const height = Math.floor(Math.random() * 3) + 1;
                     baseTopY = GROUND_Y - height;
-                    
                     for (let px = 0; px < width; px++) {
                         for (let py = baseTopY; py < GROUND_Y; py++) {
                             map[py][curX + px] = brickChar;
                         }
                     }
                 }
-                
-                // Brick Rule 2: Floating bricks, 1 to 3 blocks above ground OR above ground bricks
+
+                // Brick Rule 2: Floating bricks, 1 to 3 blocks above ground OR ground bricks
                 let floatingY = -1;
                 if (hasFloatingBricks) {
-                    const space = Math.floor(Math.random() * 3) + 1; // 1, 2, or 3 blocks of clearance
-                    floatingY = baseTopY - space - 1; 
-                    
-                    if (floatingY > 1) { // Bounds check
+                    const space = Math.floor(Math.random() * 3) + 1;
+                    floatingY = baseTopY - space - 1;
+                    if (floatingY > 1) {
                         for (let px = 0; px < width; px++) {
                             map[floatingY][curX + px] = brickChar;
                         }
-                        
-                        // Insert mystery boxes directly in the floating platform sometimes
                         if (mysteryCount < targetMysteryCount && Math.random() < 0.4) {
                             const mbX = Math.floor(Math.random() * width);
                             map[floatingY][curX + mbX] = mysteryChar;
@@ -109,44 +116,40 @@ export class Level {
                     }
                 }
 
-                // Place floating mystery boxes high above the structures
-                const highestY = hasFloatingBricks ? floatingY : baseTopY;
+                // Floating mystery boxes above structures
+                const highestY = hasFloatingBricks && floatingY > 0 ? floatingY : baseTopY;
                 if (mysteryCount < targetMysteryCount && Math.random() < 0.4) {
-                    const hoverSpace = Math.floor(Math.random() * 2) + 2; // 2 or 3 empty tiles above
+                    const hoverSpace = Math.floor(Math.random() * 2) + 2;
                     const boxY = highestY - hoverSpace;
                     const mbX = Math.floor(Math.random() * width);
-                    
                     if (boxY > 1 && map[boxY][curX + mbX] === skyChar) {
                         map[boxY][curX + mbX] = mysteryChar;
                         mysteryCount++;
                     }
                 }
-                
-                // Maybe a Goomba
+
+                // Enemy placement
                 if (Math.random() > 0.6) {
-                    // Goomba on the lowest solid level to easily get in Mario's way
                     const goombaY = hasGroundBricks ? baseTopY - 1 : GROUND_Y - 1;
                     if (goombaY > 1) {
-                        this.entities.push({ x: (curX + 1) * TS, y: goombaY * TS, type: 'goomba' });
+                        const goombaType = levelIndex === 3 ? 'lava_goomba' : 'goomba';
+                        this.entities.push({ x: (curX + 1) * TS, y: goombaY * TS, type: goombaType });
                     }
                 }
-                
-                curX += width + Math.floor(Math.random() * 3) + 2; // Advance cursor
+
+                curX += width + Math.floor(Math.random() * 3) + 2;
             }
 
-            // 4. Guaranteed Mystery Boxes
+            // Guaranteed mystery boxes
             for (let attempts = 0; attempts < 100 && mysteryCount < targetMysteryCount; attempts++) {
-                const rx = Math.floor(Math.random() * (COLS - 40)) + 15;
-                const space = Math.floor(Math.random() * 3) + 2; 
-                const boxY = GROUND_Y - space - 1; 
-                
+                const rx = Math.floor(Math.random() * (bossZoneStart - 40)) + 15;
+                const space = Math.floor(Math.random() * 3) + 2;
+                const boxY = GROUND_Y - space - 1;
                 if (boxY > 1 && map[boxY][rx] === skyChar) {
-                    // To make it punchable, also add a quick 1-thick brick float if it's too high?
-                    // According to rule 2, we can just sprinkle independent floating brick here
                     const hasSupport = Math.random() > 0.5;
                     if (hasSupport) {
-                        map[boxY][rx] = brickChar; // Re-roll random empty spot into brick
-                        map[boxY - 3][rx] = mysteryChar; // Box 3 tiles above it
+                        map[boxY][rx] = brickChar;
+                        if (boxY - 3 > 1) map[boxY - 3][rx] = mysteryChar;
                     } else {
                         map[boxY][rx] = mysteryChar;
                     }
@@ -154,7 +157,32 @@ export class Level {
                 }
             }
 
-            // 5. Convert map from 2D array of chars back to strings
+            // ── Level 3 Boss Arena ──────────────────────────────────
+            if (levelIndex === 3) {
+                // Clear boss zone ground (flat, solid)
+                for (let y = GROUND_Y; y < ROWS; y++) {
+                    for (let x = bossZoneStart; x < COLS; x++) {
+                        map[y][x] = groundChar;
+                    }
+                }
+                // Walls on left & right of arena
+                for (let y = GROUND_Y - 6; y < GROUND_Y; y++) {
+                    map[y][bossZoneStart] = brickChar; // left wall
+                    map[y][COLS - 1] = brickChar;      // right wall
+                }
+                // Place boss marker (handled by game.js)
+                this.entities.push({
+                    x: (bossZoneStart + 10) * TS,
+                    y: (GROUND_Y - 3) * TS,
+                    type: 'goombaba'
+                });
+                // Finish tile behind boss (revealed after boss dies)
+                for (let y = 4; y < ROWS; y++) {
+                    map[y][COLS - 2] = finishChar;
+                }
+            }
+
+            // Convert to strings
             for (let y = 0; y < ROWS; y++) {
                 map[y] = map[y].join('');
             }
@@ -166,17 +194,18 @@ export class Level {
         this.height = this.rows * this.tileSize;
 
         // Pre-compute finish columns for flag-pole drawing
-        this.finishCols = new Map(); // col → {topRow, bottomRow}
+        this.finishCols = new Map();
 
         for (let y = 0; y < this.rows; y++) {
             this.tiles[y] = [];
             for (let x = 0; x < this.cols; x++) {
                 const char = map[y][x];
-                if (char === '1') this.tiles[y][x] = 1;
+                if      (char === '1') this.tiles[y][x] = 1;
                 else if (char === '2') this.tiles[y][x] = 2;
                 else if (char === '3') this.tiles[y][x] = 3;
                 else if (char === '4') this.tiles[y][x] = 4;
                 else if (char === 'U') this.tiles[y][x] = 7;
+                else if (char === 'L') this.tiles[y][x] = 9;  // Lava
                 else if (char === 'F') {
                     this.tiles[y][x] = 5;
                     if (!this.finishCols.has(x)) {
@@ -196,30 +225,46 @@ export class Level {
 
     // ── Theme palettes ─────────────────────────────────────────────
     getTheme() {
+        if (this.levelIndex === 3) {
+            return {
+                sky:            '#0A0000',
+                ground:         '#1A1A1A',
+                groundStroke:   '#0A0A0A',
+                brick:          '#3A2A2A',
+                brickStroke:    '#1A0A0A',
+                mystery:        '#FF6600',
+                pipe:           '#4A0000',
+                unstable:       '#555',
+                unstableStroke: '#333',
+                lava:           '#FF4400',
+                lavaGlow:       '#FFAA00',
+                cloud:          'rgba(200, 30, 0, 0.12)',
+            };
+        }
         if (this.levelIndex === 2) {
             return {
-                sky: '#1a0505',
-                ground: '#5C1A1A',
-                groundStroke: '#3A0E0E',
-                brick: '#8B2500',
-                brickStroke: '#5C1A00',
-                mystery: '#FFD700',
-                pipe: '#4A0000',
-                unstable: '#8B5C00',
+                sky:            '#1a0505',
+                ground:         '#5C1A1A',
+                groundStroke:   '#3A0E0E',
+                brick:          '#8B2500',
+                brickStroke:    '#5C1A00',
+                mystery:        '#FFD700',
+                pipe:           '#4A0000',
+                unstable:       '#8B5C00',
                 unstableStroke: '#5C3D00',
-                cloud: 'rgba(200, 50, 50, 0.20)',
+                cloud:          'rgba(200, 50, 50, 0.20)',
             };
         }
         // Level 1 – classic Mario
         return {
-            sky: '#5C94FC',   // Mario NES sky blue
-            ground: '#8B4513',
+            sky:          '#5C94FC',
+            ground:       '#8B4513',
             groundStroke: '#5C2D0A',
-            brick: '#C84010',   // classic NES brick red-orange
-            brickStroke: '#7A2800',
-            mystery: '#F8A800',   // classic gold
-            pipe: '#008000',
-            cloud: 'rgba(255,255,255,0.85)',
+            brick:        '#C84010',
+            brickStroke:  '#7A2800',
+            mystery:      '#F8A800',
+            pipe:         '#008000',
+            cloud:        'rgba(255,255,255,0.85)',
         };
     }
 
@@ -228,17 +273,48 @@ export class Level {
         const t = this.getTheme();
         const ts = this.tileSize;
 
-        // Sky background (covers entire level width)
+        // Sky
         ctx.fillStyle = t.sky;
         ctx.fillRect(0, 0, this.width, this.height);
 
-        // Classic puffy clouds (pixel-block style)
-        ctx.fillStyle = t.cloud;
-        for (let i = 0; i < 20; i++) {
-            const cx = i * 350 + 60;
-            ctx.fillRect(cx, 70, 64, 16);
-            ctx.fillRect(cx + 16, 54, 32, 16);
-            ctx.fillRect(cx + 8, 86, 48, 16);
+        // Level 3: lava glow from below
+        if (this.levelIndex === 3) {
+            const grad = ctx.createLinearGradient(0, this.height - 200, 0, this.height);
+            grad.addColorStop(0, 'rgba(255, 40, 0, 0)');
+            grad.addColorStop(1, 'rgba(255, 60, 0, 0.3)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, this.height - 200, this.width, 200);
+
+            // Floating ember particles
+            const now = performance.now();
+            ctx.fillStyle = '#FF6600';
+            for (let i = 0; i < 40; i++) {
+                const ex = (i * 173 + now / 20) % this.width;
+                const ey = this.height - 100 - ((now / 15 + i * 97) % (this.height - 150));
+                const sz = 2 + Math.sin(now / 300 + i) * 1;
+                ctx.globalAlpha = 0.3 + Math.sin(now / 400 + i * 2) * 0.2;
+                ctx.fillRect(ex, ey, sz, sz);
+            }
+            ctx.globalAlpha = 1.0;
+        }
+
+        // Clouds
+        if (this.levelIndex !== 3) {
+            ctx.fillStyle = t.cloud;
+            for (let i = 0; i < 20; i++) {
+                const cx = i * 350 + 60;
+                ctx.fillRect(cx, 70, 64, 16);
+                ctx.fillRect(cx + 16, 54, 32, 16);
+                ctx.fillRect(cx + 8, 86, 48, 16);
+            }
+        } else {
+            // Smoke clouds for hell
+            ctx.fillStyle = t.cloud;
+            for (let i = 0; i < 25; i++) {
+                const cx = i * 280 + 40;
+                ctx.fillRect(cx, 40 + Math.sin(i) * 20, 80, 12);
+                ctx.fillRect(cx + 20, 28 + Math.sin(i) * 20, 40, 12);
+            }
         }
 
         // ── Tiles ──
@@ -259,41 +335,44 @@ export class Level {
                         ctx.strokeRect(px, py, ts, ts);
                         break;
 
-                    case 2: // Brick — classic NES style with stagger lines
+                    case 2: // Brick
                         ctx.fillStyle = t.brick;
                         ctx.fillRect(px, py, ts, ts);
                         ctx.strokeStyle = t.brickStroke;
                         ctx.lineWidth = 1;
                         ctx.strokeRect(px, py, ts, ts);
-                        // Mortar lines
                         ctx.strokeStyle = t.brickStroke;
                         ctx.beginPath();
-                        ctx.moveTo(px, py + ts / 2); ctx.lineTo(px + ts, py + ts / 2); // horizontal
-                        ctx.moveTo(px + ts / 2, py); ctx.lineTo(px + ts / 2, py + ts / 2); // vert top
-                        ctx.moveTo(px, py + ts / 2); ctx.lineTo(px, py + ts);              // vert bot left
+                        ctx.moveTo(px, py + ts / 2); ctx.lineTo(px + ts, py + ts / 2);
+                        ctx.moveTo(px + ts / 2, py); ctx.lineTo(px + ts / 2, py + ts / 2);
+                        ctx.moveTo(px, py + ts / 2); ctx.lineTo(px, py + ts);
                         ctx.stroke();
+                        // Level 3: lava glow on bricks
+                        if (this.levelIndex === 3) {
+                            ctx.strokeStyle = 'rgba(255,100,0,0.3)';
+                            ctx.beginPath();
+                            ctx.moveTo(px + 4, py + 10);
+                            ctx.lineTo(px + 20, py + 22);
+                            ctx.stroke();
+                        }
                         break;
 
-                    case 3: // Mystery box — gold, NO label (all identical)
-                        // Outer fill
+                    case 3: // Mystery box
                         ctx.fillStyle = t.mystery;
                         ctx.fillRect(px, py, ts, ts);
-                        // Dark border
                         ctx.strokeStyle = '#7A5C00';
                         ctx.lineWidth = 2;
                         ctx.strokeRect(px + 1, py + 1, ts - 2, ts - 2);
                         ctx.lineWidth = 1;
-                        // Pixel shine top-left
                         ctx.fillStyle = 'rgba(255,255,200,0.6)';
                         ctx.fillRect(px + 4, py + 4, 6, 2);
                         ctx.fillRect(px + 4, py + 6, 2, 4);
-                        // Pixel dot pattern (subtle)
                         ctx.fillStyle = 'rgba(200,130,0,0.35)';
                         ctx.fillRect(px + 14, py + 12, 4, 4);
                         ctx.fillRect(px + 20, py + 18, 4, 4);
                         break;
 
-                    case 8: // Used mystery box — depressed gray
+                    case 8: // Used mystery box
                         ctx.fillStyle = '#606060';
                         ctx.fillRect(px, py, ts, ts);
                         ctx.strokeStyle = '#303030';
@@ -311,7 +390,7 @@ export class Level {
                         ctx.strokeRect(px, py, ts, ts);
                         break;
 
-                    case 5: // Finish — thin pole section (flag in post-pass)
+                    case 5: // Finish
                         ctx.fillStyle = 'rgba(100,80,0,0.15)';
                         ctx.fillRect(px, py, ts, ts);
                         ctx.fillStyle = '#7A5C00';
@@ -336,21 +415,39 @@ export class Level {
                         ctx.stroke();
                         break;
                     }
+
+                    case 9: { // Lava tile
+                        const now = performance.now();
+                        // Base lava color
+                        ctx.fillStyle = '#CC2200';
+                        ctx.fillRect(px, py, ts, ts);
+                        // Animated surface bubbles
+                        const bub1 = Math.sin(now / 300 + x * 0.7) * 0.3 + 0.5;
+                        const bub2 = Math.sin(now / 200 + x * 1.3 + y) * 0.3 + 0.5;
+                        ctx.fillStyle = `rgba(255, 160, 0, ${bub1})`;
+                        ctx.fillRect(px + 4, py + 4 + Math.sin(now / 400 + x) * 3, 10, 8);
+                        ctx.fillStyle = `rgba(255, 220, 50, ${bub2})`;
+                        ctx.fillRect(px + 18, py + 8 + Math.sin(now / 350 + x * 2) * 4, 8, 6);
+                        // Glow on top edge
+                        if (y > 0 && this.tiles[y - 1] && this.tiles[y - 1][x] === 0) {
+                            ctx.fillStyle = 'rgba(255, 100, 0, 0.4)';
+                            ctx.fillRect(px, py - 4, ts, 6);
+                        }
+                        break;
+                    }
                 }
             }
         }
 
         // ── Flag Pole + Kurdistan Flag (post-pass) ──────────────────
         this.finishCols.forEach(({ topRow, bottomRow }, col) => {
-            const poleX = col * ts + ts / 2;              // centre of finish column
+            const poleX = col * ts + ts / 2;
             const poleTop = topRow * ts;
             const poleBot = (bottomRow + 1) * ts;
 
-            // Pole
             ctx.fillStyle = '#7A5C00';
             ctx.fillRect(poleX - 3, poleTop, 6, poleBot - poleTop);
 
-            // Ball on top
             ctx.fillStyle = '#FFD700';
             ctx.beginPath();
             ctx.arc(poleX, poleTop + 6, 7, 0, Math.PI * 2);
@@ -359,17 +456,13 @@ export class Level {
             ctx.lineWidth = 1;
             ctx.stroke();
 
-            // ── Kurdistan Flag (LEFT of pole, fully in view) ──────────
-            // 80 × 48 px block-art flag
-            const FW = 80;  // flag width
-            const FH = 48;  // flag height
-            const fx = poleX - 6 - FW;   // right edge = 6px left of pole
-            const fy = poleTop + 2;       // top of flag
+            // Kurdistan Flag (LEFT of pole)
+            const FW = 80;
+            const FH = 48;
+            const fx = poleX - 6 - FW;
+            const fy = poleTop + 2;
+            const SH = FH / 3;
 
-            const SH = FH / 3;  // stripe height = 16 px
-
-            // ── Stripes (pixel blocks, 8px wide columns) ──
-            // Draw stripes using 8×8 pixel blocks for a pixelated look
             const PSIZE = 8;
             const stripeColors = ['#D8232A', '#FFFFFF', '#007A3D'];
             for (let si = 0; si < 3; si++) {
@@ -380,20 +473,18 @@ export class Level {
                 }
             }
 
-            // Flag border
             ctx.strokeStyle = '#333333';
             ctx.lineWidth = 2;
             ctx.strokeRect(fx, fy, FW, FH);
             ctx.lineWidth = 1;
 
-            // ── Pixelated Sun (centre of white stripe) ────────────────
+            // Pixelated Sun
             const sunX = fx + FW / 2;
             const sunY = fy + FH / 2;
             const INNER_R = 7;
             const OUTER_R = 13;
             const RAY_COUNT = 21;
 
-            // Rays first — drawn as thick pixel lines
             ctx.strokeStyle = '#FFD700';
             ctx.lineWidth = 2;
             for (let i = 0; i < RAY_COUNT; i++) {
@@ -402,14 +493,12 @@ export class Level {
                 const y1 = sunY + Math.sin(angle) * (INNER_R + 1);
                 const x2 = sunX + Math.cos(angle) * OUTER_R;
                 const y2 = sunY + Math.sin(angle) * OUTER_R;
-                // Pixel-snap to nearest 2px grid
                 ctx.beginPath();
                 ctx.moveTo(Math.round(x1 / 2) * 2, Math.round(y1 / 2) * 2);
                 ctx.lineTo(Math.round(x2 / 2) * 2, Math.round(y2 / 2) * 2);
                 ctx.stroke();
             }
 
-            // Sun circle (filled, pixelated by using fillRect blocks)
             ctx.fillStyle = '#FFD700';
             for (let dy = -INNER_R; dy <= INNER_R; dy += 2) {
                 for (let dx = -INNER_R; dx <= INNER_R; dx += 2) {

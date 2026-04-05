@@ -4,6 +4,10 @@ import { Level } from './src/level/Level_v2.js';
 import { Input } from './src/core/Input.js';
 import { FourArmsItem } from './src/entities/FourArmsItem.js';
 import { OmnitrixItem } from './src/entities/OmnitrixItem.js';
+import { HeatblastItem } from './src/entities/HeatblastItem.js';
+import { Fireball } from './src/entities/Fireball.js';
+import { LavaGoomba } from './src/entities/LavaGoomba.js';
+import { Goombaba } from './src/entities/Goombaba.js';
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -24,10 +28,9 @@ const omnitrixPanel = document.getElementById('omnitrix-panel');
 const alienGrid = document.getElementById('alien-grid');
 
 // ─── Alien Roster Definition ─────────────────
-// 10 slots (keys 0–9). Add more here as levels unlock them.
 const ALIENS = [
     { key: '0', name: 'Four Arms', icon: '💪', unlocked: false },
-    { key: '1', name: '???', icon: '👾', unlocked: false },
+    { key: '1', name: 'Heatblast', icon: '🔥', unlocked: false },
     { key: '2', name: '???', icon: '👾', unlocked: false },
     { key: '3', name: '???', icon: '👾', unlocked: false },
     { key: '4', name: '???', icon: '👾', unlocked: false },
@@ -57,7 +60,6 @@ function renderAlienGrid() {
         }
         alienGrid.appendChild(slot);
     });
-    // Show intro message if any alien was just unlocked
     const hintBar = document.getElementById('panel-hint-bar');
     if (introMsg) {
         hintBar.innerHTML = `<span style="color:#FFD700;font-size:12px;">${introMsg}</span><br><br>Press <b>0–9</b> to transform • <b>C</b> to close`;
@@ -81,10 +83,9 @@ function closeOmnitrixPanel() {
     omnitrixPanel.style.display = 'none';
 }
 
-// Show intro popup (called once when watch is collected)
 function showOmnitrixIntro() {
     omnitrixIntro.style.display = 'flex';
-    gameState = 'PAUSED'; // Freeze the game while popup shows
+    gameState = 'PAUSED';
 }
 
 btnOmnitrixOk.addEventListener('click', () => {
@@ -98,15 +99,14 @@ function activateAlien(index) {
     if (!alien.unlocked) return;
 
     closeOmnitrixPanel();
-
-    // Clear intro message after first use
     alien.introMessage = null;
     renderAlienGrid();
 
     if (alien.name === 'Four Arms') {
         mario.transformToFourArms();
+    } else if (alien.name === 'Heatblast') {
+        mario.transformToHeatblast();
     }
-    // Future aliens: add more cases here
 }
 
 // ─── Core state ──────────────────────────────
@@ -118,11 +118,15 @@ const entities = [];
 let gameState = 'PLAYING';
 
 // Ground Pound shockwave effect
-const shockwaves = []; // {x, y, radius, maxRadius, alpha}
+const shockwaves = [];
 let screenShake = 0;
 
-let specialBoxPos = null;   // {x, y} column/row of the one box with the upgrade
-let levelTitleTimer = 0;     // timestamp when current level loaded (for title fade)
+let specialBoxPos = null;
+let levelTitleTimer = 0;
+
+// Goombaba boss reference
+let goombaba = null;
+let bossDefeated = false;
 
 function assignBlockHit() {
     mario.onBlockHit = (tileType, bx, by) => {
@@ -131,17 +135,26 @@ function assignBlockHit() {
             const gy = Math.round(by / level.tileSize);
 
             if (level.tiles[gy] && level.tiles[gy][gx] === 3) {
-                level.tiles[gy][gx] = 8; // Change to used box
+                level.tiles[gy][gx] = 8;
             }
 
-            // Decide item
-            let ItemClass = Goomba;
+            let ItemClass;
             if (specialBoxPos && gx === specialBoxPos.x && gy === specialBoxPos.y) {
-                if (currentLevelIndex == 1) ItemClass = OmnitrixItem;
-                else if (currentLevelIndex == 2) ItemClass = FourArmsItem;
+                if (currentLevelIndex === 1) ItemClass = OmnitrixItem;
+                else if (currentLevelIndex === 2) ItemClass = FourArmsItem;
+                else if (currentLevelIndex === 3) ItemClass = HeatblastItem;
             }
 
-            entities.push(new ItemClass(bx, by - 32));
+            if (ItemClass) {
+                entities.push(new ItemClass(bx, by - 32));
+            } else {
+                // Non-special box: spawn LavaGoomba in level 3, regular Goomba otherwise
+                if (currentLevelIndex === 3) {
+                    entities.push(new LavaGoomba(bx, by - 32));
+                } else {
+                    entities.push(new Goomba(bx, by - 32));
+                }
+            }
         }
     };
 }
@@ -157,10 +170,12 @@ function loadLevel(index, carryOverState = null) {
         mario.hasWatch = true;
         if (carryOverState.alienState === 'FOURARMS') {
             mario.transformToFourArms();
+        } else if (carryOverState.alienState === 'HEATBLAST') {
+            mario.transformToHeatblast();
         }
     }
 
-    // ── Pick ONE random box per level to have the special item ──
+    // Pick ONE random box for the special item
     specialBoxPos = null;
     const allBoxes = [];
     for (let y = 0; y < level.rows; y++) {
@@ -175,24 +190,33 @@ function loadLevel(index, carryOverState = null) {
 
     assignBlockHit();
     entities.length = 0;
+    goombaba = null;
+    bossDefeated = false;
+
     level.entities.forEach(entityData => {
         if (entityData.type === 'goomba') {
             entities.push(new Goomba(entityData.x, entityData.y));
+        } else if (entityData.type === 'lava_goomba') {
+            entities.push(new LavaGoomba(entityData.x, entityData.y));
+        } else if (entityData.type === 'goombaba') {
+            goombaba = new Goombaba(entityData.x, entityData.y, entities);
+            entities.push(goombaba);
         }
     });
 
-    levelTitleTimer = performance.now(); // start title fade
+    levelTitleTimer = performance.now();
     gameState = 'PLAYING';
     modal.style.display = 'none';
     closeOmnitrixPanel();
     canvas.classList.toggle('level2-theme', index === 2);
+    canvas.classList.toggle('level3-theme', index === 3);
 }
 
 loadLevel(1);
 
 // ─── Modal Buttons ────────────────────────────
 btnNext.addEventListener('click', () => {
-    loadLevel(currentLevelIndex + 1, { hasWatch: mario.hasWatch });
+    loadLevel(currentLevelIndex + 1, { hasWatch: mario.hasWatch, alienState: mario.state });
 });
 
 btnRestart.addEventListener('click', () => {
@@ -214,29 +238,54 @@ window.addEventListener('keydown', (e) => {
         omnitrixPanelOpen ? closeOmnitrixPanel() : openOmnitrixPanel();
         e.preventDefault();
     }
-    // Ground Pound with F — works in FOURARMS state, from air OR ground
-    if (e.code === 'KeyF' && mario && mario.state === 'FOURARMS' && gameState === 'PLAYING' && !mario.groundPounding) {
-        const now = performance.now();
-        const cooldownMs = 1500; // 1.5 seconds
-        if (now - mario.groundPoundCooldown > cooldownMs) {
-            if (mario.grounded) {
-                // On ground: hop up first, then slam
-                mario.vy = -10;
-                mario.grounded = false;
-                setTimeout(() => {
-                    if (mario && mario.state === 'FOURARMS' && !mario.groundPounding) {
-                        mario.groundPounding = true;
-                    }
-                }, 200); // slam after 200ms of hop
-            } else {
-                // Already in air: slam immediately
-                mario.groundPounding = true;
+
+    // F key — context-dependent:
+    //   FOURARMS: Ground Pound
+    //   HEATBLAST: Shoot Fireball (rapid press = bigger fire)
+    if (e.code === 'KeyF' && mario && gameState === 'PLAYING') {
+        if (mario.state === 'FOURARMS' && !mario.groundPounding) {
+            // Ground Pound
+            const now = performance.now();
+            const cooldownMs = 1500;
+            if (now - mario.groundPoundCooldown > cooldownMs) {
+                if (mario.grounded) {
+                    mario.vy = -10;
+                    mario.grounded = false;
+                    setTimeout(() => {
+                        if (mario && mario.state === 'FOURARMS' && !mario.groundPounding) {
+                            mario.groundPounding = true;
+                        }
+                    }, 200);
+                } else {
+                    mario.groundPounding = true;
+                }
+                console.log('GROUND POUND TRIGGERED!');
             }
-            console.log('GROUND POUND TRIGGERED! grounded=', mario.grounded);
-        } else {
-            console.log('Ground pound on cooldown:', Math.round(cooldownMs - (now - mario.groundPoundCooldown)), 'ms left');
+        } else if (mario.state === 'HEATBLAST') {
+            // Fireball — rapid press increases power
+            const now = performance.now();
+            const rapidWindow = 500; // 500ms window to press again for power up
+            const cooldownMs = 300;  // minimum time between actual shots
+
+            if (now - mario.fireballLastPress < rapidWindow) {
+                mario.fireballPower = Math.min(mario.fireballPower + 1, 5);
+            } else {
+                mario.fireballPower = 1;
+            }
+            mario.fireballLastPress = now;
+
+            // Actually fire if off cooldown
+            if (now - mario.fireballCooldown > cooldownMs) {
+                mario.fireballCooldown = now;
+                const dir = mario.facingRight ? 1 : -1;
+                const fx = mario.x + (mario.facingRight ? mario.width : 0);
+                const fy = mario.y + mario.height / 2 - 6;
+                entities.push(new Fireball(fx, fy, dir, mario.fireballPower));
+                console.log(`FIREBALL! Power: ${mario.fireballPower}`);
+            }
         }
     }
+
     // Number keys 0–9 transform when panel is open
     if (omnitrixPanelOpen) {
         const idx = parseInt(e.key);
@@ -251,8 +300,6 @@ function gameLoop(timestamp) {
     try {
         const deltaTime = Math.min(timestamp - lastTime, 50);
         lastTime = timestamp;
-
-        // W toggle and number keys are handled by the keydown listener above
 
         ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
@@ -272,6 +319,21 @@ function gameLoop(timestamp) {
         if (gameState === 'PLAYING') {
             mario.update(deltaTime, level);
 
+            // ── Lava Death ──────────────────────
+            if (mario.lavaDeath) {
+                mario.lavaDeath = false;
+                if (mario.state === 'HEATBLAST') {
+                    // Heatblast downgrades on lava timeout
+                    mario.state = 'SMALL';
+                    mario.width = 32;
+                    mario.height = 32;
+                    mario.vy = -10;
+                    mario.lavaTimer = 0;
+                } else {
+                    gameState = 'GAMEOVER';
+                }
+            }
+
             // ── Win Detection ─────────────────
             const gridY = Math.floor((mario.y + mario.height / 2) / level.tileSize);
             const gridX = Math.floor((mario.x + mario.width / 2) / level.tileSize);
@@ -282,6 +344,11 @@ function gameLoop(timestamp) {
 
                 if (currentLevelIndex === 1) {
                     showLevelModal('LEVEL 1 COMPLETE!', 'You are the chosen guard for the universe.', true);
+                } else if (currentLevelIndex === 2) {
+                    showLevelModal('LEVEL 2 COMPLETE!', 'Four Arms has proven his strength!', true);
+                } else if (currentLevelIndex === 3) {
+                    mario.victory = true;
+                    showLevelModal('LEVEL 3 COMPLETE!', 'You escaped HELL! The universe is safe… for now.', false);
                 } else {
                     mario.victory = true;
                     showLevelModal('YOU WIN!', 'The universe is safe… for now.', false);
@@ -295,19 +362,17 @@ function gameLoop(timestamp) {
                 const footR = Math.floor((mario.x + mario.width - 1) / level.tileSize);
                 for (const fx of [footL, footR]) {
                     if (level.tiles[footY] && level.tiles[footY][fx] === 7) {
-                        // Check if already tracked
                         if (!level.unstableTiles.find(u => u.x === fx && u.y === footY)) {
                             level.unstableTiles.push({ x: fx, y: footY, timer: performance.now() });
                         }
                     }
                 }
             }
-            // Process crumbling tiles
             const now = performance.now();
             for (let i = level.unstableTiles.length - 1; i >= 0; i--) {
                 const ut = level.unstableTiles[i];
-                if (now - ut.timer > 500) { // 0.5 second delay
-                    level.tiles[ut.y][ut.x] = 0; // Remove tile!
+                if (now - ut.timer > 500) {
+                    level.tiles[ut.y][ut.x] = 0;
                     level.unstableTiles.splice(i, 1);
                 }
             }
@@ -317,27 +382,52 @@ function gameLoop(timestamp) {
                 entity.update(deltaTime, level);
                 if (entity.dead) return;
 
+                // ── Fireball hits enemies ─────
+                if (entity.type === 'fireball') {
+                    entities.forEach(target => {
+                        if (target.dead || target === entity) return;
+                        if (target.type === 'fireball') return; // fireballs don't collide
+
+                        if (checkEntityCollision(entity, target)) {
+                            if (target.type === 'goombaba') {
+                                target.takeDamage(entity.damage);
+                                entity.dead = true;
+                                screenShake = Math.min(entity.power * 2, 10);
+                            } else if (target.type === 'goomba') {
+                                target.dead = true;
+                                entity.dead = true;
+                            }
+                        }
+                    });
+                    return; // Don't check mario collision for fireballs
+                }
+
                 if (checkEntityCollision(mario, entity)) {
-                    if (entity.type === 'fourarms_item') {
+                    if (entity.type === 'heatblast_item') {
                         entity.dead = true;
-                        // Don't transform directly! Unlock in watch and show panel with message.
+                        ALIENS[1].unlocked = true;
+                        ALIENS[1].introMessage = 'I am Heatblast! Press F to shoot fireballs! Keep pressing for MORE POWER! 🔥';
+                        renderAlienGrid();
+                        openOmnitrixPanel();
+
+                    } else if (entity.type === 'fourarms_item') {
+                        entity.dead = true;
                         ALIENS[0].unlocked = true;
                         ALIENS[0].introMessage = 'My name is Four Arms. If you need me, press "0".';
                         renderAlienGrid();
-                        // Show the Omnitrix panel with the alien's intro
                         openOmnitrixPanel();
 
                     } else if (entity.type === 'omnitrix_item') {
                         entity.dead = true;
                         mario.hasWatch = true;
-                        showOmnitrixIntro(); // show the popup!
+                        showOmnitrixIntro();
 
                     } else if (entity.type === 'goomba') {
                         if (mario.vy > 0 && mario.y + mario.height < entity.y + entity.height / 2 + 10) {
                             entity.dead = true;
                             mario.vy = -8;
                         } else {
-                            if (mario.state === 'FOURARMS') {
+                            if (mario.state === 'FOURARMS' || mario.state === 'HEATBLAST') {
                                 mario.state = 'SMALL';
                                 mario.width = 32;
                                 mario.height = 32;
@@ -348,34 +438,64 @@ function gameLoop(timestamp) {
                                 gameState = 'GAMEOVER';
                             }
                         }
+
+                    } else if (entity.type === 'goombaba') {
+                        // Touching Goombaba = damage (bounce back)
+                        if (mario.vy > 0 && mario.y + mario.height < entity.y + 20) {
+                            // Stomp does 1 damage
+                            entity.takeDamage(1);
+                            mario.vy = -12;
+                        } else {
+                            if (mario.state === 'FOURARMS' || mario.state === 'HEATBLAST') {
+                                mario.state = 'SMALL';
+                                mario.width = 32;
+                                mario.height = 32;
+                                mario.y += 32;
+                                mario.vy = -8;
+                            } else {
+                                gameState = 'GAMEOVER';
+                            }
+                        }
                     }
                 }
             });
 
             // Remove dead entities
             for (let i = entities.length - 1; i >= 0; i--) {
-                if (entities[i].dead) entities.splice(i, 1);
+                if (entities[i].dead) {
+                    // Check if Goombaba died
+                    if (entities[i] === goombaba) {
+                        bossDefeated = true;
+                        goombaba = null;
+                        screenShake = 20;
+                        console.log('GOOMBABA DEFEATED!');
+                    }
+                    entities.splice(i, 1);
+                }
             }
 
             // ── Ground Pound Impact ───────────
             if (mario.groundPoundLanded) {
                 mario.groundPoundLanded = false;
-                screenShake = 12; // frames of shake
+                screenShake = 12;
 
-                // Create shockwave visual
                 const cx = mario.x + mario.width / 2;
                 const cy = mario.y + mario.height;
                 shockwaves.push({ x: cx, y: cy, radius: 10, maxRadius: 160, alpha: 1.0 });
 
-                // Kill enemies within radius
                 const KILL_RADIUS = 160;
                 entities.forEach(entity => {
-                    if (entity.dead || entity.type !== 'goomba') return;
-                    const ex = entity.x + entity.width / 2;
-                    const ey = entity.y + entity.height / 2;
-                    const dist = Math.sqrt((cx - ex) ** 2 + (cy - ey) ** 2);
-                    if (dist < KILL_RADIUS) {
-                        entity.dead = true;
+                    if (entity.dead) return;
+                    if (entity.type === 'goomba') {
+                        const ex = entity.x + entity.width / 2;
+                        const ey = entity.y + entity.height / 2;
+                        const dist = Math.sqrt((cx - ex) ** 2 + (cy - ey) ** 2);
+                        if (dist < KILL_RADIUS) entity.dead = true;
+                    } else if (entity.type === 'goombaba') {
+                        const ex = entity.x + entity.width / 2;
+                        const ey = entity.y + entity.height / 2;
+                        const dist = Math.sqrt((cx - ex) ** 2 + (cy - ey) ** 2);
+                        if (dist < KILL_RADIUS) entity.takeDamage(5);
                     }
                 });
             }
@@ -409,16 +529,15 @@ function gameLoop(timestamp) {
             ctx.beginPath();
             ctx.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2);
             ctx.stroke();
-            // Inner ring
             ctx.strokeStyle = `rgba(255, 200, 50, ${sw.alpha * 0.6})`;
             ctx.lineWidth = 2;
             ctx.beginPath();
             ctx.arc(sw.x, sw.y, sw.radius * 0.6, 0, Math.PI * 2);
             ctx.stroke();
         }
-        ctx.lineWidth = 1; // reset
+        ctx.lineWidth = 1;
 
-        // Draw ground pound indicator when slamming
+        // Ground pound indicator
         if (mario.groundPounding) {
             ctx.fillStyle = 'rgba(255, 100, 0, 0.4)';
             ctx.beginPath();
@@ -439,13 +558,14 @@ function gameLoop(timestamp) {
                 '',
                 'Find the Mystery Watch!',
                 'The Four Arms Level',
+                'Welcome to HELL 🔥',
             ];
             const subtitle = titles[currentLevelIndex] || `Level ${currentLevelIndex}`;
             ctx.save();
             ctx.globalAlpha = alpha;
-            ctx.fillStyle = 'rgba(0,0,0,0.65)';
+            ctx.fillStyle = currentLevelIndex === 3 ? 'rgba(80,0,0,0.75)' : 'rgba(0,0,0,0.65)';
             ctx.fillRect(GAME_WIDTH / 2 - 230, GAME_HEIGHT / 3 - 38, 460, 80);
-            ctx.fillStyle = '#FFD700';
+            ctx.fillStyle = currentLevelIndex === 3 ? '#FF4400' : '#FFD700';
             ctx.font = 'bold 16px sans-serif';
             ctx.textAlign = 'center';
             ctx.fillText(`LEVEL ${currentLevelIndex}`, GAME_WIDTH / 2, GAME_HEIGHT / 3 - 10);
@@ -458,15 +578,57 @@ function gameLoop(timestamp) {
 
         // ── HUD ───────────────────────────────
         ctx.fillStyle = 'rgba(0,0,0,0.45)';
-        ctx.fillRect(8, 8, 280, 32);
+        ctx.fillRect(8, 8, 340, 32);
         ctx.fillStyle = 'white';
         ctx.font = 'bold 14px sans-serif';
         ctx.textAlign = 'left';
         const hudWatch = mario.hasWatch ? ' ⌚[C]' : '';
-        const hudAlien = mario.state === 'FOURARMS' ? ' 💪' : '';
-        const gpReady = mario.state === 'FOURARMS' && (performance.now() - mario.groundPoundCooldown > 3000);
-        const hudGP = mario.state === 'FOURARMS' ? (gpReady ? ' [F]🥊' : ' [F]⏳') : '';
-        ctx.fillText(`Level ${currentLevelIndex}${hudWatch}${hudAlien}${hudGP}`, 18, 30);
+        let hudAlien = '';
+        if (mario.state === 'FOURARMS') hudAlien = ' 💪';
+        else if (mario.state === 'HEATBLAST') hudAlien = ' 🔥';
+        const gpReady = mario.state === 'FOURARMS' && (performance.now() - mario.groundPoundCooldown > 1500);
+        let hudAction = '';
+        if (mario.state === 'FOURARMS') hudAction = gpReady ? ' [F]🥊' : ' [F]⏳';
+        else if (mario.state === 'HEATBLAST') hudAction = ` [F]🔥×${mario.fireballPower}`;
+        ctx.fillText(`Level ${currentLevelIndex}${hudWatch}${hudAlien}${hudAction}`, 18, 30);
+
+        // ── Boss HP Bar (screen-space) ────────
+        if (goombaba && !goombaba.dead && currentLevelIndex === 3) {
+            const barW = 300;
+            const barH = 16;
+            const barX = GAME_WIDTH / 2 - barW / 2;
+            const barY = 50;
+            const hpRatio = goombaba.hp / goombaba.maxHp;
+
+            ctx.fillStyle = 'rgba(0,0,0,0.6)';
+            ctx.fillRect(barX - 4, barY - 4, barW + 8, barH + 24);
+
+            ctx.fillStyle = '#333';
+            ctx.fillRect(barX, barY, barW, barH);
+            const r = Math.floor(255 * (1 - hpRatio));
+            const g = Math.floor(255 * hpRatio);
+            ctx.fillStyle = `rgb(${r}, ${g}, 0)`;
+            ctx.fillRect(barX, barY, barW * hpRatio, barH);
+            ctx.strokeStyle = '#FF6600';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(barX, barY, barW, barH);
+            ctx.lineWidth = 1;
+
+            ctx.fillStyle = '#FFD700';
+            ctx.font = 'bold 12px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(`GOOMBABA — ${goombaba.hp}/${goombaba.maxHp}`, GAME_WIDTH / 2, barY + barH + 14);
+            ctx.textAlign = 'left';
+        }
+
+        // Boss defeated message
+        if (bossDefeated && currentLevelIndex === 3) {
+            ctx.fillStyle = '#FF6600';
+            ctx.font = 'bold 20px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('GOOMBABA DEFEATED! → REACH THE EXIT!', GAME_WIDTH / 2, 80);
+            ctx.textAlign = 'left';
+        }
 
         // ── GAME OVER ─────────────────────────
         if (gameState === 'GAMEOVER') {
