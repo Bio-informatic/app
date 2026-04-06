@@ -12,6 +12,7 @@ import { Goombaba } from './src/entities/Goombaba.js';
 import { ShieldDrone } from './src/entities/ShieldDrone.js';
 import { LaserTurret } from './src/entities/LaserTurret.js';
 import { Turtumba } from './src/entities/Turtumba.js';
+import { Bomba } from './src/entities/Bomba.js';
 import { SoundManager } from './src/core/SoundManager.js';
 
 const sfx = new SoundManager();
@@ -30,6 +31,14 @@ function resizeCanvas() {
 }
 resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
+
+// ─── Audio Sliders ─────────────────────────
+document.getElementById('bgm-volume').addEventListener('input', (e) => {
+    sfx.setMusicVolume(parseFloat(e.target.value));
+});
+document.getElementById('sfx-volume').addEventListener('input', (e) => {
+    sfx.setSfxVolume(parseFloat(e.target.value));
+});
 
 // ─── UI Elements ─────────────────────────────
 const modal = document.getElementById('level-complete-modal');
@@ -169,6 +178,10 @@ let bossDefeated = false;
 let turtumba = null;
 let turtumbaDefeated = false;
 
+// Bomba boss reference
+let bomba = null;
+let bombaDefeated = false;
+
 function assignBlockHit() {
     mario.onBlockHit = (tileType, bx, by) => {
         if (tileType === 3) {
@@ -237,6 +250,8 @@ function loadLevel(index, carryOverState = null) {
     bossDefeated = false;
     turtumba = null;
     turtumbaDefeated = false;
+    bomba = null;
+    bombaDefeated = false;
 
     level.entities.forEach(entityData => {
         if (entityData.type === 'goomba') {
@@ -256,6 +271,9 @@ function loadLevel(index, carryOverState = null) {
         } else if (entityData.type === 'turtumba') {
             turtumba = new Turtumba(entityData.x, entityData.y);
             entities.push(turtumba);
+        } else if (entityData.type === 'bomba') {
+            bomba = new Bomba(entityData.x, entityData.y, entities);
+            entities.push(bomba);
         }
     });
 
@@ -325,26 +343,7 @@ window.addEventListener('keydown', (e) => {
     //   FOURARMS: Ground Pound
     //   HEATBLAST: Shoot Fireball (rapid press = bigger fire)
     if (e.code === 'KeyF' && mario && gameState === 'PLAYING') {
-        if (mario.state === 'FOURARMS' && !mario.groundPounding) {
-            // Ground Pound
-            const now = performance.now();
-            const cooldownMs = 1500;
-            if (now - mario.groundPoundCooldown > cooldownMs) {
-                if (mario.grounded) {
-                    mario.vy = -10;
-                    mario.grounded = false;
-                    setTimeout(() => {
-                        if (mario && mario.state === 'FOURARMS' && !mario.groundPounding) {
-                            mario.groundPounding = true;
-                        }
-                    }, 200);
-                } else {
-                    mario.groundPounding = true;
-                }
-                console.log('GROUND POUND TRIGGERED!');
-                sfx.groundPound();
-            }
-        } else if (mario.state === 'HEATBLAST') {
+        if (mario.state === 'HEATBLAST') {
             // Fireball — rapid press increases power
             const now = performance.now();
             const rapidWindow = 500; // 500ms window to press again for power up
@@ -413,7 +412,49 @@ function gameLoop(timestamp) {
         ctx.translate(-camX + shakeX, -camY + shakeY);
 
         if (gameState === 'PLAYING') {
+            if (bomba && !bomba.dead) {
+                bomba.update(deltaTime, level, mario.x + mario.width/2, mario.y + mario.height/2);
+            }
             mario.update(deltaTime, level);
+
+            // ── FourArms Ground Pound Charging ────
+            if (mario.state === 'FOURARMS') {
+                const fDown = input.isDown('F');
+                const now = performance.now();
+                if (fDown && !mario.groundPounding) {
+                    if (!mario._gpCharging) {
+                        mario._gpCharging = true;
+                        mario._gpChargeStart = now;
+                    }
+                    mario.gpChargePercent = Math.min((now - mario._gpChargeStart) / 5000, 1.0);
+                } else if (!fDown && mario._gpCharging) {
+                    mario._gpCharging = false;
+                    const cooldownMs = 1500;
+                    if (now - mario.groundPoundCooldown > cooldownMs || !mario.groundPoundCooldown) {
+                        mario.gpMultiplier = 1 + mario.gpChargePercent * 2;
+                        mario.gpChargePercent = 0;
+
+                        if (mario.grounded) {
+                            mario.vy = -10;
+                            mario.grounded = false;
+                            setTimeout(() => {
+                                if (mario && mario.state === 'FOURARMS' && !mario.groundPounding) {
+                                    mario.groundPounding = true;
+                                }
+                            }, 200);
+                        } else {
+                            mario.groundPounding = true;
+                        }
+                        console.log(`GROUND POUND TRIGGERED! x${mario.gpMultiplier}`);
+                        sfx.groundPound();
+                    } else {
+                        mario.gpChargePercent = 0;
+                    }
+                }
+            } else {
+                mario._gpCharging = false;
+                mario.gpChargePercent = 0;
+            }
 
             // ── Sound: Jump detection ──────────
             if (mario.vy < -2 && !mario.grounded && mario._justJumped) {
@@ -649,9 +690,54 @@ function gameLoop(timestamp) {
                                 gameState = 'GAMEOVER';
                             }
                         }
+                    } else if (entity.type === 'bomba') {
+                        if (entity.windowOpen && !entity.goombaDead && mario.state === 'SMALL') {
+                            // Small Ben can pass through and hit Goomba
+                            const gx = entity.goombaX;
+                            const gy = entity.goombaY;
+                            const gw = entity.goombaWidth;
+                            const gh = entity.goombaHeight;
+                            if (mario.x < gx + gw && mario.x + mario.width > gx &&
+                                mario.y < gy + gh && mario.y + mario.height > gy) {
+                                entity.killGoomba();
+                                sfx.bossDefeated();
+                                screenShake = 30;
+                                mario.vy = -12;
+                            }
+                        } else {
+                            // Act as solid armor for everyone else, or if window closed
+                            if (mario.vy > 0 && mario.y + mario.height < entity.y + 40) {
+                                mario.y = entity.y - mario.height;
+                                mario.vy = 0;
+                                mario.grounded = true;
+                            } else {
+                                // Push horizontally out
+                                if (mario.x < entity.x + entity.width/2) {
+                                    mario.x = entity.x - mario.width;
+                                } else {
+                                    mario.x = entity.x + entity.width;
+                                }
+                                mario.vx = 0;
+                            }
+                        }
                     }
                 }
             });
+
+            // Bomba bomb tracking collisions
+            if (bomba && !bomba.dead) {
+                for (const b of bomba.bombs) {
+                    if (!b.dead && checkEntityCollision(mario, b)) {
+                        if (mario.state === 'FOURARMS' || mario.state === 'HEATBLAST' || mario.state === 'XLR8') {
+                            mario.revertToSmall();
+                            mario.vy = -5;
+                            b.dead = true;
+                        } else {
+                            gameState = 'GAMEOVER';
+                        }
+                    }
+                }
+            }
 
             // Remove dead entities
             for (let i = entities.length - 1; i >= 0; i--) {
@@ -679,6 +765,16 @@ function gameLoop(timestamp) {
                         // Also set the finishCols for Level draw
                         level.finishCols.set(flagX, { topRow: 4, bottomRow: level.rows - 1 });
                     }
+                    if (entities[i] === bomba && bomba.dead) {
+                        bombaDefeated = true;
+                        bomba = null;
+                        console.log('BOMBA DEFEATED!');
+                        const flagX = level.cols - 2;
+                        for (let fy = 4; fy < level.rows; fy++) {
+                            level.tiles[fy][flagX] = 5;
+                        }
+                        level.finishCols.set(flagX, { topRow: 4, bottomRow: level.rows - 1 });
+                    }
                     entities.splice(i, 1);
                 }
             }
@@ -686,13 +782,15 @@ function gameLoop(timestamp) {
             // ── Ground Pound Impact ───────────
             if (mario.groundPoundLanded) {
                 mario.groundPoundLanded = false;
-                screenShake = 12;
+                
+                const mult = mario.gpMultiplier || 1;
+                screenShake = 12 * Math.max(1, mult * 0.8);
 
                 const cx = mario.x + mario.width / 2;
                 const cy = mario.y + mario.height;
-                shockwaves.push({ x: cx, y: cy, radius: 10, maxRadius: 160, alpha: 1.0 });
+                const KILL_RADIUS = 160 * mult;
+                shockwaves.push({ x: cx, y: cy, radius: 10, maxRadius: KILL_RADIUS, alpha: 1.0 });
 
-                const KILL_RADIUS = 160;
                 entities.forEach(entity => {
                     if (entity.dead) return;
                     if (entity.type === 'goomba') {
@@ -704,7 +802,16 @@ function gameLoop(timestamp) {
                         const ex = entity.x + entity.width / 2;
                         const ey = entity.y + entity.height / 2;
                         const dist = Math.sqrt((cx - ex) ** 2 + (cy - ey) ** 2);
-                        if (dist < KILL_RADIUS) entity.takeDamage(5);
+                        if (dist < KILL_RADIUS) entity.takeDamage(5 * mult);
+                    } else if (entity.type === 'bomba' && entity.hasShooter) {
+                        const sx = entity.x + entity.width/2;
+                        const sy = entity.y - 10;
+                        const dist = Math.sqrt((cx - sx) ** 2 + (cy - sy) ** 2);
+                        if (dist < KILL_RADIUS && mult >= 2.9) {
+                            entity.breakShooter();
+                            sfx.stomp(); // breaking sound
+                            screenShake = 20;
+                        }
                     }
                 });
             }
@@ -717,7 +824,13 @@ function gameLoop(timestamp) {
 
             // ── Sound: Boss entrance trigger ──────
             if (!bossEntrancePlayed) {
-                if (currentLevelIndex === 3 && goombaba && !goombaba.dead) {
+                if (currentLevelIndex === 2 && bomba && !bomba.dead) {
+                    const dist = Math.abs(mario.x - bomba.x);
+                    if (dist < 500) {
+                        sfx.bossEntrance('BOMBA');
+                        bossEntrancePlayed = true;
+                    }
+                } else if (currentLevelIndex === 3 && goombaba && !goombaba.dead) {
                     const dist = Math.abs(mario.x - goombaba.x);
                     if (dist < 500) {
                         sfx.bossEntrance('GOOMBABA');
@@ -814,8 +927,17 @@ function gameLoop(timestamp) {
         if (mario.groundPounding) {
             ctx.fillStyle = 'rgba(255, 100, 0, 0.4)';
             ctx.beginPath();
-            ctx.arc(mario.x + mario.width / 2, mario.y + mario.height, 20, 0, Math.PI * 2);
+            ctx.arc(mario.x + mario.width / 2, mario.y + mario.height, 20 * (mario.gpMultiplier || 1), 0, Math.PI * 2);
             ctx.fill();
+        }
+        
+        // Charging ground pound indicator
+        if (mario.state === 'FOURARMS' && mario._gpCharging && mario.gpChargePercent > 0) {
+            ctx.strokeStyle = `rgba(255, ${255 - mario.gpChargePercent * 255}, 0, 0.8)`;
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.arc(mario.x + mario.width / 2, mario.y + mario.height / 2, 30 + Math.sin(performance.now()/50)*5, 0, Math.PI * 2 * mario.gpChargePercent);
+            ctx.stroke();
         }
 
         // ── Turtumba Slow Zone green overlay (world-space) ────
@@ -886,7 +1008,14 @@ function gameLoop(timestamp) {
         const gpReady = mario.state === 'FOURARMS' && (performance.now() - mario.groundPoundCooldown > 1500);
         const dashReady = mario.state === 'XLR8' && (performance.now() - mario.dashCooldown > mario.dashCooldownMs);
         let hudAction = '';
-        if (mario.state === 'FOURARMS') hudAction = gpReady ? ' [F]🥊' : ' [F]⏳';
+        if (mario.state === 'FOURARMS') {
+            if (mario._gpCharging) {
+                const pct = Math.floor(mario.gpChargePercent * 100);
+                hudAction = ` [F] CHARGING ${pct}%`;
+            } else {
+                hudAction = gpReady ? ' [F]🥊 (Hold to Charge)' : ' [F]⏳';
+            }
+        }
         else if (mario.state === 'HEATBLAST') hudAction = ` [F]🔥×${mario.fireballPower}`;
         else if (mario.state === 'XLR8') hudAction = dashReady ? ' [F]⚡DASH' : (mario.dashActive ? ' ⚡DASHING!' : ' [F]⏳');
         const hudDoubleJump = mario.doubleJumpsRemaining > 0 ? ` ⬆⬆×${mario.doubleJumpsRemaining}` : '';
@@ -998,6 +1127,33 @@ function gameLoop(timestamp) {
             ctx.font = 'bold 20px sans-serif';
             ctx.textAlign = 'center';
             ctx.fillText('TURTUMBA DEFEATED! → REACH THE FLAG!', GAME_WIDTH / 2, 80);
+            ctx.textAlign = 'left';
+        }
+
+        // ── Bomba UI HUD (screen-space) ────────
+        if (bomba && !bomba.dead && currentLevelIndex === 2) {
+            const barW = 300;
+            const barH = 16;
+            const barX = GAME_WIDTH / 2 - barW / 2;
+            const barY = 50;
+
+            ctx.fillStyle = '#FFDD88';
+            ctx.font = 'bold 12px sans-serif';
+            ctx.textAlign = 'center';
+            if (bomba.windowOpen) {
+                ctx.fillText(`💣 BOMBA — SHOOTER DESTROYED! TRANSFORM TO SMALL BEN TO ENTER THE WINDOW!`, GAME_WIDTH / 2, barY + barH + 14);
+            } else {
+                ctx.fillText(`💣 BOMBA — Use FULLY CHARGED Four Arms Ground Pound on the Shooter!`, GAME_WIDTH / 2, barY + barH + 14);
+            }
+            ctx.textAlign = 'left';
+        }
+
+        // Bomba defeated message
+        if (bombaDefeated && currentLevelIndex === 2) {
+            ctx.fillStyle = '#FFDD88';
+            ctx.font = 'bold 20px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('BOMBA DEFEATED! → REACH THE EXIT!', GAME_WIDTH / 2, 80);
             ctx.textAlign = 'left';
         }
 

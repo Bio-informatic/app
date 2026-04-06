@@ -10,6 +10,8 @@ export class SoundManager {
         this.musicNodes = [];
         this._musicTimer = null;
         this._musicPlaying = false;
+        this.sfxVolume = 1.0;
+        this.baseMasterVol = 0.30;
         this._initOnGesture();
     }
 
@@ -19,7 +21,7 @@ export class SoundManager {
             if (this.ctx) return;
             this.ctx = new (window.AudioContext || window.webkitAudioContext)();
             this.masterGain = this.ctx.createGain();
-            this.masterGain.gain.value = 0.30;
+            this.masterGain.gain.value = this.baseMasterVol * this.sfxVolume;
             this.masterGain.connect(this.ctx.destination);
             this.musicGain = this.ctx.createGain();
             this.musicGain.gain.value = 0.06; // Very quiet background
@@ -35,8 +37,19 @@ export class SoundManager {
 
     toggleMute() {
         this.muted = !this.muted;
-        if (this.masterGain) this.masterGain.gain.value = this.muted ? 0 : 0.30;
+        if (this.masterGain) this.masterGain.gain.value = this.muted ? 0 : this.baseMasterVol * this.sfxVolume;
         return this.muted;
+    }
+
+    setMusicVolume(vol) {
+        if (this.musicGain) this.musicGain.gain.value = vol * 0.12; 
+    }
+
+    setSfxVolume(vol) {
+        this.sfxVolume = vol;
+        if (this.masterGain && !this.muted) {
+            this.masterGain.gain.value = this.baseMasterVol * this.sfxVolume;
+        }
     }
 
     // ── Utility helpers ───────────────────────────────────────────

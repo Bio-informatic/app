@@ -16,6 +16,16 @@
         <canvas id="gameCanvas"></canvas>
         <div id="ui-layer">
             <p>Controls: Arrow Keys / WASD to Move, W / Space / ↑ to Jump | C for Watch | F for Power (Ground Pound / Fireball)</p>
+            <div id="audio-controls" style="pointer-events: auto; position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.5); padding: 5px; border-radius: 5px; color: white;">
+                <label style="font-size: 12px; display:flex; align-items: center; margin-bottom:4px;">
+                    <span style="width: 40px;">BGM</span>
+                    <input type="range" id="bgm-volume" min="0" max="1" step="0.1" value="0.5" style="width: 80px;">
+                </label>
+                <label style="font-size: 12px; display:flex; align-items: center;">
+                    <span style="width: 40px;">SFX</span>
+                    <input type="range" id="sfx-volume" min="0" max="1" step="0.1" value="1.0" style="width: 80px;">
+                </label>
+            </div>
         </div>
         <div id="level-complete-modal">
             <h1 id="modal-title">LEVEL COMPLETE!</h1>

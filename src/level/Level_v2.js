@@ -40,7 +40,7 @@ export class Level {
             // 3. Finish flag at far right (Level 1 & 2 only)
             //    Level 3 has a boss arena instead — finish unlocks after Goombaba dies
             const finishX = COLS - 1;
-            if (levelIndex !== 3 && levelIndex !== 4) {
+            if (levelIndex === 1) {
                 for (let y = 4; y < ROWS; y++) {
                     map[y][finishX] = finishChar;
                 }
@@ -50,10 +50,12 @@ export class Level {
             let mysteryCount = 0;
             const targetMysteryCount = levelIndex === 1 ? 7 : (levelIndex === 4 ? 5 : (levelIndex === 3 ? 10 : 15));
 
+            // Level 2: Boss arena at the end (last 30 columns)
             // Level 3: Boss arena at the end (last 20 columns)
             // Level 4: Turtumba slow zone at the end (last 52 columns)
             let bossZoneStart = COLS;
-            if (levelIndex === 3) bossZoneStart = COLS - 22;
+            if (levelIndex === 2) bossZoneStart = COLS - 30;
+            else if (levelIndex === 3) bossZoneStart = COLS - 22;
             else if (levelIndex === 4) bossZoneStart = COLS - 52;
 
             // Store slow zone bounds for game.js
@@ -163,6 +165,27 @@ export class Level {
                     }
                     mysteryCount++;
                 }
+            }
+
+            // ── Level 2 Boss Arena ──────────────────────────────────
+            if (levelIndex === 2) {
+                // Clear boss zone ground (flat, solid)
+                for (let y = GROUND_Y; y < ROWS; y++) {
+                    for (let x = bossZoneStart; x < COLS; x++) {
+                        map[y][x] = groundChar;
+                    }
+                }
+                // Walls on left & right of arena
+                for (let y = GROUND_Y - 6; y < GROUND_Y; y++) {
+                    map[y][bossZoneStart] = brickChar; // left wall
+                    map[y][COLS - 1] = brickChar;      // right wall
+                }
+                // Place boss marker
+                this.entities.push({
+                    x: (bossZoneStart + 15) * TS,
+                    y: (GROUND_Y - 5) * TS,
+                    type: 'bomba'
+                });
             }
 
             // ── Level 3 Boss Arena ──────────────────────────────────
