@@ -160,11 +160,13 @@ export class Mario {
             this.vy = this.state === 'FOURARMS' ? -14 : -12;
             this.grounded = false;
             this.canDoubleJump = true;
+            this._justJumped = true;
         } else if (jumpJustPressed && !this.grounded && this.canDoubleJump && this.doubleJumpsRemaining > 0) {
             // Double jump — higher boost
             this.vy = this.state === 'FOURARMS' ? -18 : -16;
             this.canDoubleJump = false;
             this.doubleJumpsRemaining--;
+            this._justJumped = true;
         }
 
         // Ground Pound (Four Arms only, triggered by game.js)

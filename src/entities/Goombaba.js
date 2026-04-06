@@ -78,8 +78,8 @@ export class Goombaba {
             baby.vy = -4; // Pop up so they're visible
             baby.vx = (Math.random() > 0.5) ? 2 : -2;
             this.entitiesArray.push(baby);
+            if (this.onBabySpawn) this.onBabySpawn();
         }
-
         // Hurt flash countdown
         if (this.hurtFlash > 0) this.hurtFlash--;
     }

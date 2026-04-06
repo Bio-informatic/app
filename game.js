@@ -12,6 +12,9 @@ import { Goombaba } from './src/entities/Goombaba.js';
 import { ShieldDrone } from './src/entities/ShieldDrone.js';
 import { LaserTurret } from './src/entities/LaserTurret.js';
 import { Turtumba } from './src/entities/Turtumba.js';
+import { SoundManager } from './src/core/SoundManager.js';
+
+const sfx = new SoundManager();
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -92,11 +95,13 @@ function openOmnitrixPanel() {
     if (!mario.hasWatch) return;
     omnitrixPanelOpen = true;
     omnitrixPanel.style.display = 'flex';
+    sfx.omnitrixOpen();
 }
 
 function closeOmnitrixPanel() {
     omnitrixPanelOpen = false;
     omnitrixPanel.style.display = 'none';
+    sfx.omnitrixClose();
 }
 
 function showOmnitrixIntro() {
@@ -124,6 +129,7 @@ function activateAlien(index) {
     alien.introMessage = null;
     renderAlienGrid();
 
+    sfx.transform();
     if (alien.name === 'Four Arms') {
         mario.transformToFourArms();
     } else if (alien.name === 'Heatblast') {
@@ -148,6 +154,13 @@ let screenShake = 0;
 let specialBoxPos = null;
 let levelTitleTimer = 0;
 
+// Sound: boss entrance tracking
+let bossEntrancePlayed = false;
+let lastLavaSizzle = 0;
+
+// Sound: alien timeout tracking
+let lastAlienState = 'SMALL';
+
 // Goombaba boss reference
 let goombaba = null;
 let bossDefeated = false;
@@ -164,6 +177,7 @@ function assignBlockHit() {
 
             if (level.tiles[gy] && level.tiles[gy][gx] === 3) {
                 level.tiles[gy][gx] = 8;
+                sfx.hitBox();
             }
 
             let ItemClass;
@@ -231,6 +245,7 @@ function loadLevel(index, carryOverState = null) {
             entities.push(new LavaGoomba(entityData.x, entityData.y));
         } else if (entityData.type === 'goombaba') {
             goombaba = new Goombaba(entityData.x, entityData.y, entities);
+            goombaba.onBabySpawn = () => sfx.bossSpawn();
             entities.push(goombaba);
         } else if (entityData.type === 'shield_drone') {
             entities.push(new ShieldDrone(entityData.x, entityData.y));
@@ -251,6 +266,11 @@ function loadLevel(index, carryOverState = null) {
     canvas.classList.toggle('level2-theme', index === 2);
     canvas.classList.toggle('level3-theme', index === 3);
     canvas.classList.toggle('level4-theme', index === 4);
+
+    // Sound: start level music
+    bossEntrancePlayed = false;
+    lastAlienState = 'SMALL';
+    sfx.startMusic(index);
 }
 
 loadLevel(1);
@@ -295,6 +315,12 @@ window.addEventListener('keydown', (e) => {
         e.preventDefault();
     }
 
+    // M key — toggle mute
+    if (e.code === 'KeyM') {
+        const muted = sfx.toggleMute();
+        console.log(muted ? '🔇 Sound MUTED' : '🔊 Sound ON');
+    }
+
     // F key — context-dependent:
     //   FOURARMS: Ground Pound
     //   HEATBLAST: Shoot Fireball (rapid press = bigger fire)
@@ -316,6 +342,7 @@ window.addEventListener('keydown', (e) => {
                     mario.groundPounding = true;
                 }
                 console.log('GROUND POUND TRIGGERED!');
+                sfx.groundPound();
             }
         } else if (mario.state === 'HEATBLAST') {
             // Fireball — rapid press increases power
@@ -337,6 +364,7 @@ window.addEventListener('keydown', (e) => {
                 const fx = mario.x + (mario.facingRight ? mario.width : 0);
                 const fy = mario.y + mario.height / 2 - 6;
                 entities.push(new Fireball(fx, fy, dir, mario.fireballPower));
+                sfx.fireball(mario.fireballPower);
                 console.log(`FIREBALL! Power: ${mario.fireballPower}`);
             }
         } else if (mario.state === 'XLR8') {
@@ -387,6 +415,24 @@ function gameLoop(timestamp) {
         if (gameState === 'PLAYING') {
             mario.update(deltaTime, level);
 
+            // ── Sound: Jump detection ──────────
+            if (mario.vy < -2 && !mario.grounded && mario._justJumped) {
+                sfx.jump();
+                mario._justJumped = false;
+            }
+
+            // ── Sound: Alien timer timeout ────
+            if (lastAlienState !== 'SMALL' && mario.state === 'SMALL' && mario.alienTimer === 0) {
+                sfx.omnitrixTimeout();
+            }
+            lastAlienState = mario.state;
+
+            // ── Sound: Lava sizzle ────────────
+            if (mario.lavaTimer > 0 && performance.now() - lastLavaSizzle > 400) {
+                sfx.lavaSizzle();
+                lastLavaSizzle = performance.now();
+            }
+
             // ── Slow Zone check (Turtumba’s turtle effect) ─────
             let inSlowZone = false;
             if (currentLevelIndex === 4 && level.slowZoneStart > 0 && turtumba && !turtumba.dead) {
@@ -406,13 +452,14 @@ function gameLoop(timestamp) {
             if (mario.lavaDeath) {
                 mario.lavaDeath = false;
                 if (mario.state === 'HEATBLAST') {
-                    // Heatblast downgrades on lava timeout
                     mario.state = 'SMALL';
                     mario.width = 32;
                     mario.height = 32;
                     mario.vy = -10;
                     mario.lavaTimer = 0;
                 } else {
+                    sfx.death();
+                    sfx.stopMusic();
                     gameState = 'GAMEOVER';
                 }
             }
@@ -426,13 +473,21 @@ function gameLoop(timestamp) {
                 (level.tiles[gridY] && level.tiles[gridY][gridRight] === 5)) {
 
                 if (currentLevelIndex === 1) {
+                    sfx.levelComplete();
+                    sfx.stopMusic();
                     showLevelModal('LEVEL 1 COMPLETE!', 'You are the chosen guard for the universe.', true);
                 } else if (currentLevelIndex === 2) {
+                    sfx.levelComplete();
+                    sfx.stopMusic();
                     showLevelModal('LEVEL 2 COMPLETE!', 'Four Arms has proven his strength!', true);
                 } else if (currentLevelIndex === 3) {
+                    sfx.levelComplete();
+                    sfx.stopMusic();
                     showLevelModal('LEVEL 3 COMPLETE!', 'You escaped HELL! The flames are behind you.', true);
                 } else if (currentLevelIndex === 4) {
                     mario.victory = true;
+                    sfx.levelComplete();
+                    sfx.stopMusic();
                     showLevelModal('LEVEL 4 COMPLETE!', 'XLR8 — nothing can catch you! The universe is safe… for now.', false);
                 } else {
                     mario.victory = true;
@@ -478,9 +533,11 @@ function gameLoop(timestamp) {
                                 target.takeDamage(entity.damage);
                                 entity.dead = true;
                                 screenShake = Math.min(entity.power * 2, 10);
+                                sfx.bossHit();
                             } else if (target.type === 'goomba') {
                                 target.dead = true;
                                 entity.dead = true;
+                                sfx.fireballHit();
                             }
                         }
                     });
@@ -492,6 +549,7 @@ function gameLoop(timestamp) {
                         entity.dead = true;
                         ALIENS[1].unlocked = true;
                         ALIENS[1].introMessage = 'I am Heatblast! Press F to shoot fireballs! Keep pressing for MORE POWER! 🔥';
+                        sfx.collectItem();
                         renderAlienGrid();
                         openOmnitrixPanel();
 
@@ -499,17 +557,20 @@ function gameLoop(timestamp) {
                         entity.dead = true;
                         ALIENS[0].unlocked = true;
                         ALIENS[0].introMessage = 'My name is Four Arms. If you need me, press "0".';
+                        sfx.collectItem();
                         renderAlienGrid();
                         openOmnitrixPanel();
 
                     } else if (entity.type === 'omnitrix_item') {
                         entity.dead = true;
                         mario.hasWatch = true;
+                        sfx.watchAcquired();
                         showOmnitrixIntro();
 
                     } else if (entity.type === 'goomba') {
                         if (mario.vy > 0 && mario.y + mario.height < entity.y + entity.height / 2 + 10) {
                             entity.dead = true;
+                            sfx.stomp();
                             mario.vy = -8;
                         } else {
                             if (mario.state === 'FOURARMS' || mario.state === 'HEATBLAST' || mario.state === 'XLR8') {
@@ -520,6 +581,8 @@ function gameLoop(timestamp) {
                                 mario.vy = -5;
                                 entity.dead = true;
                             } else {
+                                sfx.death();
+                                sfx.stopMusic();
                                 gameState = 'GAMEOVER';
                             }
                         }
@@ -527,8 +590,8 @@ function gameLoop(timestamp) {
                     } else if (entity.type === 'goombaba') {
                         // Touching Goombaba = damage (bounce back)
                         if (mario.vy > 0 && mario.y + mario.height < entity.y + 20) {
-                            // Stomp does 1 damage
                             entity.takeDamage(1);
+                            sfx.bossHit();
                             mario.vy = -12;
                         } else {
                             if (mario.state === 'FOURARMS' || mario.state === 'HEATBLAST' || mario.state === 'XLR8') {
@@ -538,6 +601,8 @@ function gameLoop(timestamp) {
                                 mario.y += 32;
                                 mario.vy = -8;
                             } else {
+                                sfx.death();
+                                sfx.stopMusic();
                                 gameState = 'GAMEOVER';
                             }
                         }
@@ -565,6 +630,7 @@ function gameLoop(timestamp) {
                         entity.dead = true;
                         ALIENS[2].unlocked = true;
                         ALIENS[2].introMessage = 'I am XLR8! Super speed! Press F for Speed Dash — nothing can stop me! ⚡';
+                        sfx.collectItem();
                         renderAlienGrid();
                         openOmnitrixPanel();
 
@@ -595,6 +661,7 @@ function gameLoop(timestamp) {
                         bossDefeated = true;
                         goombaba = null;
                         screenShake = 20;
+                        sfx.bossDefeated();
                         console.log('GOOMBABA DEFEATED!');
                     }
                     // Check if Turtumba died — place finish flag
@@ -602,6 +669,7 @@ function gameLoop(timestamp) {
                         turtumbaDefeated = true;
                         turtumba = null;
                         screenShake = 25;
+                        sfx.bossDefeated();
                         console.log('TURTUMBA DEFEATED!');
                         // Place finish flag at the right edge of the arena
                         const flagX = level.cols - 2;
@@ -642,7 +710,26 @@ function gameLoop(timestamp) {
             }
 
             if (mario.y > level.height + 100) {
+                sfx.death();
+                sfx.stopMusic();
                 gameState = 'GAMEOVER';
+            }
+
+            // ── Sound: Boss entrance trigger ──────
+            if (!bossEntrancePlayed) {
+                if (currentLevelIndex === 3 && goombaba && !goombaba.dead) {
+                    const dist = Math.abs(mario.x - goombaba.x);
+                    if (dist < 500) {
+                        sfx.bossEntrance('GOOMBABA');
+                        bossEntrancePlayed = true;
+                    }
+                } else if (currentLevelIndex === 4 && turtumba && !turtumba.dead) {
+                    const dist = Math.abs(mario.x - turtumba.x);
+                    if (dist < 500) {
+                        sfx.bossEntrance('TURTUMBA');
+                        bossEntrancePlayed = true;
+                    }
+                }
             }
 
             // ── Laser Turret beam collision ───────
