@@ -16,6 +16,16 @@
         <canvas id="gameCanvas"></canvas>
         <div id="ui-layer">
             <p>Controls: Arrow Keys / WASD to Move, W / Space / ↑ to Jump | C for Watch | F for Power (Ground Pound / Fireball)</p>
+            <!-- TEMPORARY DEV LEVEL SWITCHER (REMOVE LATER) -->
+            <div id="dev-level-switcher" style="pointer-events: auto; position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.8); padding: 5px 10px; border-radius: 5px; color: #0f0; font-family: monospace; z-index: 100;">
+                <b>DEV: Switch Level</b><br>
+                <button onclick="window.devWarp(1)" style="margin: 2px;">L1</button>
+                <button onclick="window.devWarp(2)" style="margin: 2px;">L2</button>
+                <button onclick="window.devWarp(3)" style="margin: 2px;">L3</button>
+                <button onclick="window.devWarp(4)" style="margin: 2px;">L4</button>
+                <button onclick="window.devWarp(5)" style="margin: 2px;">L5</button>
+            </div>
+            <!-- /TEMPORARY DEV LEVEL SWITCHER -->
             <div id="audio-controls" style="pointer-events: auto; position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.5); padding: 5px; border-radius: 5px; color: white;">
                 <label style="font-size: 12px; display:flex; align-items: center; margin-bottom:4px;">
                     <span style="width: 40px;">BGM</span>

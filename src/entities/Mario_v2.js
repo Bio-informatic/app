@@ -49,6 +49,10 @@ export class Mario {
         this.dashCooldownMs = 2000;  // 2s cooldown
         this.dashTrail = [];         // Speed trail particles
         this.lavaDeath = false;
+
+        // Stinkfly Stamina
+        this.maxWingStamina = 6000; // 6 seconds
+        this.wingStamina = this.maxWingStamina;
     }
 
     transformToFourArms() {
@@ -84,6 +88,10 @@ export class Mario {
         this.dashActive = false;
         this.alienTimer = 0;
         this.alienTimerRemaining = 0;
+        
+        // Stinkfly stats
+        this.wingStamina = 6000;
+        this.maxWingStamina = 6000;
     }
 
     transformToXLR8() {
@@ -97,6 +105,18 @@ export class Mario {
         this.height = 56;
     }
 
+    transformToStinkfly() {
+        if (this.state === 'STINKFLY') return;
+        this.state = 'STINKFLY';
+        this.transforming = true;
+        this.transformTimer = performance.now();
+        this.alienTimer = performance.now();
+        if (this.height < 50) this.y -= (50 - this.height);
+        this.width = 45;
+        this.height = 50;
+        this.wingStamina = this.maxWingStamina;
+    }
+
     update(deltaTime, level) {
         if (this.transforming) {
             if (performance.now() - this.transformTimer > 1000) {
@@ -105,7 +125,7 @@ export class Mario {
         }
 
         // Alien countdown timer — revert to SMALL after 15 seconds
-        if (this.alienTimer > 0 && (this.state === 'FOURARMS' || this.state === 'HEATBLAST' || this.state === 'XLR8')) {
+        if (this.alienTimer > 0 && (this.state === 'FOURARMS' || this.state === 'HEATBLAST' || this.state === 'XLR8' || this.state === 'STINKFLY')) {
             const elapsed = performance.now() - this.alienTimer;
             this.alienTimerRemaining = Math.max(0, Math.ceil((this.alienTimerDuration - elapsed) / 1000));
             if (elapsed >= this.alienTimerDuration) {
@@ -113,13 +133,18 @@ export class Mario {
             }
         }
 
-        // Apply Gravity
-        this.vy += this.gravity;
+        // Apply Gravity (Stinkfly flies naturally)
+        if (this.state === 'STINKFLY') {
+            this.vy = 0; // zero gravity base
+        } else {
+            this.vy += this.gravity;
+        }
 
         // Horizontal Movement
         let moveSpeed = this.speed;
         if (this.state === 'XLR8') moveSpeed = this.speed * 2.5;
         if (this.dashActive) moveSpeed = this.speed * 4;
+        if (this.state === 'STINKFLY') moveSpeed = this.speed * 1.5;
 
         if (this.input.isDown('ArrowRight')) {
             this.vx = moveSpeed;
@@ -151,22 +176,31 @@ export class Mario {
         this.x += this.vx;
         this.handleHorizontalCollisions(level);
 
-        // Jump
         const jumpPressed = this.input.isDown('Space') || this.input.isDown('ArrowUp');
         const jumpJustPressed = jumpPressed && !this._jumpWasDown;
         this._jumpWasDown = jumpPressed;
 
-        if (jumpPressed && this.grounded) {
-            this.vy = this.state === 'FOURARMS' ? -14 : -12;
-            this.grounded = false;
-            this.canDoubleJump = true;
-            this._justJumped = true;
-        } else if (jumpJustPressed && !this.grounded && this.canDoubleJump && this.doubleJumpsRemaining > 0) {
-            // Double jump — higher boost
-            this.vy = this.state === 'FOURARMS' ? -18 : -16;
-            this.canDoubleJump = false;
-            this.doubleJumpsRemaining--;
-            this._justJumped = true;
+        if (this.state === 'STINKFLY') {
+            this.wingStamina = this.maxWingStamina; // no long drain since natural flight
+            if (jumpPressed) {
+                this.vy = -moveSpeed; // Fly up
+                this._justJumped = true;
+            } else if (this.input.isDown('ArrowDown')) {
+                this.vy = moveSpeed; // Fly down
+            }
+        } else {
+            if (jumpPressed && this.grounded) {
+                this.vy = this.state === 'FOURARMS' ? -14 : -12;
+                this.grounded = false;
+                this.canDoubleJump = true;
+                this._justJumped = true;
+            } else if (jumpJustPressed && !this.grounded && this.canDoubleJump && this.doubleJumpsRemaining > 0) {
+                // Double jump — higher boost
+                this.vy = this.state === 'FOURARMS' ? -18 : -16;
+                this.canDoubleJump = false;
+                this.doubleJumpsRemaining--;
+                this._justJumped = true;
+            }
         }
 
         // Ground Pound (Four Arms only, triggered by game.js)
@@ -198,7 +232,10 @@ export class Mario {
         }
 
         if (onLava) {
-            if (this.state === 'HEATBLAST') {
+            if (this.state === 'STINKFLY' && level.levelIndex === 5) {
+                // Stinkfly is immune to poison
+                this.lavaTimer = 0;
+            } else if (this.state === 'HEATBLAST') {
                 // Heatblast: slow sink, 2 second grace
                 this.lavaTimer += deltaTime || 16;
                 this.vy = Math.min(this.vy, 1); // slow sinking
@@ -206,7 +243,7 @@ export class Mario {
                     this.lavaDeath = true; // game.js reads this
                 }
             } else {
-                // Instant death for non-Heatblast
+                // Instant death
                 this.lavaDeath = true;
             }
         } else {
@@ -317,6 +354,8 @@ export class Mario {
             this.drawFourArms(ctx);
         } else if (this.state === 'XLR8') {
             this.drawXLR8(ctx);
+        } else if (this.state === 'STINKFLY') {
+            this.drawStinkfly(ctx);
         } else {
             this.drawMario(ctx);
         }
@@ -685,6 +724,90 @@ export class Mario {
                 ctx.stroke();
             }
         }
+
+        ctx.restore();
+    }
+
+    drawStinkfly(ctx) {
+        const cx = this.x + this.width / 2;
+        const cy = this.y + this.height / 2;
+        const now = performance.now();
+
+        ctx.save();
+        ctx.translate(cx, cy);
+        
+        const facingFlip = this.facingRight ? 1 : -1;
+        ctx.scale(facingFlip, 1);
+
+        // Hover bobbing
+        if (!this.grounded) {
+            ctx.translate(0, Math.sin(now / 150) * 3);
+        }
+
+        // --- Blocky Stinkfly Design ---
+        const bX = -this.width / 2;
+        const bY = -this.height / 2;
+
+        // Wings (behind body)
+        ctx.fillStyle = 'rgba(200, 255, 200, 0.6)';
+        const flapOffset = this.grounded ? 0 : Math.sin(now / 20) * 5;
+        
+        // Back Wing
+        ctx.fillRect(bX - 15, bY + 5 - flapOffset, 30, 8);
+        ctx.fillRect(bX - 25, bY + 8 - flapOffset, 10, 5);
+        // Front Wing
+        ctx.fillRect(bX - 10, bY + 15 + flapOffset/2, 25, 6);
+
+        // Body (Dark greenish)
+        ctx.fillStyle = '#115511';
+        ctx.fillRect(bX + 5, bY + 10, 30, 25);
+        ctx.fillRect(bX, bY + 15, 40, 15);
+        
+        // Stripes (White/Pale green)
+        ctx.fillStyle = '#88FF88';
+        ctx.fillRect(bX + 15, bY + 10, 4, 25);
+        ctx.fillRect(bX + 25, bY + 12, 4, 18);
+
+        // Tail
+        ctx.fillStyle = '#0a220a';
+        ctx.fillRect(bX - 15, bY + 20, 15, 8);
+        ctx.fillRect(bX - 25, bY + 22, 10, 4);
+
+        // Head (Black dome with orange eyes)
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(bX + 30, bY + 5, 20, 15); // head box
+        
+        // Eye Stalks
+        ctx.fillStyle = '#115511';
+        ctx.fillRect(bX + 45, bY - 5, 4, 10);
+        ctx.fillRect(bX + 38, bY + 0, 4, 5);
+        
+        // Eyes (Orange squares)
+        ctx.fillStyle = '#FF6600';
+        ctx.fillRect(bX + 44, bY - 8, 6, 6);
+        ctx.fillRect(bX + 37, bY - 3, 6, 6);
+        
+        // Pupils
+        ctx.fillStyle = '#000';
+        ctx.fillRect(bX + 46, bY - 6, 2, 4);
+        ctx.fillRect(bX + 39, bY - 1, 2, 4);
+
+        // Omnitrix symbol
+        ctx.fillStyle = '#000';
+        ctx.fillRect(bX + 15, bY + 18, 10, 10);
+        ctx.fillStyle = '#39FF14';
+        ctx.fillRect(bX + 17, bY + 20, 6, 6);
+        ctx.fillStyle = '#000';
+        ctx.fillRect(bX + 19, bY + 20, 2, 6); // simple hourglass shape impression
+
+        // Legs (Spindly, bent)
+        ctx.fillStyle = '#111';
+        // Legs front
+        ctx.fillRect(bX + 25, bY + 35, 4, 15);
+        ctx.fillRect(bX + 27, bY + 45, 6, 4);
+        // Legs back
+        ctx.fillRect(bX + 10, bY + 35, 4, 15);
+        ctx.fillRect(bX + 8, bY + 45, -6, 4);
 
         ctx.restore();
     }

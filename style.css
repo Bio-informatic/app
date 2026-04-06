@@ -45,6 +45,11 @@ canvas.level4-theme {
     /* Deep navy cyber highway for XLR8 level */
 }
 
+canvas.level5-theme {
+    background-color: #0A1A0A;
+    /* Dark green swamp for Stinkfly level */
+}
+
 #ui-layer {
     position: absolute;
     top: 10px;

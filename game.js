@@ -13,6 +13,12 @@ import { ShieldDrone } from './src/entities/ShieldDrone.js';
 import { LaserTurret } from './src/entities/LaserTurret.js';
 import { Turtumba } from './src/entities/Turtumba.js';
 import { Bomba } from './src/entities/Bomba.js';
+import { Gomrog } from './src/entities/Gomrog.js';
+import { PipeChomper } from './src/entities/PipeChomper.js';
+import { OozeGoomba } from './src/entities/OozeGoomba.js';
+import { SludgeBat } from './src/entities/SludgeBat.js';
+import { Slimeball } from './src/entities/Slimeball.js';
+import { StinkflyItem } from './src/entities/StinkflyItem.js';
 import { SoundManager } from './src/core/SoundManager.js';
 
 const sfx = new SoundManager();
@@ -57,7 +63,7 @@ const ALIENS = [
     { key: '0', name: 'Four Arms', icon: '💪', unlocked: false, lives: 25 },
     { key: '1', name: 'Heatblast', icon: '🔥', unlocked: false, lives: 25 },
     { key: '2', name: 'XLR8', icon: '⚡', unlocked: false, lives: 25 },
-    { key: '3', name: '???', icon: '👾', unlocked: false, lives: 25 },
+    { key: '3', name: 'Stinkfly', icon: '🪰', unlocked: false, lives: 25 },
     { key: '4', name: '???', icon: '👾', unlocked: false, lives: 25 },
     { key: '5', name: '???', icon: '👾', unlocked: false, lives: 25 },
     { key: '6', name: '???', icon: '👾', unlocked: false, lives: 25 },
@@ -145,6 +151,8 @@ function activateAlien(index) {
         mario.transformToHeatblast();
     } else if (alien.name === 'XLR8') {
         mario.transformToXLR8();
+    } else if (alien.name === 'Stinkfly') {
+        mario.transformToStinkfly();
     }
 }
 
@@ -181,6 +189,10 @@ let turtumbaDefeated = false;
 // Bomba boss reference
 let bomba = null;
 let bombaDefeated = false;
+
+// Gomrog boss reference
+let gomrog = null;
+let gomrogDefeated = false;
 
 function assignBlockHit() {
     mario.onBlockHit = (tileType, bx, by) => {
@@ -252,6 +264,8 @@ function loadLevel(index, carryOverState = null) {
     turtumbaDefeated = false;
     bomba = null;
     bombaDefeated = false;
+    gomrog = null;
+    gomrogDefeated = false;
 
     level.entities.forEach(entityData => {
         if (entityData.type === 'goomba') {
@@ -274,6 +288,13 @@ function loadLevel(index, carryOverState = null) {
         } else if (entityData.type === 'bomba') {
             bomba = new Bomba(entityData.x, entityData.y, entities);
             entities.push(bomba);
+        } else if (entityData.type === 'gomrog') {
+            gomrog = new Gomrog(entityData.x, entityData.y);
+            entities.push(gomrog);
+        } else if (entityData.type === 'ooze_goomba') {
+            entities.push(new OozeGoomba(entityData.x, entityData.y));
+        } else if (entityData.type === 'stinkfly_item') {
+            entities.push(new StinkflyItem(entityData.x, entityData.y));
         }
     });
 
@@ -284,6 +305,7 @@ function loadLevel(index, carryOverState = null) {
     canvas.classList.toggle('level2-theme', index === 2);
     canvas.classList.toggle('level3-theme', index === 3);
     canvas.classList.toggle('level4-theme', index === 4);
+    canvas.classList.toggle('level5-theme', index === 5);
 
     // Sound: start level music
     bossEntrancePlayed = false;
@@ -375,6 +397,17 @@ window.addEventListener('keydown', (e) => {
                 mario.dashCooldown = now;
                 console.log('XLR8 SPEED DASH!');
             }
+        } else if (mario.state === 'STINKFLY') {
+            // Slime Spit
+            const now = performance.now();
+            if (!mario.slimeCooldown || now - mario.slimeCooldown > 400) {
+                mario.slimeCooldown = now;
+                const fx = mario.x + mario.width / 2 - 8;
+                const fy = mario.y + mario.height;
+                entities.push(new Slimeball(fx, fy, mario.facingRight));
+                sfx.stomp(); // Plop sound
+                mario.vy = Math.min(0, mario.vy - 3); // recoil
+            }
         }
     }
 
@@ -414,6 +447,9 @@ function gameLoop(timestamp) {
         if (gameState === 'PLAYING') {
             if (bomba && !bomba.dead) {
                 bomba.update(deltaTime, level, mario.x + mario.width/2, mario.y + mario.height/2);
+            }
+            if (gomrog && !gomrog.dead) {
+                gomrog.update(deltaTime, level, mario.x, mario.y);
             }
             mario.update(deltaTime, level);
 
@@ -526,10 +562,14 @@ function gameLoop(timestamp) {
                     sfx.stopMusic();
                     showLevelModal('LEVEL 3 COMPLETE!', 'You escaped HELL! The flames are behind you.', true);
                 } else if (currentLevelIndex === 4) {
+                    sfx.levelComplete();
+                    sfx.stopMusic();
+                    showLevelModal('LEVEL 4 COMPLETE!', 'XLR8 got you through! Next stop: The Sewers.', true);
+                } else if (currentLevelIndex === 5) {
                     mario.victory = true;
                     sfx.levelComplete();
                     sfx.stopMusic();
-                    showLevelModal('LEVEL 4 COMPLETE!', 'XLR8 — nothing can catch you! The universe is safe… for now.', false);
+                    showLevelModal('LEVEL 5 COMPLETE!', 'Stinkfly prevailed! The universe is safe...', false);
                 } else {
                     mario.victory = true;
                     showLevelModal('YOU WIN!', 'The universe is safe… for now.', false);
@@ -560,7 +600,14 @@ function gameLoop(timestamp) {
 
             // ── Entities ──────────────────────
             entities.forEach(entity => {
-                entity.update(deltaTime, level);
+                if (entity.type === 'gomrog') {
+                    // Gomrog updated earlier but we do it here if needed, or skip it
+                    // To avoid double updates, let's just skip it here
+                } else if (entity.type === 'bomba') {
+                    // skipped to avoid double update
+                } else {
+                    entity.update(deltaTime, level);
+                }
                 if (entity.dead) return;
 
                 // ── Fireball hits enemies ─────
@@ -583,6 +630,29 @@ function gameLoop(timestamp) {
                         }
                     });
                     return; // Don't check mario collision for fireballs
+                } else if (entity.type === 'slimeball') {
+                    entities.forEach(target => {
+                        if (target.dead || target === entity) return;
+                        if (target.type === 'fireball' || target.type === 'slimeball') return;
+                        
+                        if (target.type === 'gomrog') {
+                            const tRect = target.getTongueRect();
+                            if (tRect && checkEntityCollision(entity, tRect) && target.state === 'TONGUE_ATTACK') {
+                                target.takeDamage();
+                                entity.dead = true;
+                                sfx.bossHit();
+                            } else if (checkEntityCollision(entity, target)) {
+                                entity.dead = true; // blocked by armor/body
+                            }
+                        } else if (checkEntityCollision(entity, target)) {
+                            if (target.type === 'ooze_goomba' || target.type === 'goomba') {
+                                target.dead = true;
+                                entity.dead = true;
+                                sfx.stomp();
+                            }
+                        }
+                    });
+                    return;
                 }
 
                 if (checkEntityCollision(mario, entity)) {
@@ -614,7 +684,7 @@ function gameLoop(timestamp) {
                             sfx.stomp();
                             mario.vy = -8;
                         } else {
-                            if (mario.state === 'FOURARMS' || mario.state === 'HEATBLAST' || mario.state === 'XLR8') {
+                            if (mario.state === 'FOURARMS' || mario.state === 'HEATBLAST' || mario.state === 'XLR8' || mario.state === 'STINKFLY') {
                                 mario.state = 'SMALL';
                                 mario.width = 32;
                                 mario.height = 32;
@@ -675,6 +745,30 @@ function gameLoop(timestamp) {
                         renderAlienGrid();
                         openOmnitrixPanel();
 
+                    } else if (entity.type === 'stinkfly_item') {
+                        entity.dead = true;
+                        ALIENS[3].unlocked = true;
+                        ALIENS[3].introMessage = 'I am Stinkfly! Press and hold [Up] to hover! Press [F] to spit toxic slime! 🪰';
+                        sfx.collectItem();
+                        renderAlienGrid();
+                        openOmnitrixPanel();
+
+                    } else if (entity.type === 'ooze_goomba') {
+                        // Level 5 Enemies
+                        if (mario.vy > 0 && mario.y + mario.height < entity.y + entity.height / 2 + 10) {
+                            entity.dead = true;
+                            sfx.stomp();
+                            mario.vy = -8;
+                        } else {
+                            if (mario.state === 'FOURARMS' || mario.state === 'HEATBLAST' || mario.state === 'XLR8' || mario.state === 'STINKFLY') {
+                                mario.revertToSmall();
+                                mario.vy = -5;
+                            } else {
+                                sfx.death();
+                                sfx.stopMusic();
+                                gameState = 'GAMEOVER';
+                            }
+                        }
                     } else if (entity.type === 'turtumba') {
                         // Turtumba — only XLR8 dash can damage
                         if (mario.dashActive) {
@@ -739,6 +833,20 @@ function gameLoop(timestamp) {
                 }
             }
 
+            // Gomrog tongue collisions
+            if (gomrog && !gomrog.dead && gomrog.tongueLength > 0) {
+                const rect = gomrog.getTongueRect();
+                if (rect && checkEntityCollision(mario, rect)) {
+                    if (mario.state === 'FOURARMS' || mario.state === 'HEATBLAST' || mario.state === 'XLR8' || mario.state === 'STINKFLY') {
+                        mario.revertToSmall();
+                        mario.vy = -5;
+                        mario.vx = -10; // push left
+                    } else {
+                        gameState = 'GAMEOVER';
+                    }
+                }
+            }
+
             // Remove dead entities
             for (let i = entities.length - 1; i >= 0; i--) {
                 if (entities[i].dead) {
@@ -769,6 +877,18 @@ function gameLoop(timestamp) {
                         bombaDefeated = true;
                         bomba = null;
                         console.log('BOMBA DEFEATED!');
+                        const flagX = level.cols - 2;
+                        for (let fy = 4; fy < level.rows; fy++) {
+                            level.tiles[fy][flagX] = 5;
+                        }
+                        level.finishCols.set(flagX, { topRow: 4, bottomRow: level.rows - 1 });
+                    }
+                    if (entities[i] === gomrog && gomrog.dead) {
+                        gomrogDefeated = true;
+                        gomrog = null;
+                        console.log('GOMROG DEFEATED!');
+                        screenShake = 30;
+                        sfx.bossDefeated();
                         const flagX = level.cols - 2;
                         for (let fy = 4; fy < level.rows; fy++) {
                             level.tiles[fy][flagX] = 5;
@@ -840,6 +960,12 @@ function gameLoop(timestamp) {
                     const dist = Math.abs(mario.x - turtumba.x);
                     if (dist < 500) {
                         sfx.bossEntrance('TURTUMBA');
+                        bossEntrancePlayed = true;
+                    }
+                } else if (currentLevelIndex === 5 && gomrog && !gomrog.dead) {
+                    const dist = Math.abs(mario.x - gomrog.x);
+                    if (dist < 500) {
+                        sfx.bossEntrance('GOOMBABA'); // reuse goombaba theme for now
                         bossEntrancePlayed = true;
                     }
                 }
@@ -973,6 +1099,7 @@ function gameLoop(timestamp) {
                 'The Four Arms Level',
                 'Welcome to HELL 🔥',
                 'XLR8 — LIGHT SPEED! ⚡',
+                'The Toxic Sewers 🪰'
             ];
             const subtitle = titles[currentLevelIndex] || `Level ${currentLevelIndex}`;
             ctx.save();
@@ -981,6 +1108,7 @@ function gameLoop(timestamp) {
             let titleColor = '#FFD700';
             if (currentLevelIndex === 3) { titleBg = 'rgba(80,0,0,0.75)'; titleColor = '#FF4400'; }
             else if (currentLevelIndex === 4) { titleBg = 'rgba(0,5,32,0.80)'; titleColor = '#00FFFF'; }
+            else if (currentLevelIndex === 5) { titleBg = 'rgba(20,40,20,0.80)'; titleColor = '#88FF00'; }
             ctx.fillStyle = titleBg;
             ctx.fillRect(GAME_WIDTH / 2 - 230, GAME_HEIGHT / 3 - 38, 460, 80);
             ctx.fillStyle = titleColor;
@@ -1005,6 +1133,7 @@ function gameLoop(timestamp) {
         if (mario.state === 'FOURARMS') hudAlien = ' 💪';
         else if (mario.state === 'HEATBLAST') hudAlien = ' 🔥';
         else if (mario.state === 'XLR8') hudAlien = ' ⚡';
+        else if (mario.state === 'STINKFLY') hudAlien = ' 🪰';
         const gpReady = mario.state === 'FOURARMS' && (performance.now() - mario.groundPoundCooldown > 1500);
         const dashReady = mario.state === 'XLR8' && (performance.now() - mario.dashCooldown > mario.dashCooldownMs);
         let hudAction = '';
@@ -1018,11 +1147,12 @@ function gameLoop(timestamp) {
         }
         else if (mario.state === 'HEATBLAST') hudAction = ` [F]🔥×${mario.fireballPower}`;
         else if (mario.state === 'XLR8') hudAction = dashReady ? ' [F]⚡DASH' : (mario.dashActive ? ' ⚡DASHING!' : ' [F]⏳');
+        else if (mario.state === 'STINKFLY') hudAction = ' [F]💧Slime | [Up]Hover';
         const hudDoubleJump = mario.doubleJumpsRemaining > 0 ? ` ⬆⬆×${mario.doubleJumpsRemaining}` : '';
         ctx.fillText(`Level ${currentLevelIndex}${hudWatch}${hudAlien}${hudAction}${hudDoubleJump}`, 18, 30);
 
         // ── Alien Countdown Timer HUD ─────────
-        if (mario.alienTimer > 0 && (mario.state === 'FOURARMS' || mario.state === 'HEATBLAST' || mario.state === 'XLR8')) {
+        if (mario.alienTimer > 0 && (mario.state === 'FOURARMS' || mario.state === 'HEATBLAST' || mario.state === 'XLR8' || mario.state === 'STINKFLY')) {
             const timerBarW = 160;
             const timerBarH = 10;
             const timerX = 8;
@@ -1052,6 +1182,37 @@ function gameLoop(timestamp) {
             ctx.fillStyle = mario.alienTimerRemaining <= 3 ? '#FF4444' : '#FFD700';
             ctx.font = 'bold 11px sans-serif';
             ctx.fillText(`🔄 ${mario.alienTimerRemaining}s`, timerX + timerBarW + 10, timerY + 13);
+        }
+
+        // ── Stinkfly Wing Stamina HUD ─────────
+        if (mario.state === 'STINKFLY') {
+            const staminaBarW = 160;
+            const staminaBarH = 6;
+            const sx = 8;
+            const sy = 65; // just below the alien timer
+            const sRatio = mario.wingStamina / mario.maxWingStamina;
+
+            // Background
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.fillRect(sx, sy, staminaBarW + 50, staminaBarH + 8);
+
+            // Bar track
+            ctx.fillStyle = '#333';
+            ctx.fillRect(sx + 4, sy + 4, staminaBarW, staminaBarH);
+
+            // Colored bar (cyan -> blue)
+            ctx.fillStyle = '#00FFCC';
+            ctx.fillRect(sx + 4, sy + 4, staminaBarW * Math.max(0, sRatio), staminaBarH);
+
+            // Border
+            ctx.strokeStyle = '#888';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(sx + 4, sy + 4, staminaBarW, staminaBarH);
+
+            // Text
+            ctx.fillStyle = '#00FFCC';
+            ctx.font = 'bold 11px sans-serif';
+            ctx.fillText(`WING`, sx + staminaBarW + 10, sy + 11);
         }
 
         // ── Boss HP Bar (screen-space) ────────
@@ -1157,6 +1318,48 @@ function gameLoop(timestamp) {
             ctx.textAlign = 'left';
         }
 
+        // ── Gomrog UI HUD (screen-space) ────────
+        if (gomrog && !gomrog.dead && currentLevelIndex === 5) {
+            const barW = 300;
+            const barH = 16;
+            const barX = GAME_WIDTH / 2 - barW / 2;
+            const barY = 50;
+            const hpRatio = gomrog.hp / gomrog.maxHp;
+
+            ctx.fillStyle = 'rgba(0,40,0,0.7)';
+            ctx.fillRect(barX - 4, barY - 4, barW + 8, barH + 24);
+
+            ctx.fillStyle = '#333';
+            ctx.fillRect(barX, barY, barW, barH);
+            const r = Math.floor(255 * (1 - hpRatio));
+            const g = Math.floor(255 * hpRatio);
+            ctx.fillStyle = `rgb(${r}, ${g}, 0)`;
+            ctx.fillRect(barX, barY, barW * hpRatio, barH);
+            ctx.strokeStyle = '#00FF00';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(barX, barY, barW, barH);
+            ctx.lineWidth = 1;
+
+            ctx.fillStyle = '#00FF66';
+            ctx.font = 'bold 12px sans-serif';
+            ctx.textAlign = 'center';
+            if (gomrog.state === 'TONGUE_ATTACK') {
+                ctx.fillText(`🐸 GOMROG — SHOOT MUCUS AT HIS TONGUE! ${gomrog.hp}/${gomrog.maxHp}`, GAME_WIDTH / 2, barY + barH + 14);
+            } else {
+                ctx.fillText(`🐸 GOMROG — WAIT FOR HIM TO ELONGATE HIS TONGUE... ${gomrog.hp}/${gomrog.maxHp}`, GAME_WIDTH / 2, barY + barH + 14);
+            }
+            ctx.textAlign = 'left';
+        }
+
+        // Gomrog defeated message
+        if (gomrogDefeated && currentLevelIndex === 5) {
+            ctx.fillStyle = '#00FF66';
+            ctx.font = 'bold 20px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('GOMROG DEFEATED! → REACH THE EXIT!', GAME_WIDTH / 2, 80);
+            ctx.textAlign = 'left';
+        }
+
         // Slow zone warning
         if (currentLevelIndex === 4 && level.slowZoneStart > 0 && turtumba && !turtumba.dead) {
             if (mario.x >= level.slowZoneStart && mario.state !== 'XLR8') {
@@ -1203,3 +1406,25 @@ function checkEntityCollision(rect1, rect2) {
 
 // Start!
 requestAnimationFrame(gameLoop);
+
+// ── TEMPORARY DEV TOOLS ──────────────────
+window.devWarp = function(levelNum) {
+    console.log('[DEV] Warping to Level ' + levelNum);
+    
+    // Give all unlocks up to the current level
+    mario.hasWatch = true;
+    for (let i = 0; i < levelNum - 1; i++) {
+        if (ALIENS[i]) ALIENS[i].unlocked = true;
+    }
+    
+    // Hide UI panels if any
+    document.getElementById('level-complete-modal').style.display = 'none';
+    document.getElementById('omnitrix-intro').style.display = 'none';
+    closeOmnitrixPanel();
+    
+    // Reset state & load level
+    sfx.stopMusic();
+    gameState = 'PLAYING';
+    currentLevelIndex = levelNum;
+    loadLevel(currentLevelIndex, { hasWatch: true });
+};

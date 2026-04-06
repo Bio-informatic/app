@@ -9,10 +9,10 @@ export class Level {
 
         let map = [];
 
-        if (levelIndex === 1 || levelIndex === 2 || levelIndex === 3 || levelIndex === 4) {
-            // ── Unified Procedural Map Generation ────────────────────────
+        // LEVEL GENERATION
+        if (levelIndex === 1 || levelIndex === 2 || levelIndex === 3 || levelIndex === 4 || levelIndex === 5) {
             const ROWS = 24;
-            const COLS = levelIndex === 4 ? 250 : (levelIndex === 3 ? 200 : 150);
+            const COLS = levelIndex === 5 ? 200 : (levelIndex === 4 ? 250 : (levelIndex === 3 ? 200 : 150));
             const TS = this.tileSize;
             const skyChar = '.';
             const groundChar = '1';
@@ -57,6 +57,7 @@ export class Level {
             if (levelIndex === 2) bossZoneStart = COLS - 30;
             else if (levelIndex === 3) bossZoneStart = COLS - 22;
             else if (levelIndex === 4) bossZoneStart = COLS - 52;
+            else if (levelIndex === 5) bossZoneStart = COLS - 40;
 
             // Store slow zone bounds for game.js
             this.slowZoneStart = levelIndex === 4 ? bossZoneStart * TS : -1;
@@ -70,7 +71,9 @@ export class Level {
                     for (let y = GROUND_Y; y < ROWS; y++) {
                         for (let gx = 0; gx < gapWidth; gx++) {
                             if (curX + gx < bossZoneStart - 3) {
-                                if (levelIndex === 3) {
+                                if (levelIndex === 5) {
+                                    map[y][curX + gx] = lavaChar; // Represents slime!
+                                } else if (levelIndex === 3) {
                                     map[y][curX + gx] = lavaChar;
                                 } else {
                                     map[y][curX + gx] = (Math.random() > 0.5) ? unstableChar : skyChar;
@@ -139,11 +142,17 @@ export class Level {
                 // Enemy placement
                 if (Math.random() > 0.6) {
                     const goombaY = hasGroundBricks ? baseTopY - 1 : GROUND_Y - 1;
-                    if (goombaY > 1) {
+                    if (goombaY > 2 && map[goombaY][curX] === skyChar) {
                         let goombaType = 'goomba';
-                        if (levelIndex === 3) goombaType = 'lava_goomba';
+                        if (levelIndex === 5) goombaType = 'ooze_goomba';
+                        else if (levelIndex === 3) goombaType = 'lava_goomba';
                         else if (levelIndex === 4) goombaType = 'shield_drone';
-                        this.entities.push({ x: (curX + 1) * TS, y: goombaY * TS, type: goombaType });
+
+                        this.entities.push({
+                            x: (curX + Math.floor(width / 2)) * TS,
+                            y: (goombaY) * TS,
+                            type: goombaType
+                        });
                     }
                 }
 
@@ -281,6 +290,29 @@ export class Level {
                 });
             }
 
+            // ── Level 5 Boss Arena ──────────────────────────────────
+            if (levelIndex === 5) {
+                // Large poison pond
+                for (let y = GROUND_Y; y < ROWS; y++) {
+                    for (let x = bossZoneStart; x < COLS; x++) {
+                        map[y][x] = lavaChar; // poison slime
+                    }
+                }
+                
+                // Walls on sides of arena
+                for (let y = GROUND_Y - 6; y < GROUND_Y; y++) {
+                    map[y][bossZoneStart] = brickChar;
+                    map[y][COLS - 1] = brickChar;
+                }
+
+                // Place Gomrog boss marker (floating brick logic handled in Gomrog.js)
+                this.entities.push({
+                    x: (bossZoneStart + 20) * TS,
+                    y: (GROUND_Y - 3) * TS,
+                    type: 'gomrog'
+                });
+            }
+
             // Convert to strings
             for (let y = 0; y < ROWS; y++) {
                 map[y] = map[y].join('');
@@ -322,10 +354,39 @@ export class Level {
                 }
             }
         }
+        
+        // Level 2 special: Heatblast unlock
+        if (this.levelIndex === 2) {
+            this.entities.push({ x: 300, y: 150, type: 'heatblast_item' });
+        }
+        
+        // Level 3 special: XLR8 unlock
+        if (this.levelIndex === 3) {
+            this.entities.push({ x: 300, y: 150, type: 'xlr8_item' });
+        }
+
+        // Level 5 special: Stinkfly unlock
+        if (this.levelIndex === 5) {
+            this.entities.push({ x: 300, y: 150, type: 'stinkfly_item' });
+        }
     }
 
     // ── Theme palettes ─────────────────────────────────────────────
     getTheme() {
+        if (this.levelIndex === 5) {
+            return {
+                sky:            '#0A1A0A',
+                ground:         '#1A331A',
+                groundStroke:   '#081908',
+                brick:          '#224422',
+                brickStroke:    '#112211',
+                mystery:        '#00FF88',
+                pipe:           '#003300',
+                unstable:       '#335533',
+                unstableStroke: '#1A2A1A',
+                cloud:          'rgba(50, 200, 50, 0.1)',
+            };
+        }
         if (this.levelIndex === 4) {
             return {
                 sky:            '#050520',
@@ -389,6 +450,7 @@ export class Level {
     draw(ctx) {
         const t = this.getTheme();
         const ts = this.tileSize;
+        const now = performance.now();
 
         // Sky
         ctx.fillStyle = t.sky;
@@ -403,7 +465,6 @@ export class Level {
             ctx.fillRect(0, this.height - 200, this.width, 200);
 
             // Floating ember particles
-            const now = performance.now();
             ctx.fillStyle = '#FF6600';
             for (let i = 0; i < 40; i++) {
                 const ex = (i * 173 + now / 20) % this.width;
@@ -438,6 +499,17 @@ export class Level {
                 const cx = i * 400 + 60;
                 ctx.fillRect(cx, 30 + Math.sin(i * 0.5) * 15, 120, 3);
                 ctx.fillRect(cx + 30, 20 + Math.sin(i * 0.5) * 15, 60, 2);
+            }
+        } else if (this.levelIndex === 5) {
+            // Heavy Poison Smog for Sewers
+            ctx.fillStyle = t.cloud;
+            for (let i = 0; i < 40; i++) {
+                const cx = (i * 150 + now / 15) % (this.width + 200) - 100;
+                // Layer 1: High Smog
+                ctx.fillRect(cx, 20 + Math.sin(i) * 30, 200, 40);
+                ctx.fillRect(cx + 30, 50 + Math.sin(i*2) * 20, 150, 30);
+                // Layer 2: Low-hanging fog over the map
+                ctx.fillRect((cx * 1.5) % this.width, this.height - 250 + Math.sin(i*3) * 50, 300, 50);
             }
         } else if (this.levelIndex !== 3) {
             ctx.fillStyle = t.cloud;
@@ -556,22 +628,36 @@ export class Level {
                         break;
                     }
 
-                    case 9: { // Lava tile
+                    case 9: { // Lava tile (Poison for Level 5)
                         const now = performance.now();
+                        const isPoison = (this.levelIndex === 5);
+                        
                         // Base lava color
-                        ctx.fillStyle = '#CC2200';
+                        ctx.fillStyle = isPoison ? '#114411' : '#CC2200';
                         ctx.fillRect(px, py, ts, ts);
+                        
                         // Animated surface bubbles
                         const bub1 = Math.sin(now / 300 + x * 0.7) * 0.3 + 0.5;
                         const bub2 = Math.sin(now / 200 + x * 1.3 + y) * 0.3 + 0.5;
-                        ctx.fillStyle = `rgba(255, 160, 0, ${bub1})`;
+                        ctx.fillStyle = isPoison ? `rgba(60, 200, 20, ${bub1})` : `rgba(255, 160, 0, ${bub1})`;
                         ctx.fillRect(px + 4, py + 4 + Math.sin(now / 400 + x) * 3, 10, 8);
-                        ctx.fillStyle = `rgba(255, 220, 50, ${bub2})`;
+                        ctx.fillStyle = isPoison ? `rgba(150, 255, 50, ${bub2})` : `rgba(255, 220, 50, ${bub2})`;
                         ctx.fillRect(px + 18, py + 8 + Math.sin(now / 350 + x * 2) * 4, 8, 6);
+                        
                         // Glow on top edge
                         if (y > 0 && this.tiles[y - 1] && this.tiles[y - 1][x] === 0) {
-                            ctx.fillStyle = 'rgba(255, 100, 0, 0.4)';
+                            ctx.fillStyle = isPoison ? 'rgba(80, 255, 20, 0.4)' : 'rgba(255, 100, 0, 0.4)';
                             ctx.fillRect(px, py - 4, ts, 6);
+                            
+                            // Poison Smoke rising
+                            if (isPoison && x % 2 === 0) {
+                                ctx.fillStyle = `rgba(100, 255, 50, ${0.1 + Math.sin(now/500 + x) * 0.1})`;
+                                const sx = px + (Math.sin(now/1000 + x) * 5) + ts/2;
+                                const sy = py - 10 - ((now/50 + x*10) % 20);
+                                ctx.beginPath();
+                                ctx.arc(sx, sy, 4 + Math.sin(now/200)*2, 0, Math.PI*2);
+                                ctx.fill();
+                            }
                         }
                         break;
                     }
