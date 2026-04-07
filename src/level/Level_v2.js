@@ -292,6 +292,33 @@ export class Level {
 
             // ── Level 5 Boss Arena ──────────────────────────────────
             if (levelIndex === 5) {
+                const minTopY = 1;
+                const maxTopY = GROUND_Y - 5;
+                const skyStartX = 18;
+                const skyEndX = bossZoneStart - 18;
+                const verticalBands = 5;
+                const bandStep = Math.max(2, Math.floor((maxTopY - minTopY) / (verticalBands - 1)));
+
+                for (let band = 0; band < verticalBands; band++) {
+                    const baseTopY = Math.min(maxTopY, minTopY + band * bandStep);
+                    const xOffset = (band % 2) * 3;
+
+                    for (let columnX = skyStartX + xOffset; columnX < skyEndX; columnX += 9) {
+                        if (Math.random() < 0.2) continue;
+
+                        const brickHeight = Math.floor(Math.random() * 4) + 1;
+                        const jitter = Math.floor(Math.random() * 3) - 1;
+                        const topY = Math.max(minTopY, Math.min(maxTopY, baseTopY + jitter));
+
+                        for (let py = 0; py < brickHeight; py++) {
+                            const y = topY + py;
+                            if (y < GROUND_Y - 2 && map[y][columnX] === skyChar) {
+                                map[y][columnX] = brickChar;
+                            }
+                        }
+                    }
+                }
+
                 // Large poison pond
                 for (let y = GROUND_Y; y < ROWS; y++) {
                     for (let x = bossZoneStart; x < COLS; x++) {
@@ -365,10 +392,6 @@ export class Level {
             this.entities.push({ x: 300, y: 150, type: 'xlr8_item' });
         }
 
-        // Level 5 special: Stinkfly unlock
-        if (this.levelIndex === 5) {
-            this.entities.push({ x: 300, y: 150, type: 'stinkfly_item' });
-        }
     }
 
     // ── Theme palettes ─────────────────────────────────────────────

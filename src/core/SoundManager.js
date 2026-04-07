@@ -12,6 +12,7 @@ export class SoundManager {
         this._musicPlaying = false;
         this.sfxVolume = 1.0;
         this.baseMasterVol = 0.30;
+        this._voices = [];
         this._initOnGesture();
     }
 
@@ -26,6 +27,7 @@ export class SoundManager {
             this.musicGain = this.ctx.createGain();
             this.musicGain.gain.value = 0.06; // Very quiet background
             this.musicGain.connect(this.masterGain);
+            this._loadSpeechVoices();
             console.log('🔊 SoundManager initialised');
         };
         ['click', 'keydown', 'touchstart'].forEach(ev =>
@@ -35,9 +37,41 @@ export class SoundManager {
 
     _ok() { return this.ctx && !this.muted; }
 
+    _loadSpeechVoices() {
+        if (!('speechSynthesis' in window)) return;
+        const load = () => {
+            this._voices = window.speechSynthesis.getVoices();
+        };
+        load();
+        window.speechSynthesis.onvoiceschanged = load;
+    }
+
+    _pickVoice(preferred = 'default') {
+        if (!this._voices || this._voices.length === 0) return null;
+        const englishVoices = this._voices.filter(voice => /en/i.test(voice.lang || ''));
+        const pool = englishVoices.length > 0 ? englishVoices : this._voices;
+        const naturalVoices = pool.filter(voice => voice.localService || /natural|neural|premium|enhanced|google|microsoft/i.test(voice.name));
+        const preferredPool = naturalVoices.length > 0 ? naturalVoices : pool;
+        const findMatch = (patterns, sourcePool = preferredPool) => sourcePool.find(voice => patterns.some(pattern => pattern.test(`${voice.name} ${voice.lang || ''}`)));
+
+        if (preferred === 'old_woman') {
+            return findMatch([/female/i, /woman/i, /zira/i, /samantha/i, /victoria/i, /karen/i, /aria/i]) || preferredPool[0];
+        }
+        if (preferred === 'child') {
+            return findMatch([/child/i, /junior/i, /kid/i]) || findMatch([/female/i, /zira/i, /samantha/i, /aria/i]) || preferredPool[0];
+        }
+        if (preferred === 'old_man' || preferred === 'mature_man') {
+            return findMatch([/male/i, /david/i, /mark/i, /george/i, /daniel/i, /guy/i, /tony/i]) || preferredPool[0];
+        }
+        return preferredPool[0];
+    }
+
     toggleMute() {
         this.muted = !this.muted;
         if (this.masterGain) this.masterGain.gain.value = this.muted ? 0 : this.baseMasterVol * this.sfxVolume;
+        if (this.muted && 'speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+        }
         return this.muted;
     }
 
@@ -315,6 +349,54 @@ export class SoundManager {
             const echoVol = 0.06 / i;
             this._osc('sawtooth', 50 + i * 5, echoT, 0.15, echoVol);
         }
+    }
+
+    bossVoiceLine(bossName = 'GOOMBABA') {
+        if (this.muted || !('speechSynthesis' in window)) return;
+
+        const presets = {
+            GOOMBABA: {
+                text: 'Goombaba-hahaha, you are in my hell, kid!',
+                voice: 'old_woman',
+                rate: 0.9,
+                pitch: 0.92,
+                volume: 0.95
+            },
+            BOMBA: {
+                text: 'Bom-bom-bom, you are done!',
+                voice: 'child',
+                rate: 1.02,
+                pitch: 1.28,
+                volume: 0.98
+            },
+            TURTUMBA: {
+                text: 'Turrrr, this is danger, boy. Be wise!',
+                voice: 'old_man',
+                rate: 0.88,
+                pitch: 0.78,
+                volume: 0.95
+            },
+            GOMROG: {
+                text: 'Grog-grog, be careful. You will be swallowed!',
+                voice: 'mature_man',
+                rate: 0.9,
+                pitch: 0.74,
+                volume: 1.0
+            }
+        };
+
+        const preset = presets[bossName];
+        if (!preset) return;
+
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(preset.text);
+        utterance.lang = 'en-US';
+        utterance.rate = preset.rate;
+        utterance.pitch = preset.pitch;
+        utterance.volume = preset.volume;
+        const voice = this._pickVoice(preset.voice);
+        if (voice) utterance.voice = voice;
+        window.speechSynthesis.speak(utterance);
     }
 
     // 10 ── Boss Hit ───────────────────────────────────────────────

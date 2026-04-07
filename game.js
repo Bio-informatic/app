@@ -60,17 +60,31 @@ const alienGrid = document.getElementById('alien-grid');
 
 // ─── Alien Roster Definition ─────────────────
 const ALIENS = [
-    { key: '0', name: 'Four Arms', icon: '💪', unlocked: false, lives: 25 },
-    { key: '1', name: 'Heatblast', icon: '🔥', unlocked: false, lives: 25 },
-    { key: '2', name: 'XLR8', icon: '⚡', unlocked: false, lives: 25 },
-    { key: '3', name: 'Stinkfly', icon: '🪰', unlocked: false, lives: 25 },
-    { key: '4', name: '???', icon: '👾', unlocked: false, lives: 25 },
+    { key: '1', name: 'Four Arms', icon: '💪', unlocked: false, lives: 25 },
+    { key: '2', name: 'Heatblast', icon: '🔥', unlocked: false, lives: 25 },
+    { key: '3', name: 'XLR8', icon: '⚡', unlocked: false, lives: 25 },
+    { key: '4', name: 'Stinkfly', icon: '🪰', unlocked: false, lives: 25 },
     { key: '5', name: '???', icon: '👾', unlocked: false, lives: 25 },
     { key: '6', name: '???', icon: '👾', unlocked: false, lives: 25 },
     { key: '7', name: '???', icon: '👾', unlocked: false, lives: 25 },
     { key: '8', name: '???', icon: '👾', unlocked: false, lives: 25 },
     { key: '9', name: '???', icon: '👾', unlocked: false, lives: 25 },
+    { key: '10', name: '???', icon: '👾', unlocked: false, lives: 25 },
 ];
+
+function getDefaultBoxEnemyType(levelIndex) {
+    if (levelIndex === 3) return 'lava_goomba';
+    if (levelIndex === 4) return 'shield_drone';
+    if (levelIndex === 5) return 'ooze_goomba';
+    return 'goomba';
+}
+
+function createEnemyByType(type, x, y) {
+    if (type === 'lava_goomba') return new LavaGoomba(x, y);
+    if (type === 'shield_drone') return new ShieldDrone(x, y);
+    if (type === 'ooze_goomba') return new OozeGoomba(x, y);
+    return new Goomba(x, y);
+}
 
 // ─── Build the alien grid HTML ────────────────
 function renderAlienGrid() {
@@ -96,9 +110,9 @@ function renderAlienGrid() {
     });
     const hintBar = document.getElementById('panel-hint-bar');
     if (introMsg) {
-        hintBar.innerHTML = `<span style="color:#FFD700;font-size:12px;">${introMsg}</span><br><br>Press <b>0–9</b> to transform • <b>C</b> to close`;
+        hintBar.innerHTML = `<span style="color:#FFD700;font-size:12px;">${introMsg}</span><br><br>Press <b>1–0</b> to transform • <b>C</b> to close`;
     } else {
-        hintBar.innerHTML = `Press <b>0–9</b> to transform • <b>C</b> to close`;
+        hintBar.innerHTML = `Press <b>1–0</b> to transform • <b>C</b> to close`;
     }
 }
 renderAlienGrid();
@@ -211,17 +225,13 @@ function assignBlockHit() {
                 else if (currentLevelIndex === 2) ItemClass = FourArmsItem;
                 else if (currentLevelIndex === 3) ItemClass = HeatblastItem;
                 else if (currentLevelIndex === 4) ItemClass = XLR8Item;
+                else if (currentLevelIndex === 5) ItemClass = StinkflyItem;
             }
 
             if (ItemClass) {
                 entities.push(new ItemClass(bx, by - 32));
             } else {
-                // Non-special box: spawn LavaGoomba in level 3, regular Goomba otherwise
-                if (currentLevelIndex === 3) {
-                    entities.push(new LavaGoomba(bx, by - 32));
-                } else {
-                    entities.push(new Goomba(bx, by - 32));
-                }
+                entities.push(createEnemyByType(getDefaultBoxEnemyType(currentLevelIndex), bx, by - 32));
             }
         }
     };
@@ -347,7 +357,7 @@ function showLevelModal(title, message, showNext) {
     modal.style.display = 'flex';
 }
 
-// ─── Input: C key, F key & 0–9 keys (one-shot keydown) ─────────
+// ─── Input: C key, F key & 1–0 keys (one-shot keydown) ─────────
 window.addEventListener('keydown', (e) => {
     // Toggle Omnitrix panel with C
     if (e.code === 'KeyC' && mario && mario.hasWatch && gameState !== 'PAUSED') {
@@ -411,10 +421,15 @@ window.addEventListener('keydown', (e) => {
         }
     }
 
-    // Number keys 0–9 transform when panel is open
+    // Number keys 1–0 transform when panel is open
     if (omnitrixPanelOpen) {
-        const idx = parseInt(e.key);
-        if (!isNaN(idx) && idx >= 0 && idx <= 9) {
+        let idx = -1;
+        if (e.key >= '1' && e.key <= '9') {
+            idx = parseInt(e.key, 10) - 1;
+        } else if (e.key === '0') {
+            idx = 9;
+        }
+        if (idx >= 0 && idx < ALIENS.length) {
             activateAlien(idx);
         }
     }
@@ -637,12 +652,12 @@ function gameLoop(timestamp) {
                         
                         if (target.type === 'gomrog') {
                             const tRect = target.getTongueRect();
-                            if (tRect && checkEntityCollision(entity, tRect) && target.state === 'TONGUE_ATTACK') {
+                            if (tRect && checkEntityCollision(entity, tRect) && target.tongueLength > 0) {
+                                entity.dead = true; // Tongue blocks the shot
+                            } else if (checkEntityCollision(entity, target)) {
                                 target.takeDamage();
                                 entity.dead = true;
                                 sfx.bossHit();
-                            } else if (checkEntityCollision(entity, target)) {
-                                entity.dead = true; // blocked by armor/body
                             }
                         } else if (checkEntityCollision(entity, target)) {
                             if (target.type === 'ooze_goomba' || target.type === 'goomba') {
@@ -667,7 +682,7 @@ function gameLoop(timestamp) {
                     } else if (entity.type === 'fourarms_item') {
                         entity.dead = true;
                         ALIENS[0].unlocked = true;
-                        ALIENS[0].introMessage = 'My name is Four Arms. If you need me, press "0".';
+                        ALIENS[0].introMessage = 'My name is Four Arms. If you need me, press "1".';
                         sfx.collectItem();
                         renderAlienGrid();
                         openOmnitrixPanel();
@@ -948,24 +963,28 @@ function gameLoop(timestamp) {
                     const dist = Math.abs(mario.x - bomba.x);
                     if (dist < 500) {
                         sfx.bossEntrance('BOMBA');
+                        sfx.bossVoiceLine('BOMBA');
                         bossEntrancePlayed = true;
                     }
                 } else if (currentLevelIndex === 3 && goombaba && !goombaba.dead) {
                     const dist = Math.abs(mario.x - goombaba.x);
                     if (dist < 500) {
                         sfx.bossEntrance('GOOMBABA');
+                        sfx.bossVoiceLine('GOOMBABA');
                         bossEntrancePlayed = true;
                     }
                 } else if (currentLevelIndex === 4 && turtumba && !turtumba.dead) {
                     const dist = Math.abs(mario.x - turtumba.x);
                     if (dist < 500) {
                         sfx.bossEntrance('TURTUMBA');
+                        sfx.bossVoiceLine('TURTUMBA');
                         bossEntrancePlayed = true;
                     }
                 } else if (currentLevelIndex === 5 && gomrog && !gomrog.dead) {
                     const dist = Math.abs(mario.x - gomrog.x);
                     if (dist < 500) {
                         sfx.bossEntrance('GOOMBABA'); // reuse goombaba theme for now
+                        sfx.bossVoiceLine('GOMROG');
                         bossEntrancePlayed = true;
                     }
                 }
@@ -1344,9 +1363,9 @@ function gameLoop(timestamp) {
             ctx.font = 'bold 12px sans-serif';
             ctx.textAlign = 'center';
             if (gomrog.state === 'TONGUE_ATTACK') {
-                ctx.fillText(`🐸 GOMROG — SHOOT MUCUS AT HIS TONGUE! ${gomrog.hp}/${gomrog.maxHp}`, GAME_WIDTH / 2, barY + barH + 14);
+                ctx.fillText(`🐸 GOMROG — AVOID HIS TONGUE AND SHOOT GOMROG! ${gomrog.hp}/${gomrog.maxHp}`, GAME_WIDTH / 2, barY + barH + 14);
             } else {
-                ctx.fillText(`🐸 GOMROG — WAIT FOR HIM TO ELONGATE HIS TONGUE... ${gomrog.hp}/${gomrog.maxHp}`, GAME_WIDTH / 2, barY + barH + 14);
+                ctx.fillText(`🐸 GOMROG — HIT HIS BODY 10 TIMES TO DROP HIM IN THE POND! ${gomrog.hp}/${gomrog.maxHp}`, GAME_WIDTH / 2, barY + barH + 14);
             }
             ctx.textAlign = 'left';
         }
