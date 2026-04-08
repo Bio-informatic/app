@@ -50,6 +50,11 @@ canvas.level5-theme {
     /* Dark green swamp for Stinkfly level */
 }
 
+canvas.level6-theme {
+    background-color: #0A0A0C;
+    /* Destroyed world dark cyber sky */
+}
+
 #ui-layer {
     position: absolute;
     top: 10px;

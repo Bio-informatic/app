@@ -382,6 +382,13 @@ export class SoundManager {
                 rate: 0.9,
                 pitch: 0.74,
                 volume: 1.0
+            },
+            GOMBOTO: {
+                text: 'Bzzzt... You will be assimilated! Bzzzt!',
+                voice: 'mature_man',
+                rate: 0.7,
+                pitch: 0.2,
+                volume: 1.0
             }
         };
 
@@ -641,6 +648,8 @@ export class SoundManager {
         else if (levelIndex === 2) this._musicLevel2();
         else if (levelIndex === 3) this._musicLevel3();
         else if (levelIndex === 4) this._musicLevel4();
+        else if (levelIndex === 5) this._musicLevel3(); // Re-use Hell drone for sludge
+        else if (levelIndex === 6) this._musicLevel4(); // Re-use Cyberpunk for tech world
     }
 
     //── Level 1: Bright, bouncy C-major chiptune ──────────────────

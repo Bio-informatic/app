@@ -117,6 +117,17 @@ export class Mario {
         this.wingStamina = this.maxWingStamina;
     }
 
+    transformToUpgrade() {
+        if (this.state === 'UPGRADE') return;
+        this.state = 'UPGRADE';
+        this.transforming = true;
+        this.transformTimer = performance.now();
+        this.alienTimer = performance.now();
+        if (this.height < 50) this.y -= (50 - this.height);
+        this.width = 36;
+        this.height = 50;
+    }
+
     update(deltaTime, level) {
         if (this.transforming) {
             if (performance.now() - this.transformTimer > 1000) {
@@ -125,7 +136,7 @@ export class Mario {
         }
 
         // Alien countdown timer — revert to SMALL after 15 seconds
-        if (this.alienTimer > 0 && (this.state === 'FOURARMS' || this.state === 'HEATBLAST' || this.state === 'XLR8' || this.state === 'STINKFLY')) {
+        if (this.alienTimer > 0 && (this.state === 'FOURARMS' || this.state === 'HEATBLAST' || this.state === 'XLR8' || this.state === 'STINKFLY' || this.state === 'UPGRADE')) {
             const elapsed = performance.now() - this.alienTimer;
             this.alienTimerRemaining = Math.max(0, Math.ceil((this.alienTimerDuration - elapsed) / 1000));
             if (elapsed >= this.alienTimerDuration) {
@@ -190,13 +201,14 @@ export class Mario {
             }
         } else {
             if (jumpPressed && this.grounded) {
-                this.vy = this.state === 'FOURARMS' ? -14 : -12;
+                // Upgrade has higher floaty jump
+                this.vy = this.state === 'FOURARMS' ? -14 : (this.state === 'UPGRADE' ? -15 : -12);
                 this.grounded = false;
                 this.canDoubleJump = true;
                 this._justJumped = true;
             } else if (jumpJustPressed && !this.grounded && this.canDoubleJump && this.doubleJumpsRemaining > 0) {
                 // Double jump — higher boost
-                this.vy = this.state === 'FOURARMS' ? -18 : -16;
+                this.vy = this.state === 'FOURARMS' ? -18 : (this.state === 'UPGRADE' ? -19 : -16);
                 this.canDoubleJump = false;
                 this.doubleJumpsRemaining--;
                 this._justJumped = true;
@@ -253,6 +265,18 @@ export class Mario {
         // Screen Boundaries
         if (this.x < 0) this.x = 0;
         if (this.y > 2000) this.y = 0;
+
+        // Controlled Boss
+        if (this.controllingBoss) {
+            this.width = this.controllingBoss.width;
+            this.height = this.controllingBoss.height;
+            this.controllingBoss.x = this.x;
+            this.controllingBoss.y = this.y;
+            this.controllingBoss.vx = this.vx;
+            this.viewYOffset = 40; // shift draw up or let the boss render
+        } else {
+            // Restore width if dropped?
+        }
     }
 
     // Non-solid tiles: 0 (air), 9 (lava), 10 (speed panel), 11 (electric fence)
@@ -356,6 +380,8 @@ export class Mario {
             this.drawXLR8(ctx);
         } else if (this.state === 'STINKFLY') {
             this.drawStinkfly(ctx);
+        } else if (this.state === 'UPGRADE') {
+            this.drawUpgrade(ctx);
         } else {
             this.drawMario(ctx);
         }
@@ -808,6 +834,117 @@ export class Mario {
         // Legs back
         ctx.fillRect(bX + 10, bY + 35, 4, 15);
         ctx.fillRect(bX + 8, bY + 45, -6, 4);
+
+        ctx.restore();
+    }
+
+    drawUpgrade(ctx) {
+        const cx = this.x + this.width / 2;
+        const cy = this.y + this.height; // anchor at bottom
+        const now = performance.now();
+
+        // Jelly physics scale based on velocity
+        let scaleX = 1.0;
+        let scaleY = 1.0;
+        if (!this.grounded) {
+            scaleY = 1.0 + Math.abs(this.vy) * 0.03; // stretch vertical
+            scaleX = 1.0 - Math.abs(this.vy) * 0.015; // squash horizontal
+        } else if (this.vx !== 0) {
+            scaleX = 1.0 + Math.abs(this.vx) * 0.05; // stretch horizontal
+            scaleY = 1.0 - Math.abs(this.vx) * 0.02; // squash vertical
+            // liquid wobble
+            scaleY += Math.sin(now / 50) * 0.08;
+            scaleX += Math.cos(now / 50) * 0.04;
+        }
+
+        ctx.save();
+        ctx.translate(cx, cy);
+        
+        const facingFlip = this.facingRight ? 1 : -1;
+        ctx.scale(facingFlip * scaleX, scaleY);
+        ctx.translate(0, -this.height);
+
+        // --- GLOW EFFECT ---
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = '#00FF44';
+
+        // --- MAIN BODY (PITCH BLACK) ---
+        ctx.fillStyle = '#111';
+        ctx.beginPath();
+        // Slime/gel shaped body (more liquid)
+        ctx.moveTo(0, 0); // top head
+        ctx.bezierCurveTo(-15, 0, -20, 10, -18, 25); // left shoulder
+        ctx.bezierCurveTo(-20, 40, -18, 55, -12, 56); // left leg
+        ctx.lineTo(12, 56); // feet base
+        ctx.bezierCurveTo(18, 55, 20, 40, 18, 25); // right shoulder
+        ctx.bezierCurveTo(20, 10, 15, 0, 0, 0); // head back
+        ctx.fill();
+
+        // --- WHITE INNER PART (Chest/Face) ---
+        ctx.shadowBlur = 0; // No glow on white
+        ctx.fillStyle = '#FFFFFF';
+        ctx.beginPath();
+        ctx.moveTo(0, 5); 
+        ctx.bezierCurveTo(-8, 5, -12, 15, -10, 30); 
+        ctx.bezierCurveTo(-12, 45, -5, 52, 0, 52); 
+        ctx.bezierCurveTo(5, 52, 12, 45, 10, 30); 
+        ctx.bezierCurveTo(8, 15, 8, 5, 0, 5); 
+        ctx.fill();
+
+        // --- CIRCUIT PATTERNS (Neon Green) ---
+        ctx.strokeStyle = '#00FF44';
+        ctx.lineWidth = 1.5;
+        const pulseAlpha = 0.5 + Math.sin(now / 200) * 0.3;
+        ctx.globalAlpha = pulseAlpha;
+        
+        const drawCircuit = (sx, sy, dots) => {
+            ctx.beginPath();
+            ctx.moveTo(sx, sy);
+            dots.forEach(d => ctx.lineTo(d.x, d.y));
+            ctx.stroke();
+            // Tiny glow tip
+            const last = dots[dots.length-1];
+            ctx.fillStyle = '#00FF44';
+            ctx.beginPath(); ctx.arc(last.x, last.y, 1.5, 0, Math.PI*2); ctx.fill();
+        };
+
+        // Left side circuits
+        drawCircuit(-12, 15, [{x: -8, y: 18}, {x: -12, y: 25}, {x: -10, y: 35}]);
+        drawCircuit(-14, 30, [{x: -16, y: 40}, {x: -13, y: 48}]);
+        
+        // Right side circuits
+        drawCircuit(12, 15, [{x: 8, y: 18}, {x: 12, y: 25}, {x: 10, y: 35}]);
+        drawCircuit(14, 30, [{x: 16, y: 40}, {x: 13, y: 48}]);
+        
+        ctx.globalAlpha = 1.0;
+
+        // --- EYE (Glowing Green) ---
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = '#00FF44';
+        ctx.strokeStyle = '#00FF44';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(0, 10, 5, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        ctx.fillStyle = '#111';
+        ctx.beginPath();
+        ctx.arc(0, 10, 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // --- OMNITRIX (Chest) ---
+        ctx.translate(0, 25);
+        ctx.fillStyle = '#000';
+        ctx.beginPath(); ctx.arc(0, 0, 5, 0, Math.PI * 2); ctx.fill();
+        
+        ctx.fillStyle = '#00FF44';
+        // Hourglass shape
+        ctx.beginPath();
+        ctx.moveTo(-3, -3); ctx.lineTo(3, 3);
+        ctx.arc(0, 0, 4, Math.PI/4, (3*Math.PI)/4);
+        ctx.lineTo(-3, 3); ctx.lineTo(3, -3);
+        ctx.arc(0, 0, 4, (5*Math.PI)/4, (7*Math.PI)/4);
+        ctx.fill();
 
         ctx.restore();
     }

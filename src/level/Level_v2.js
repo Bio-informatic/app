@@ -10,9 +10,9 @@ export class Level {
         let map = [];
 
         // LEVEL GENERATION
-        if (levelIndex === 1 || levelIndex === 2 || levelIndex === 3 || levelIndex === 4 || levelIndex === 5) {
+        if (levelIndex >= 1 && levelIndex <= 6) {
             const ROWS = 24;
-            const COLS = levelIndex === 5 ? 200 : (levelIndex === 4 ? 250 : (levelIndex === 3 ? 200 : 150));
+            const COLS = levelIndex >= 5 ? 200 : (levelIndex === 4 ? 250 : (levelIndex === 3 ? 200 : 150));
             const TS = this.tileSize;
             const skyChar = '.';
             const groundChar = '1';
@@ -21,6 +21,8 @@ export class Level {
             const finishChar = 'F';
             const unstableChar = 'U';
             const lavaChar = 'L';
+            const wireChar = 'W'; // tile 12
+            const eBlockChar = 'E'; // tile 13
 
             const MAX_GAP_TILES = 5;
             const GROUND_Y = ROWS - 6;
@@ -58,6 +60,7 @@ export class Level {
             else if (levelIndex === 3) bossZoneStart = COLS - 22;
             else if (levelIndex === 4) bossZoneStart = COLS - 52;
             else if (levelIndex === 5) bossZoneStart = COLS - 40;
+            else if (levelIndex === 6) bossZoneStart = COLS - 40;
 
             // Store slow zone bounds for game.js
             this.slowZoneStart = levelIndex === 4 ? bossZoneStart * TS : -1;
@@ -71,7 +74,9 @@ export class Level {
                     for (let y = GROUND_Y; y < ROWS; y++) {
                         for (let gx = 0; gx < gapWidth; gx++) {
                             if (curX + gx < bossZoneStart - 3) {
-                                if (levelIndex === 5) {
+                                if (levelIndex === 6) {
+                                    map[y][curX + gx] = wireChar;
+                                } else if (levelIndex === 5) {
                                     map[y][curX + gx] = lavaChar; // Represents slime!
                                 } else if (levelIndex === 3) {
                                     map[y][curX + gx] = lavaChar;
@@ -105,7 +110,7 @@ export class Level {
                     baseTopY = GROUND_Y - height;
                     for (let px = 0; px < width; px++) {
                         for (let py = baseTopY; py < GROUND_Y; py++) {
-                            map[py][curX + px] = brickChar;
+                            map[py][curX + px] = levelIndex === 6 ? eBlockChar : brickChar;
                         }
                     }
                 }
@@ -117,7 +122,7 @@ export class Level {
                     floatingY = baseTopY - space - 1;
                     if (floatingY > 1) {
                         for (let px = 0; px < width; px++) {
-                            map[floatingY][curX + px] = brickChar;
+                            map[floatingY][curX + px] = levelIndex === 6 ? eBlockChar : brickChar;
                         }
                         if (mysteryCount < targetMysteryCount && Math.random() < 0.4) {
                             const mbX = Math.floor(Math.random() * width);
@@ -144,7 +149,8 @@ export class Level {
                     const goombaY = hasGroundBricks ? baseTopY - 1 : GROUND_Y - 1;
                     if (goombaY > 2 && map[goombaY][curX] === skyChar) {
                         let goombaType = 'goomba';
-                        if (levelIndex === 5) goombaType = 'ooze_goomba';
+                        if (levelIndex === 6) goombaType = 'electromba';
+                        else if (levelIndex === 5) goombaType = 'ooze_goomba';
                         else if (levelIndex === 3) goombaType = 'lava_goomba';
                         else if (levelIndex === 4) goombaType = 'shield_drone';
 
@@ -167,7 +173,7 @@ export class Level {
                 if (boxY > 1 && map[boxY][rx] === skyChar) {
                     const hasSupport = Math.random() > 0.5;
                     if (hasSupport) {
-                        map[boxY][rx] = brickChar;
+                        map[boxY][rx] = levelIndex === 6 ? eBlockChar : brickChar;
                         if (boxY - 3 > 1) map[boxY - 3][rx] = mysteryChar;
                     } else {
                         map[boxY][rx] = mysteryChar;
@@ -340,6 +346,24 @@ export class Level {
                 });
             }
 
+            // ── Level 6 Boss Arena ──────────────────────────────────
+            if (levelIndex === 6) {
+                for (let y = GROUND_Y; y < ROWS; y++) {
+                    for (let x = bossZoneStart; x < COLS; x++) {
+                        map[y][x] = groundChar;
+                    }
+                }
+                for (let y = GROUND_Y - 6; y < GROUND_Y; y++) {
+                    map[y][bossZoneStart] = eBlockChar;
+                    map[y][COLS - 1] = eBlockChar;
+                }
+                this.entities.push({
+                    x: (bossZoneStart + 20) * TS,
+                    y: (GROUND_Y - 3) * TS,
+                    type: 'gomboto'
+                });
+            }
+
             // Convert to strings
             for (let y = 0; y < ROWS; y++) {
                 map[y] = map[y].join('');
@@ -365,7 +389,10 @@ export class Level {
                 else if (char === 'U') this.tiles[y][x] = 7;
                 else if (char === 'L') this.tiles[y][x] = 9;  // Lava
                 else if (char === 'S') this.tiles[y][x] = 10; // Speed panel
-                else if (char === 'E') this.tiles[y][x] = 11; // Electric fence
+                else if (char === 'E' && levelIndex !== 6) this.tiles[y][x] = 11; // Electric fence
+                // In Level 6, E is electronic block
+                else if (char === 'E' && levelIndex === 6) this.tiles[y][x] = 13;
+                else if (char === 'W') this.tiles[y][x] = 12; // Wire hole
                 else if (char === 'F') {
                     this.tiles[y][x] = 5;
                     if (!this.finishCols.has(x)) {
@@ -391,11 +418,27 @@ export class Level {
         if (this.levelIndex === 3) {
             this.entities.push({ x: 300, y: 150, type: 'xlr8_item' });
         }
+        
+
 
     }
 
     // ── Theme palettes ─────────────────────────────────────────────
     getTheme() {
+        if (this.levelIndex === 6) {
+            return {
+                sky:            '#0A0A0C',
+                ground:         '#1A1A24',
+                groundStroke:   '#111118',
+                brick:          '#2A2A35',
+                brickStroke:    '#111122',
+                mystery:        '#00FFCC',
+                pipe:           '#151520',
+                unstable:       '#1F6FEB',
+                unstableStroke: '#388BFD',
+                cloud:          'rgba(0, 255, 150, 0.05)'
+            };
+        }
         if (this.levelIndex === 5) {
             return {
                 sky:            '#0A1A0A',
@@ -533,6 +576,45 @@ export class Level {
                 ctx.fillRect(cx + 30, 50 + Math.sin(i*2) * 20, 150, 30);
                 // Layer 2: Low-hanging fog over the map
                 ctx.fillRect((cx * 1.5) % this.width, this.height - 250 + Math.sin(i*3) * 50, 300, 50);
+            }
+        } else if (this.levelIndex === 6) {
+            // Destroyed World: Straight broken background wires + Sparks
+            const now = performance.now();
+            ctx.lineWidth = 4;
+            
+            for (let i = 0; i < 40; i++) {
+                const startX = (i * 150) % this.width;
+                const wireLength = 300 + Math.sin(i * 1.5) * 150; // static relative length
+                
+                let currentY = 0;
+                let segIdx = 0;
+                while (currentY < wireLength) {
+                    const segmentLength = 20 + (Math.sin(i * 3 + segIdx) + 1) * 20; // 20 to 60
+                    const gap = 10 + (Math.cos(i + segIdx * 2) + 1) * 8; // 10 to 26
+                    
+                    ctx.strokeStyle = '#22222E'; // dark inert wire
+                    ctx.beginPath();
+                    ctx.moveTo(startX, currentY);
+                    ctx.lineTo(startX, Math.min(wireLength, currentY + segmentLength));
+                    ctx.stroke();
+                    
+                    // Electric shock spanning the gap
+                    if (currentY + segmentLength < wireLength) {
+                        if ((now + i * 379 + segIdx * 123) % 2000 < 150) {
+                            ctx.strokeStyle = '#00FFCC';
+                            ctx.lineWidth = 2 + Math.random() * 2;
+                            ctx.beginPath();
+                            ctx.moveTo(startX, currentY + segmentLength);
+                            const jx = (Math.random() - 0.5) * 25; // spark jitter
+                            ctx.quadraticCurveTo(startX + jx, currentY + segmentLength + gap / 2, startX, currentY + segmentLength + gap);
+                            ctx.stroke();
+                            ctx.lineWidth = 4; // Reset to wire thickness
+                        }
+                    }
+                    
+                    currentY += segmentLength + gap;
+                    segIdx++;
+                }
             }
         } else if (this.levelIndex !== 3) {
             ctx.fillStyle = t.cloud;
@@ -735,6 +817,45 @@ export class Level {
                             // Dim post only
                             ctx.fillStyle = '#1A1A3A';
                             ctx.fillRect(px + 14, py + 2, 4, ts - 4);
+                        }
+                        break;
+                    }
+
+                    case 12: { // Wire hole (Level 6)
+                        const now = performance.now();
+                        ctx.fillStyle = '#050510';
+                        ctx.fillRect(px, py, ts, ts);
+                        ctx.strokeStyle = '#00FFCC';
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(px + 4, py + ts); ctx.lineTo(px + 10, py + ts*0.2); ctx.lineTo(px + 16, py + ts);
+                        ctx.stroke();
+                        ctx.strokeStyle = '#A0A0FF';
+                        ctx.beginPath();
+                        ctx.moveTo(px + 16, py + ts); ctx.lineTo(px + 22, py + ts*0.1); ctx.lineTo(px + 28, py + ts);
+                        ctx.stroke();
+                        // Occasional sparks
+                        if (Math.random() > 0.95) {
+                            ctx.fillStyle = '#FFFFFF';
+                            ctx.fillRect(px + Math.random() * ts, py + Math.random() * ts, 2, 2);
+                        }
+                        break;
+                    }
+
+                    case 13: { // Electronic Block (Level 6)
+                        ctx.fillStyle = '#1A1A24';
+                        ctx.fillRect(px, py, ts, ts);
+                        ctx.strokeStyle = '#00FFCC';
+                        ctx.beginPath();
+                        ctx.moveTo(px, py+ts/2); ctx.lineTo(px+ts, py+ts/2);
+                        ctx.moveTo(px+ts/2, py); ctx.lineTo(px+ts/2, py+ts);
+                        ctx.stroke();
+                        ctx.strokeRect(px, py, ts, ts);
+                        ctx.fillStyle = '#00FFCC';
+                        ctx.fillRect(px + 14, py + 14, 4, 4);
+                        if (Math.random() > 0.99) {
+                            ctx.fillStyle = '#FFFFFF';
+                            ctx.fillRect(px + ts/2 - 2, py + ts/2 - 2, 4, 4);
                         }
                         break;
                     }
