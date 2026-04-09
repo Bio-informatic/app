@@ -1,5 +1,5 @@
 export class Electromba {
-    constructor(x, y) {
+    constructor(x, y, entitiesArray = null) {
         this.width = 30;
         this.height = 30;
         this.x = x;
@@ -9,12 +9,55 @@ export class Electromba {
         this.dead = false;
         this.type = 'electromba';
         this.absorbed = false;
+        this.hacked = false;
         this.jumpTimer = performance.now() + Math.random() * 2000;
+        this.entities = entitiesArray;
+    }
+
+    isHacked() {
+        return this.hacked;
     }
 
     update(deltaTime, level) {
         if (this.absorbed) {
             this.type = 'goomba'; // act as generic goomba from now on
+        }
+
+        if (this.hacked && this.entities) {
+            let nearestHostile = null;
+            let nearestDist = Infinity;
+
+            this.entities.forEach(entity => {
+                if (!entity || entity === this || entity.dead || entity.type !== 'electromba') return;
+                if (entity.isHacked && entity.isHacked()) return;
+
+                const dx = (entity.x + entity.width / 2) - (this.x + this.width / 2);
+                const dy = (entity.y + entity.height / 2) - (this.y + this.height / 2);
+                const dist = Math.hypot(dx, dy);
+                if (dist < nearestDist) {
+                    nearestDist = dist;
+                    nearestHostile = entity;
+                }
+            });
+
+            if (nearestHostile) {
+                this.vx = nearestHostile.x > this.x ? 2.8 : -2.8;
+
+                if (nearestHostile.y + 4 < this.y && this.vy === 0) {
+                    this.vy = -7;
+                }
+
+                const overlapping =
+                    this.x < nearestHostile.x + nearestHostile.width &&
+                    this.x + this.width > nearestHostile.x &&
+                    this.y < nearestHostile.y + nearestHostile.height &&
+                    this.y + this.height > nearestHostile.y;
+
+                if (overlapping) {
+                    nearestHostile.dead = true;
+                    this.dead = true;
+                }
+            }
         }
 
         this.x += this.vx;
@@ -51,13 +94,28 @@ export class Electromba {
     draw(ctx) {
         const cx = this.x + this.width / 2;
         const cy = this.y + this.height / 2;
+        const hacked = this.isHacked();
 
-        if (this.absorbed) {
-            // green/black hacked coloring
-            ctx.fillStyle = '#0f1a0f';
+        if (this.absorbed || hacked) {
+            ctx.save();
+            ctx.shadowBlur = 8;
+            ctx.shadowColor = '#00FF44';
+            ctx.fillStyle = '#080808';
             ctx.fillRect(this.x, this.y, this.width, this.height);
-            ctx.strokeStyle = '#00FFCC';
+            ctx.strokeStyle = '#00FF44';
             ctx.strokeRect(this.x, this.y, this.width, this.height);
+            ctx.fillStyle = '#00FF44';
+            ctx.fillRect(cx - 5, cy - 2, 10, 4);
+            if (hacked && !this.absorbed) {
+                ctx.strokeStyle = '#B6FFD1';
+                ctx.beginPath();
+                ctx.moveTo(this.x + this.width + 2, cy);
+                ctx.lineTo(this.x + this.width + 10, cy - 4);
+                ctx.lineTo(this.x + this.width + 6, cy);
+                ctx.lineTo(this.x + this.width + 10, cy + 4);
+                ctx.stroke();
+            }
+            ctx.restore();
             return;
         }
 

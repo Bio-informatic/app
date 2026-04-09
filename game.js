@@ -83,11 +83,11 @@ function getDefaultBoxEnemyType(levelIndex) {
     return 'goomba';
 }
 
-function createEnemyByType(type, x, y) {
+function createEnemyByType(type, x, y, entitiesArray = null) {
     if (type === 'lava_goomba') return new LavaGoomba(x, y);
     if (type === 'shield_drone') return new ShieldDrone(x, y);
     if (type === 'ooze_goomba') return new OozeGoomba(x, y);
-    if (type === 'electromba') return new Electromba(x, y);
+    if (type === 'electromba') return new Electromba(x, y, entitiesArray);
     return new Goomba(x, y);
 }
 
@@ -243,7 +243,7 @@ function assignBlockHit() {
             if (ItemClass) {
                 entities.push(new ItemClass(bx, by - 32));
             } else {
-                entities.push(createEnemyByType(getDefaultBoxEnemyType(currentLevelIndex), bx, by - 32));
+                entities.push(createEnemyByType(getDefaultBoxEnemyType(currentLevelIndex), bx, by - 32, entities));
             }
         }
     };
@@ -320,7 +320,7 @@ function loadLevel(index, carryOverState = null) {
         } else if (entityData.type === 'stinkfly_item') {
             entities.push(new StinkflyItem(entityData.x, entityData.y));
         } else if (entityData.type === 'electromba') {
-            entities.push(new Electromba(entityData.x, entityData.y));
+            entities.push(new Electromba(entityData.x, entityData.y, entities));
         } else if (entityData.type === 'upgrade_item') {
             entities.push(new UpgradeItem(entityData.x, entityData.y));
         } else if (entityData.type === 'gomboto') {
@@ -442,6 +442,15 @@ window.addEventListener('keydown', (e) => {
                 mario.vy = Math.min(0, mario.vy - 3); // recoil
             }
         } else if (mario.state === 'UPGRADE') {
+            const now = performance.now();
+            if (currentLevelIndex === 6 && now - mario.upgradeShotCooldown > 350) {
+                mario.upgradeShotCooldown = now;
+                const fx = mario.facingRight ? mario.x + mario.width - 8 : mario.x - 8;
+                const fy = mario.y + mario.height / 2;
+                entities.push(new Slimeball(fx, fy, mario.facingRight, { source: 'upgrade' }));
+                sfx.stomp();
+            }
+
             // Technopathic Absorb (Nearby objects/enemies)
             entities.forEach(target => {
                 if (target.dead || target.absorbed) return;
@@ -449,22 +458,26 @@ window.addEventListener('keydown', (e) => {
                 const distY = Math.abs((mario.y + mario.height/2) - (target.y + target.height/2));
                 if (dist < 60 && distY < 60) {
                     if (target.type === 'electromba') {
-                        target.absorbed = true;
-                        target.type = 'goomba'; // behaves like normal goomba
-                        sfx.stomp();
-                    } else if (target.type === 'gomboto') {
-                        target.absorbed = true;
-                        mario.controllingBoss = target; // Boss control mode
-                        mario.y = target.y - mario.height; // pop him up slightly
-                        
-                        // Place finish flag!
-                        const flagX = level.cols - 2;
-                        for (let fy = 4; fy < level.rows; fy++) {
-                            level.tiles[fy][flagX] = 5;
+                        if (currentLevelIndex !== 6 || (target.isHacked && target.isHacked())) {
+                            target.absorbed = true;
+                            target.type = 'goomba'; // behaves like normal goomba
+                            sfx.stomp();
                         }
-                        // Ensure Kurdistan flag draws by populating finishCols
-                        level.finishCols.set(flagX, { topRow: 4, bottomRow: level.rows - 1 });
-                        sfx.bossHit();
+                    } else if (target.type === 'gomboto') {
+                        if (currentLevelIndex !== 6 || target.claimReady) {
+                            target.absorbed = true;
+                            mario.controllingBoss = target; // Boss control mode
+                            mario.y = target.y - mario.height; // pop him up slightly
+                            
+                            // Place finish flag!
+                            const flagX = level.cols - 2;
+                            for (let fy = 4; fy < level.rows; fy++) {
+                                level.tiles[fy][flagX] = 5;
+                            }
+                            // Ensure Kurdistan flag draws by populating finishCols
+                            level.finishCols.set(flagX, { topRow: 4, bottomRow: level.rows - 1 });
+                            sfx.bossHit();
+                        }
                     }
                 }
             });
@@ -698,6 +711,12 @@ function gameLoop(timestamp) {
                 } else {
                     entity.update(deltaTime, level);
                 }
+                if (entity.type === 'slimeball' &&
+                    entity.source === 'upgrade' &&
+                    entity.dead &&
+                    (entity.impactTile === 11 || entity.impactTile === 12 || entity.impactTile === 13)) {
+                    mario.activateUpgradeElectricImmunity();
+                }
                 if (entity.dead) return;
 
                 // ── Fireball hits enemies ─────
@@ -735,6 +754,13 @@ function gameLoop(timestamp) {
                                 sfx.bossHit();
                             }
                         } else if (checkEntityCollision(entity, target)) {
+                            if (entity.source === 'upgrade' && (target.type === 'electromba' || target.type === 'gomboto')) {
+                                target.hacked = true;
+                                mario.activateUpgradeElectricImmunity();
+                                entity.dead = true;
+                                sfx.bossHit();
+                                return;
+                            }
                             if (target.type === 'ooze_goomba' || target.type === 'goomba') {
                                 target.dead = true;
                                 entity.dead = true;
@@ -873,7 +899,25 @@ function gameLoop(timestamp) {
                             entity.dead = true;
                             sfx.stomp();
                             mario.vy = -8;
+                        } else if (mario.hasUpgradeElectricImmunity(currentLevelIndex) && entity.isHacked && entity.isHacked()) {
+                            // Upgrade can safely phase through hacked electric enemies while immune
                         } else {
+                            if (mario.state === 'FOURARMS' || mario.state === 'HEATBLAST' || mario.state === 'XLR8' || mario.state === 'STINKFLY' || mario.state === 'UPGRADE') {
+                                mario.revertToSmall();
+                                mario.vy = -5;
+                            } else {
+                                sfx.death();
+                                sfx.stopMusic();
+                                gameState = 'GAMEOVER';
+                            }
+                        }
+                    } else if (entity.type === 'gomboto') {
+                        if (mario.vy > 0 && mario.y + mario.height < entity.y + 24) {
+                            entity.claimReady = true;
+                            entity.hacked = true;
+                            mario.vy = -10;
+                            sfx.bossHit();
+                        } else if (!(mario.hasUpgradeElectricImmunity(currentLevelIndex) && entity.isHacked && entity.isHacked())) {
                             if (mario.state === 'FOURARMS' || mario.state === 'HEATBLAST' || mario.state === 'XLR8' || mario.state === 'STINKFLY' || mario.state === 'UPGRADE') {
                                 mario.revertToSmall();
                                 mario.vy = -5;
@@ -1147,7 +1191,7 @@ function gameLoop(timestamp) {
                 
                 if (touchingFence) {
                     const fenceOn = (performance.now() % 4000) < 2000;
-                    if (fenceOn && !mario.dashActive) {
+                    if (fenceOn && !mario.dashActive && !mario.hasUpgradeElectricImmunity(currentLevelIndex)) {
                         if (mario.state === 'FOURARMS' || mario.state === 'HEATBLAST' || mario.state === 'XLR8' || mario.state === 'STINKFLY') {
                             mario.revertToSmall();
                             mario.vy = -5;
@@ -1157,7 +1201,7 @@ function gameLoop(timestamp) {
                     }
                 }
                 
-                if (touchingWire && mario.state !== 'UPGRADE') {
+                if (touchingWire && !mario.hasUpgradeElectricImmunity(currentLevelIndex)) {
                     if (gameState !== 'GAMEOVER') {
                         sfx.death();
                         sfx.stopMusic();

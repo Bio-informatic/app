@@ -1,20 +1,30 @@
 export class Slimeball {
-    constructor(x, y, facingRight) {
+    constructor(x, y, facingRight, options = {}) {
         this.x = x;
         this.y = y;
         this.width = 16;
         this.height = 16;
         this.type = 'slimeball';
         this.dead = false;
+        this.source = options.source || 'stinkfly';
+        this.facingRight = facingRight !== false;
+        this.impactTile = null;
 
-        this.vx = 0; // vertical only
-        this.vy = 8; // drop fast
+        if (this.source === 'upgrade') {
+            this.vx = this.facingRight ? 8 : -8;
+            this.vy = 0;
+        } else {
+            this.vx = 0; // vertical only
+            this.vy = 8; // drop fast
+        }
     }
 
     update(deltaTime, level) {
         if (this.dead) return;
 
-        this.vy += 0.5; // gravity
+        if (this.source !== 'upgrade') {
+            this.vy += 0.5; // gravity
+        }
         this.x += this.vx;
         this.y += this.vy;
 
@@ -26,6 +36,7 @@ export class Slimeball {
         if (level.tiles[row]) {
             const t = level.tiles[row][col];
             if (t !== 0 && t !== 9) { // 9 is lava
+                this.impactTile = t;
                 this.dead = true;
             }
         }
@@ -37,12 +48,15 @@ export class Slimeball {
     }
 
     draw(ctx) {
-        ctx.fillStyle = '#66AA00';
+        const bodyColor = this.source === 'upgrade' ? '#00FF44' : '#66AA00';
+        const highlightColor = this.source === 'upgrade' ? '#B6FFD1' : '#AADD88';
+
+        ctx.fillStyle = bodyColor;
         ctx.beginPath();
         ctx.arc(this.x + 8, this.y + 8, 8, 0, Math.PI * 2);
         ctx.fill();
         
-        ctx.fillStyle = '#AADD88';
+        ctx.fillStyle = highlightColor;
         ctx.beginPath();
         ctx.arc(this.x + 6, this.y + 6, 2, 0, Math.PI * 2);
         ctx.fill();

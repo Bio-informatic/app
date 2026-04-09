@@ -10,10 +10,16 @@ export class Gomboto {
         this.type = 'gomboto';
         this.dead = false;
         this.absorbed = false;
+        this.hacked = false;
+        this.claimReady = false;
         
         this.entities = entitiesArray;
         this.lastAttack = performance.now();
         this.vx = -1;
+    }
+
+    isHacked() {
+        return this.hacked;
     }
 
     takeDamage(amount = 1) {
@@ -28,7 +34,7 @@ export class Gomboto {
     }
 
     update(deltaTime, level) {
-        if (this.absorbed) {
+        if (this.absorbed || this.claimReady) {
             // While controlled, Mario's code in game.js handles checking the finish flag!
             return;
         }
@@ -54,19 +60,20 @@ export class Gomboto {
             if (this.entities && this.onBabySpawn) {
                 this.onBabySpawn();
                 const spawnX = this.vx > 0 ? this.x + this.width : this.x - 32;
-                this.entities.push(new Electromba(spawnX, this.y + 40));
+                this.entities.push(new Electromba(spawnX, this.y + 40, this.entities));
             }
         }
     }
 
     draw(ctx) {
         // Theme Colors
-        const baseColor = this.absorbed ? '#080808' : '#111';
-        const accentColor = this.absorbed ? '#00FF44' : '#00FFCC';
-        const eyeColor = this.absorbed ? '#00FF44' : '#FF0000';
+        const hacked = this.absorbed || this.isHacked();
+        const baseColor = hacked ? '#080808' : '#111';
+        const accentColor = hacked ? '#00FF44' : '#00FFCC';
+        const eyeColor = hacked ? '#00FF44' : '#FF0000';
 
         ctx.save();
-        if (this.absorbed) {
+        if (hacked) {
             ctx.shadowBlur = 10;
             ctx.shadowColor = '#00FF44';
         }
@@ -92,7 +99,7 @@ export class Gomboto {
         ctx.stroke();
 
         // --- UI / State Info ---
-        if (!this.absorbed) {
+        if (!hacked) {
             // Health Bar
             ctx.fillStyle = '#F00';
             ctx.fillRect(this.x, this.y - 15, this.width * (this.hp / 10), 5);
@@ -110,6 +117,19 @@ export class Gomboto {
             ctx.moveTo(this.x + 5, this.y + 10); ctx.lineTo(this.x + 15, this.y + 10); ctx.lineTo(this.x + 15, this.y + 25);
             ctx.moveTo(this.x + 75, this.y + 70); ctx.lineTo(this.x + 65, this.y + 70); ctx.lineTo(this.x + 65, this.y + 55);
             ctx.stroke();
+        }
+
+        if (!this.absorbed && this.isHacked()) {
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = '#00FF44';
+            ctx.font = 'bold 12px monospace';
+            ctx.fillText('GEL HACKED', this.x + 8, this.y - 10);
+        }
+        if (this.claimReady && !this.absorbed) {
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = '#B6FFD1';
+            ctx.font = 'bold 12px monospace';
+            ctx.fillText('PRESS F TO ACQUIRE', this.x - 10, this.y - 26);
         }
         ctx.restore();
     }

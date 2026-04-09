@@ -53,6 +53,10 @@ export class Mario {
         // Stinkfly Stamina
         this.maxWingStamina = 6000; // 6 seconds
         this.wingStamina = this.maxWingStamina;
+
+        // Level 6 Upgrade hacking
+        this.upgradeShotCooldown = 0;
+        this.upgradeElectricImmunity = false;
     }
 
     transformToFourArms() {
@@ -92,6 +96,7 @@ export class Mario {
         // Stinkfly stats
         this.wingStamina = 6000;
         this.maxWingStamina = 6000;
+        this.upgradeElectricImmunity = false;
     }
 
     transformToXLR8() {
@@ -277,6 +282,16 @@ export class Mario {
         } else {
             // Restore width if dropped?
         }
+    }
+
+    activateUpgradeElectricImmunity() {
+        this.upgradeElectricImmunity = true;
+    }
+
+    hasUpgradeElectricImmunity(levelIndex = null) {
+        return this.state === 'UPGRADE' &&
+            levelIndex === 6 &&
+            this.upgradeElectricImmunity;
     }
 
     // Non-solid tiles: 0 (air), 9 (lava), 10 (speed panel), 11 (electric fence)
@@ -842,6 +857,8 @@ export class Mario {
         const cx = this.x + this.width / 2;
         const cy = this.y + this.height; // anchor at bottom
         const now = performance.now();
+        const immune = this.upgradeElectricImmunity;
+        const circuitColor = immune ? '#B6FFD1' : '#00FF44';
 
         // Jelly physics scale based on velocity
         let scaleX = 1.0;
@@ -866,7 +883,7 @@ export class Mario {
 
         // --- GLOW EFFECT ---
         ctx.shadowBlur = 10;
-        ctx.shadowColor = '#00FF44';
+        ctx.shadowColor = circuitColor;
 
         // --- MAIN BODY (PITCH BLACK) ---
         ctx.fillStyle = '#111';
@@ -892,7 +909,7 @@ export class Mario {
         ctx.fill();
 
         // --- CIRCUIT PATTERNS (Neon Green) ---
-        ctx.strokeStyle = '#00FF44';
+        ctx.strokeStyle = circuitColor;
         ctx.lineWidth = 1.5;
         const pulseAlpha = 0.5 + Math.sin(now / 200) * 0.3;
         ctx.globalAlpha = pulseAlpha;
@@ -904,7 +921,7 @@ export class Mario {
             ctx.stroke();
             // Tiny glow tip
             const last = dots[dots.length-1];
-            ctx.fillStyle = '#00FF44';
+            ctx.fillStyle = circuitColor;
             ctx.beginPath(); ctx.arc(last.x, last.y, 1.5, 0, Math.PI*2); ctx.fill();
         };
 
@@ -920,8 +937,8 @@ export class Mario {
 
         // --- EYE (Glowing Green) ---
         ctx.shadowBlur = 15;
-        ctx.shadowColor = '#00FF44';
-        ctx.strokeStyle = '#00FF44';
+        ctx.shadowColor = circuitColor;
+        ctx.strokeStyle = circuitColor;
         ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.arc(0, 10, 5, 0, Math.PI * 2);
@@ -937,7 +954,7 @@ export class Mario {
         ctx.fillStyle = '#000';
         ctx.beginPath(); ctx.arc(0, 0, 5, 0, Math.PI * 2); ctx.fill();
         
-        ctx.fillStyle = '#00FF44';
+        ctx.fillStyle = circuitColor;
         // Hourglass shape
         ctx.beginPath();
         ctx.moveTo(-3, -3); ctx.lineTo(3, 3);
