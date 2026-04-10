@@ -57,6 +57,12 @@ export class Mario {
         // Level 6 Upgrade hacking
         this.upgradeShotCooldown = 0;
         this.upgradeElectricImmunity = false;
+
+        // Wild Mutt punch
+        this.punchActive = false;
+        this.punchTimer = 0;
+        this.punchCooldown = 0;
+        this.punchRect = null; // {x,y,width,height} hit zone
     }
 
     transformToFourArms() {
@@ -90,6 +96,7 @@ export class Mario {
         this.height = 32;
         this.groundPounding = false;
         this.dashActive = false;
+        this.punchActive = false;
         this.alienTimer = 0;
         this.alienTimerRemaining = 0;
         
@@ -133,6 +140,17 @@ export class Mario {
         this.height = 50;
     }
 
+    transformToWildMutt() {
+        if (this.state === 'WILDMUTT') return;
+        this.state = 'WILDMUTT';
+        this.transforming = true;
+        this.transformTimer = performance.now();
+        this.alienTimer = performance.now();
+        if (this.height < 48) this.y -= (48 - this.height);
+        this.width = 52;
+        this.height = 48;
+    }
+
     update(deltaTime, level) {
         if (this.transforming) {
             if (performance.now() - this.transformTimer > 1000) {
@@ -141,7 +159,7 @@ export class Mario {
         }
 
         // Alien countdown timer — revert to SMALL after 15 seconds
-        if (this.alienTimer > 0 && (this.state === 'FOURARMS' || this.state === 'HEATBLAST' || this.state === 'XLR8' || this.state === 'STINKFLY' || this.state === 'UPGRADE')) {
+        if (this.alienTimer > 0 && (this.state === 'FOURARMS' || this.state === 'HEATBLAST' || this.state === 'XLR8' || this.state === 'STINKFLY' || this.state === 'UPGRADE' || this.state === 'WILDMUTT')) {
             const elapsed = performance.now() - this.alienTimer;
             this.alienTimerRemaining = Math.max(0, Math.ceil((this.alienTimerDuration - elapsed) / 1000));
             if (elapsed >= this.alienTimerDuration) {
@@ -397,6 +415,8 @@ export class Mario {
             this.drawStinkfly(ctx);
         } else if (this.state === 'UPGRADE') {
             this.drawUpgrade(ctx);
+        } else if (this.state === 'WILDMUTT') {
+            this.drawWildMutt(ctx);
         } else {
             this.drawMario(ctx);
         }
@@ -964,5 +984,138 @@ export class Mario {
         ctx.fill();
 
         ctx.restore();
+    }
+
+    drawWildMutt(ctx) {
+        const cx = this.x + this.width / 2;
+        const cy = this.y + this.height / 2;
+        const now = performance.now();
+        const flip = this.facingRight ? 1 : -1;
+
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.scale(flip, 1);
+
+        // Body (large quadruped — low to ground)
+        // --- Body (Vibrant Orange Alien) ---
+        ctx.fillStyle = '#FF8C00'; 
+        // Main mass (hunched forward)
+        ctx.beginPath();
+        ctx.ellipse(0, 5, 28, 22, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Shaggy fur on back (darker orange/red)
+        ctx.fillStyle = '#E65C00';
+        ctx.beginPath();
+        ctx.moveTo(-25, -5);
+        ctx.lineTo(-10, -15);
+        ctx.lineTo(10, -18);
+        ctx.lineTo(25, -12);
+        ctx.lineTo(15, 5);
+        ctx.fill();
+
+        // neck/chin fur (shaggy)
+        ctx.fillStyle = '#FF8C00';
+        ctx.beginPath();
+        ctx.moveTo(15, 10);
+        ctx.lineTo(25, 15);
+        ctx.lineTo(20, 25);
+        ctx.lineTo(10, 28);
+        ctx.lineTo(5, 25);
+        ctx.fill();
+
+        // --- Head (No eyes, just mouth and gills) ---
+        // Gill slits (distinct feature on neck)
+        ctx.strokeStyle = '#4A1A00';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 4; i++) {
+            ctx.beginPath();
+            ctx.moveTo(18 + i * 2, -2);
+            ctx.lineTo(22 + i * 2, 8);
+            ctx.stroke();
+        }
+
+        // Large mouth with fangs (lower part of face)
+        ctx.fillStyle = '#1A0800';
+        ctx.fillRect(25, 5, 14, 8);
+        // Fangs (White)
+        ctx.fillStyle = 'white';
+        ctx.beginPath();
+        ctx.moveTo(27, 5); ctx.lineTo(29, 12); ctx.lineTo(31, 5); ctx.fill(); 
+        ctx.beginPath();
+        ctx.moveTo(33, 5); ctx.lineTo(35, 12); ctx.lineTo(37, 5); ctx.fill();
+
+        // --- Legs (Massive muscular front arms) ---
+        // Back Leg
+        ctx.fillStyle = '#D64500';
+        ctx.fillRect(-22, 10, 10, 24);
+        ctx.fillStyle = '#222';
+        ctx.fillRect(-24, 34, 14, 4); // Back claws
+
+        // Massive Front Arm
+        ctx.fillStyle = '#FF8C00';
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(15, 15);
+        ctx.lineTo(10, 35);
+        ctx.lineTo(-5, 35);
+        ctx.lineTo(-10, 15);
+        ctx.fill();
+
+        // Massive Front Paw/Claws
+        ctx.fillStyle = '#222';
+        ctx.beginPath();
+        ctx.moveTo(15, 35);
+        ctx.lineTo(22, 40);
+        ctx.lineTo(5, 40);
+        ctx.lineTo(-10, 35);
+        ctx.fill();
+
+        // --- Omnitrix (Shoulder/Bracer) ---
+        ctx.fillStyle = '#333';
+        ctx.fillRect(-12, -8, 16, 16); // Bracer
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.arc(-4, 0, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#00FF44';
+        ctx.beginPath();
+        ctx.moveTo(-4, -4); ctx.lineTo(0, 0); ctx.lineTo(-4, 0); ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(-4, 4); ctx.lineTo(-8, 0); ctx.lineTo(-4, 0); ctx.fill();
+
+        // --- Punch animation ---
+        if (this.punchActive) {
+            const ext = Math.min(1, (now - this.punchTimer) / 150); // 0→1
+            const punchX = 35 + ext * 25;
+            ctx.fillStyle = '#FF8C00';
+            ctx.beginPath();
+            ctx.arc(punchX, 10, 14, 0, Math.PI*2);
+            ctx.fill();
+            // Claws extended
+            ctx.fillStyle = '#222';
+            ctx.fillRect(punchX + 5, 6, 14, 5);
+            ctx.fillRect(punchX + 5, 11, 14, 5);
+        }
+
+        ctx.restore();
+
+        // Update punch hit-rect
+        if (this.punchActive) {
+            const punchOffsetX = this.facingRight ? this.width + 5 : -55;
+            this.punchRect = {
+                x: this.x + punchOffsetX,
+                y: this.y + 10,
+                width: 50,
+                height: 30
+            };
+        } else {
+            this.punchRect = null;
+        }
+    }
+
+    /** Returns active punch rect in world coords (for game.js collision), or null */
+    getPunchRect() {
+        return this.punchRect;
     }
 }

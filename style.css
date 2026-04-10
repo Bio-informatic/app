@@ -55,6 +55,11 @@ canvas.level6-theme {
     /* Destroyed world dark cyber sky */
 }
 
+canvas.level7-theme {
+    background-color: #1A3A0A;
+    /* Deep jungle green sky for Wild Mutt level */
+}
+
 #ui-layer {
     position: absolute;
     top: 10px;

@@ -10,7 +10,7 @@ export class Level {
         let map = [];
 
         // LEVEL GENERATION
-        if (levelIndex >= 1 && levelIndex <= 6) {
+        if (levelIndex >= 1 && levelIndex <= 7) {
             const ROWS = 24;
             const COLS = levelIndex >= 5 ? 200 : (levelIndex === 4 ? 250 : (levelIndex === 3 ? 200 : 150));
             const TS = this.tileSize;
@@ -61,6 +61,7 @@ export class Level {
             else if (levelIndex === 4) bossZoneStart = COLS - 52;
             else if (levelIndex === 5) bossZoneStart = COLS - 40;
             else if (levelIndex === 6) bossZoneStart = COLS - 40;
+            else if (levelIndex === 7) bossZoneStart = COLS - 45;
 
             // Store slow zone bounds for game.js
             this.slowZoneStart = levelIndex === 4 ? bossZoneStart * TS : -1;
@@ -149,7 +150,8 @@ export class Level {
                     const goombaY = hasGroundBricks ? baseTopY - 1 : GROUND_Y - 1;
                     if (goombaY > 2 && map[goombaY][curX] === skyChar) {
                         let goombaType = 'goomba';
-                        if (levelIndex === 6) goombaType = 'electromba';
+                        if (levelIndex === 7) goombaType = 'goomba'; // vanishing goombas — managed in draw
+                        else if (levelIndex === 6) goombaType = 'electromba';
                         else if (levelIndex === 5) goombaType = 'ooze_goomba';
                         else if (levelIndex === 3) goombaType = 'lava_goomba';
                         else if (levelIndex === 4) goombaType = 'shield_drone';
@@ -364,6 +366,53 @@ export class Level {
                 });
             }
 
+            // ── Level 7 Boss Arena ─────────────────────────────────
+            if (levelIndex === 7) {
+                // Jungle clearing — flat, wide solid ground
+                for (let y = GROUND_Y; y < ROWS; y++) {
+                    for (let x = bossZoneStart; x < COLS; x++) {
+                        map[y][x] = groundChar;
+                    }
+                }
+                // Clear sky above arena
+                for (let y = 0; y < GROUND_Y; y++) {
+                    for (let x = bossZoneStart; x < COLS; x++) {
+                        map[y][x] = skyChar;
+                    }
+                }
+                // Some tree-platform bricks on the sides
+                for (let y = GROUND_Y - 5; y < GROUND_Y - 2; y++) {
+                    map[y][bossZoneStart] = brickChar;
+                    map[y][COLS - 1] = brickChar;
+                }
+                // Floating bricks as jungle vines/branches
+                for (let i = 0; i < 4; i++) {
+                    const bx = bossZoneStart + 5 + i * 9;
+                    const by = GROUND_Y - 7 - (i % 2) * 3;
+                    if (by > 1) {
+                        map[by][bx] = brickChar;
+                        map[by][bx + 1] = brickChar;
+                        map[by][bx + 2] = brickChar;
+                    }
+                }
+                // Gorillomba boss marker (center of arena)
+                this.entities.push({
+                    x: (bossZoneStart + 22) * TS,
+                    y: (GROUND_Y - 3) * TS,
+                    type: 'gorillomba'
+                });
+                // Wild Mutt item placed just before boss zone
+                this.entities.push({
+                    x: (bossZoneStart - 8) * TS,
+                    y: (GROUND_Y - 4) * TS,
+                    type: 'wild_mutt_item'
+                });
+                // Finish flag behind boss (revealed after defeat)
+                for (let y = 4; y < ROWS; y++) {
+                    map[y][COLS - 2] = finishChar;
+                }
+            }
+
             // Convert to strings
             for (let y = 0; y < ROWS; y++) {
                 map[y] = map[y].join('');
@@ -425,6 +474,20 @@ export class Level {
 
     // ── Theme palettes ─────────────────────────────────────────────
     getTheme() {
+        if (this.levelIndex === 7) {
+            return {
+                sky:            '#1A3A0A',   // deep jungle green sky
+                ground:         '#2E5A0E',
+                groundStroke:   '#1A3A08',
+                brick:          '#3D6B1A',
+                brickStroke:    '#2A4D10',
+                mystery:        '#AAFF44',
+                pipe:           '#1A4A05',
+                unstable:       '#5A7A20',
+                unstableStroke: '#3A5A10',
+                cloud:          'rgba(100, 200, 50, 0.12)',
+            };
+        }
         if (this.levelIndex === 6) {
             return {
                 sky:            '#0A0A0C',
@@ -616,7 +679,17 @@ export class Level {
                     segIdx++;
                 }
             }
-        } else if (this.levelIndex !== 3) {
+        } else if (this.levelIndex === 7) {
+            // Jungle canopy — animated leaf shapes moving slowly
+            ctx.fillStyle = t.cloud;
+            for (let i = 0; i < 30; i++) {
+                const cx = (i * 200 + now / 25) % (this.width + 200) - 100;
+                const cy = 30 + Math.sin(i * 1.3) * 20;
+                ctx.fillRect(cx, cy, 80, 30);
+                ctx.fillRect(cx + 20, cy - 14, 40, 20);
+                ctx.fillRect(cx - 20, cy + 20, 50, 18);
+            }
+        } else if (this.levelIndex !== 3 && this.levelIndex !== 6) {
             ctx.fillStyle = t.cloud;
             for (let i = 0; i < 20; i++) {
                 const cx = i * 350 + 60;
@@ -624,7 +697,7 @@ export class Level {
                 ctx.fillRect(cx + 16, 54, 32, 16);
                 ctx.fillRect(cx + 8, 86, 48, 16);
             }
-        } else {
+        } else if (this.levelIndex === 3) {
             // Smoke clouds for hell
             ctx.fillStyle = t.cloud;
             for (let i = 0; i < 25; i++) {
@@ -932,5 +1005,38 @@ export class Level {
                 }
             }
         });
+    }
+
+    /**
+     * Draws a full-screen Thermal / Infrared vision overlay.
+     * Call AFTER all game entities are drawn, BEFORE UI.
+     * @param {CanvasRenderingContext2D} ctx
+     * @param {number} screenW
+     * @param {number} screenH
+     */
+    drawThermalOverlay(ctx, screenW, screenH) {
+        // Dark tinted vignette — everything dim except thermal objects
+        ctx.save();
+        // Semi-opaque dark green tint overlay (like night-vision goggles)
+        const tint = ctx.createRadialGradient(screenW / 2, screenH / 2, screenH * 0.2, screenW / 2, screenH / 2, screenH * 0.75);
+        tint.addColorStop(0, 'rgba(0,10,0,0.50)');
+        tint.addColorStop(1, 'rgba(0,5,0,0.80)');
+        ctx.fillStyle = tint;
+        ctx.fillRect(0, 0, screenW, screenH);
+
+        // Scanline effect
+        ctx.globalAlpha = 0.07;
+        ctx.fillStyle = '#000000';
+        for (let sy = 0; sy < screenH; sy += 4) {
+            ctx.fillRect(0, sy, screenW, 2);
+        }
+        ctx.globalAlpha = 1.0;
+
+        // HUD text hint
+        ctx.fillStyle = 'rgba(0,255,100,0.5)';
+        ctx.font = 'bold 11px monospace';
+        ctx.fillText('[ THERMAL VISION ACTIVE ]', screenW / 2 - 90, 22);
+
+        ctx.restore();
     }
 }

@@ -23,6 +23,8 @@ import { SoundManager } from './src/core/SoundManager.js';
 import { UpgradeItem } from './src/entities/UpgradeItem.js';
 import { Electromba } from './src/entities/Electromba.js';
 import { Gomboto } from './src/entities/Gomboto.js';
+import { Gorillomba } from './src/entities/Gorillomba.js';
+import { WildMuttItem } from './src/entities/WildMuttItem.js';
 
 const sfx = new SoundManager();
 
@@ -68,7 +70,7 @@ const ALIENS = [
     { key: '3', name: 'XLR8', icon: '⚡', unlocked: false, lives: 25 },
     { key: '4', name: 'Stinkfly', icon: '🪰', unlocked: false, lives: 25 },
     { key: '5', name: 'Upgrade', icon: '💻', unlocked: false, lives: 25 },
-    { key: '6', name: '???', icon: '👾', unlocked: false, lives: 25 },
+    { key: '6', name: 'Wild Mutt', icon: '🐺', unlocked: false, lives: 25 },
     { key: '7', name: '???', icon: '👾', unlocked: false, lives: 25 },
     { key: '8', name: '???', icon: '👾', unlocked: false, lives: 25 },
     { key: '9', name: '???', icon: '👾', unlocked: false, lives: 25 },
@@ -174,6 +176,8 @@ function activateAlien(index) {
         mario.transformToStinkfly();
     } else if (alien.name === 'Upgrade') {
         mario.transformToUpgrade();
+    } else if (alien.name === 'Wild Mutt') {
+        mario.transformToWildMutt();
     }
 }
 
@@ -218,6 +222,10 @@ let gomrogDefeated = false;
 // Gomboto boss reference
 let gomboto = null;
 let gombotoDefeated = false;
+
+// Gorillomba boss reference
+let gorillomba = null;
+let gorillombaDefeated = false;
 
 function assignBlockHit() {
     mario.onBlockHit = (tileType, bx, by) => {
@@ -290,6 +298,8 @@ function loadLevel(index, carryOverState = null) {
     gomrogDefeated = false;
     gomboto = null;
     gombotoDefeated = false;
+    gorillomba = null;
+    gorillombaDefeated = false;
 
     level.entities.forEach(entityData => {
         if (entityData.type === 'goomba') {
@@ -327,6 +337,11 @@ function loadLevel(index, carryOverState = null) {
             gomboto = new Gomboto(entityData.x, entityData.y, entities);
             gomboto.onBabySpawn = () => sfx.bossSpawn();
             entities.push(gomboto);
+        } else if (entityData.type === 'gorillomba') {
+            gorillomba = new Gorillomba(entityData.x, entityData.y);
+            entities.push(gorillomba);
+        } else if (entityData.type === 'wild_mutt_item') {
+            entities.push(new WildMuttItem(entityData.x, entityData.y));
         }
     });
 
@@ -339,6 +354,7 @@ function loadLevel(index, carryOverState = null) {
     canvas.classList.toggle('level4-theme', index === 4);
     canvas.classList.toggle('level5-theme', index === 5);
     canvas.classList.toggle('level6-theme', index === 6);
+    canvas.classList.toggle('level7-theme', index === 7);
 
     // Sound: start level music
     bossEntrancePlayed = false;
@@ -440,6 +456,17 @@ window.addEventListener('keydown', (e) => {
                 entities.push(new Slimeball(fx, fy, mario.facingRight));
                 sfx.stomp(); // Plop sound
                 mario.vy = Math.min(0, mario.vy - 3); // recoil
+            }
+        } else if (mario.state === 'WILDMUTT') {
+            // Punch attack
+            const now = performance.now();
+            if (!mario.punchCooldown || now - mario.punchCooldown > 500) {
+                mario.punchCooldown = now;
+                mario.punchActive = true;
+                mario.punchTimer = now;
+                sfx.stomp();
+                // Auto-deactivate after 200ms
+                setTimeout(() => { mario.punchActive = false; }, 200);
             }
         } else if (mario.state === 'UPGRADE') {
             const now = performance.now();
@@ -547,6 +574,9 @@ function gameLoop(timestamp) {
             }
             if (gomrog && !gomrog.dead) {
                 gomrog.update(deltaTime, level, mario.x, mario.y);
+            }
+            if (gorillomba && !gorillomba.dead) {
+                gorillomba.update(deltaTime, level, mario.x + mario.width / 2, mario.y + mario.height / 2);
             }
             mario.update(deltaTime, level);
 
@@ -669,10 +699,14 @@ function gameLoop(timestamp) {
                     sfx.stopMusic();
                     showLevelModal('LEVEL 5 COMPLETE!', 'Stinkfly prevailed! Next stop: The Destroyed World.', true);
                 } else if (currentLevelIndex === 6) {
+                    sfx.levelComplete();
+                    sfx.stopMusic();
+                    showLevelModal('LEVEL 6 COMPLETE!', 'Upgrade merged and saved the system! The Jungle calls...', true);
+                } else if (currentLevelIndex === 7) {
                     mario.victory = true;
                     sfx.levelComplete();
                     sfx.stopMusic();
-                    showLevelModal('LEVEL 6 COMPLETE!', 'Upgrade merged and saved the system...', false);
+                    showLevelModal('LEVEL 7 COMPLETE!', 'Wild Mutt\s senses never lied! Gorillomba is defeated!', false);
                 } else {
                     mario.victory = true;
                     showLevelModal('YOU WIN!', 'The universe is safe… for now.', false);
@@ -707,6 +741,8 @@ function gameLoop(timestamp) {
                     // Gomrog updated earlier but we do it here if needed, or skip it
                     // To avoid double updates, let's just skip it here
                 } else if (entity.type === 'bomba') {
+                    // skipped to avoid double update
+                } else if (entity.type === 'gorillomba') {
                     // skipped to avoid double update
                 } else {
                     entity.update(deltaTime, level);
@@ -972,9 +1008,64 @@ function gameLoop(timestamp) {
                                 mario.vx = 0;
                             }
                         }
+                    } else if (entity.type === 'wild_mutt_item') {
+                        entity.dead = true;
+                        ALIENS[5].unlocked = true;
+                        ALIENS[5].introMessage = 'I am Wild Mutt! My senses are sharp! Press F to PUNCH and see HIDDEN ENEMIES! 🐺';
+                        mario.transformToWildMutt();
+                        sfx.collectItem();
+                        renderAlienGrid();
+                        openOmnitrixPanel();
+
+                    } else if (entity.type === 'gorillomba') {
+                        // Contact with Gorillomba — only Wild Mutt is safe
+                        if (mario.state !== 'WILDMUTT') {
+                            if (mario.state === 'FOURARMS' || mario.state === 'HEATBLAST' || mario.state === 'XLR8' || mario.state === 'STINKFLY' || mario.state === 'UPGRADE') {
+                                mario.revertToSmall();
+                                mario.vy = -8;
+                            } else {
+                                sfx.death();
+                                sfx.stopMusic();
+                                gameState = 'GAMEOVER';
+                            }
+                        }
+
+                    } else if (entity.type === 'goomba' && currentLevelIndex === 7) {
+                        // Level 7 goombas: appear/disappear every 2 seconds
+                        const visPhase = Math.floor(performance.now() / 2000) % 2;
+                        if (visPhase === 0) {
+                            // Visible — normal goomba logic
+                            if (mario.vy > 0 && mario.y + mario.height < entity.y + entity.height / 2 + 10) {
+                                entity.dead = true;
+                                sfx.stomp();
+                                mario.vy = -8;
+                            } else {
+                                if (mario.state !== 'SMALL') {
+                                    mario.revertToSmall();
+                                    mario.vy = -5;
+                                } else {
+                                    sfx.death();
+                                    sfx.stopMusic();
+                                    gameState = 'GAMEOVER';
+                                }
+                            }
+                        }
+                        // Invisible/ghost phase: harmless, walk through
                     }
                 }
             });
+
+            // ── Wild Mutt Punch Gorillomba ─────────────────────────
+            if (mario.state === 'WILDMUTT' && mario.punchActive && gorillomba && !gorillomba.dead) {
+                const pr = mario.getPunchRect();
+                if (pr && gorillomba.isHitBy(pr)) {
+                    const hit = gorillomba.takeDamage();
+                    if (hit) {
+                        screenShake = 8;
+                        sfx.bossHit();
+                    }
+                }
+            }
 
             // Bomba bomb tracking collisions
             if (bomba && !bomba.dead) {
@@ -1052,6 +1143,16 @@ function gameLoop(timestamp) {
                             level.tiles[fy][flagX] = 5;
                         }
                         level.finishCols.set(flagX, { topRow: 4, bottomRow: level.rows - 1 });
+                    }
+                    if (entities[i] === gorillomba && gorillomba.dead) {
+                        gorillombaDefeated = true;
+                        gorillomba = null;
+                        console.log('GORILLOMBA DEFEATED!');
+                        screenShake = 30;
+                        sfx.bossDefeated();
+                        // Finish flag already placed in map — just ensure finishCols is set
+                        const gFlagX = level.cols - 2;
+                        level.finishCols.set(gFlagX, { topRow: 4, bottomRow: level.rows - 1 });
                     }
                     entities.splice(i, 1);
                 }
@@ -1219,7 +1320,35 @@ function gameLoop(timestamp) {
 
         // ── Draw ──────────────────────────────
         level.draw(ctx);
-        entities.forEach(entity => entity.draw(ctx));
+
+        // Level 7: Draw goombas with vanish effect BEFORE entities loop
+        if (currentLevelIndex === 7) {
+            const visPhase = Math.floor(performance.now() / 2000) % 2;
+            entities.forEach(e => {
+                if (e.type === 'goomba' && !e.dead) {
+                    if (visPhase === 1) {
+                        // Invisible phase: faint shimmer
+                        ctx.globalAlpha = 0.10;
+                        e.draw(ctx);
+                        ctx.globalAlpha = 1.0;
+                    }
+                    // visible phase drawn normally below in the generic loop
+                }
+            });
+        }
+
+        entities.forEach(entity => {
+            if (entity.type === 'gorillomba' && !entity.dead) {
+                const wildMuttActive = mario.state === 'WILDMUTT';
+                entity.draw(ctx, wildMuttActive);
+            } else if (entity.type === 'goomba' && currentLevelIndex === 7) {
+                const visPhase = Math.floor(performance.now() / 2000) % 2;
+                if (visPhase === 0) entity.draw(ctx); // visible phase only
+                // invisible phase already rendered as shimmer above
+            } else {
+                entity.draw(ctx);
+            }
+        });
         mario.draw(ctx);
 
         // ── Draw Shockwaves ───────────────────
@@ -1281,6 +1410,11 @@ function gameLoop(timestamp) {
 
         ctx.restore();
 
+        // ── Level 7 Thermal Vision Overlay (screen-space) ────────
+        if (currentLevelIndex === 7 && mario.state === 'WILDMUTT') {
+            level.drawThermalOverlay(ctx, GAME_WIDTH, GAME_HEIGHT);
+        }
+
         // ── Level Title Fade ──────────────────────────────────────
         const titleAge = performance.now() - levelTitleTimer;
         const titleDur = 3500;
@@ -1295,7 +1429,8 @@ function gameLoop(timestamp) {
                 'Welcome to HELL 🔥',
                 'XLR8 — LIGHT SPEED! ⚡',
                 'The Toxic Sewers 🪰',
-                'Welcome to the damaged world 💻'
+                'Welcome to the Damaged World 💻',
+                'The Hidden Senses Jungle 🐺'
             ];
             const subtitle = titles[currentLevelIndex] || `Level ${currentLevelIndex}`;
             ctx.save();
@@ -1306,6 +1441,7 @@ function gameLoop(timestamp) {
             else if (currentLevelIndex === 4) { titleBg = 'rgba(0,5,32,0.80)'; titleColor = '#00FFFF'; }
             else if (currentLevelIndex === 5) { titleBg = 'rgba(20,40,20,0.80)'; titleColor = '#88FF00'; }
             else if (currentLevelIndex === 6) { titleBg = 'rgba(10,10,12,0.85)'; titleColor = '#00FFCC'; }
+            else if (currentLevelIndex === 7) { titleBg = 'rgba(5,20,5,0.85)'; titleColor = '#AAFF44'; }
             ctx.fillStyle = titleBg;
             ctx.fillRect(GAME_WIDTH / 2 - 230, GAME_HEIGHT / 3 - 38, 460, 80);
             ctx.fillStyle = titleColor;
@@ -1349,7 +1485,7 @@ function gameLoop(timestamp) {
         ctx.fillText(`Level ${currentLevelIndex}${hudWatch}${hudAlien}${hudAction}${hudDoubleJump}`, 18, 30);
 
         // ── Alien Countdown Timer HUD ─────────
-        if (mario.alienTimer > 0 && (mario.state === 'FOURARMS' || mario.state === 'HEATBLAST' || mario.state === 'XLR8' || mario.state === 'STINKFLY')) {
+        if (mario.alienTimer > 0 && (mario.state === 'FOURARMS' || mario.state === 'HEATBLAST' || mario.state === 'XLR8' || mario.state === 'STINKFLY' || mario.state === 'UPGRADE' || mario.state === 'WILDMUTT')) {
             const timerBarW = 160;
             const timerBarH = 10;
             const timerX = 8;
@@ -1554,6 +1690,48 @@ function gameLoop(timestamp) {
             ctx.font = 'bold 20px sans-serif';
             ctx.textAlign = 'center';
             ctx.fillText('GOMROG DEFEATED! → REACH THE EXIT!', GAME_WIDTH / 2, 80);
+            ctx.textAlign = 'left';
+        }
+
+        // ── Gorillomba UI HUD (screen-space) ────────
+        if (gorillomba && !gorillomba.dead && currentLevelIndex === 7) {
+            const barW = 300;
+            const barH = 16;
+            const barX = GAME_WIDTH / 2 - barW / 2;
+            const barY = 50;
+            const hpRatio = gorillomba.hp / gorillomba.maxHp;
+
+            ctx.fillStyle = 'rgba(20,10,0,0.7)';
+            ctx.fillRect(barX - 4, barY - 4, barW + 8, barH + 24);
+
+            ctx.fillStyle = '#333';
+            ctx.fillRect(barX, barY, barW, barH);
+            const r = Math.floor(255 * (1 - hpRatio));
+            const g = Math.floor(255 * hpRatio);
+            ctx.fillStyle = `rgb(${r}, ${g}, 0)`;
+            ctx.fillRect(barX, barY, barW * hpRatio, barH);
+            ctx.strokeStyle = '#AAFF44';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(barX, barY, barW, barH);
+            ctx.lineWidth = 1;
+
+            ctx.fillStyle = '#AAFF44';
+            ctx.font = 'bold 12px sans-serif';
+            ctx.textAlign = 'center';
+            if (mario.state !== 'WILDMUTT') {
+                ctx.fillText(`🦍 GORILLOMBA — YOU MUST BE WILD MUTT TO SEE AND HIT HIM! ???/???`, GAME_WIDTH / 2, barY + barH + 14);
+            } else {
+                ctx.fillText(`🦍 GORILLOMBA — PUNCH HIS CHEST TO DEFEAT HIM! ${gorillomba.hp}/${gorillomba.maxHp}`, GAME_WIDTH / 2, barY + barH + 14);
+            }
+            ctx.textAlign = 'left';
+        }
+
+        // Gorillomba defeated message
+        if (gorillombaDefeated && currentLevelIndex === 7) {
+            ctx.fillStyle = '#AAFF44';
+            ctx.font = 'bold 20px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('GORILLOMBA DEFEATED! → REACH THE EXIT!', GAME_WIDTH / 2, 80);
             ctx.textAlign = 'left';
         }
 
