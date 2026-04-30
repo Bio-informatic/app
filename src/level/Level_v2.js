@@ -10,7 +10,7 @@ export class Level {
         let map = [];
 
         // LEVEL GENERATION
-        if (levelIndex >= 1 && levelIndex <= 7) {
+        if (levelIndex >= 1 && levelIndex <= 8) {
             const ROWS = 24;
             const COLS = levelIndex >= 5 ? 200 : (levelIndex === 4 ? 250 : (levelIndex === 3 ? 200 : 150));
             const TS = this.tileSize;
@@ -62,6 +62,7 @@ export class Level {
             else if (levelIndex === 5) bossZoneStart = COLS - 40;
             else if (levelIndex === 6) bossZoneStart = COLS - 40;
             else if (levelIndex === 7) bossZoneStart = COLS - 45;
+            else if (levelIndex === 8) bossZoneStart = COLS - 50;
 
             // Store slow zone bounds for game.js
             this.slowZoneStart = levelIndex === 4 ? bossZoneStart * TS : -1;
@@ -150,7 +151,8 @@ export class Level {
                     const goombaY = hasGroundBricks ? baseTopY - 1 : GROUND_Y - 1;
                     if (goombaY > 2 && map[goombaY][curX] === skyChar) {
                         let goombaType = 'goomba';
-                        if (levelIndex === 7) goombaType = 'goomba'; // vanishing goombas — managed in draw
+                        if (levelIndex === 8) goombaType = 'whitewalker_goomba';
+                        else if (levelIndex === 7) goombaType = 'goomba'; // vanishing goombas — managed in draw
                         else if (levelIndex === 6) goombaType = 'electromba';
                         else if (levelIndex === 5) goombaType = 'ooze_goomba';
                         else if (levelIndex === 3) goombaType = 'lava_goomba';
@@ -413,6 +415,39 @@ export class Level {
                 }
             }
 
+            // ── Level 8 Boss Arena (Night King) ───────────────────
+            if (levelIndex === 8) {
+                // Flat snowy ground
+                for (let y = GROUND_Y; y < ROWS; y++) {
+                    for (let x = bossZoneStart; x < COLS; x++) {
+                        map[y][x] = groundChar;
+                    }
+                }
+                // Ice pillars
+                for (let y = GROUND_Y - 5; y < GROUND_Y; y++) {
+                    map[y][bossZoneStart] = brickChar;
+                    map[y][COLS - 1] = brickChar;
+                }
+                // Place Night King
+                this.entities.push({
+                    x: (bossZoneStart + 25) * TS,
+                    y: (GROUND_Y - 4) * TS,
+                    type: 'night_king'
+                });
+                
+                // Giant Dragonglass Diamond guarded by Night King
+                this.entities.push({
+                    x: (bossZoneStart + 10) * TS,
+                    y: (GROUND_Y - 3) * TS,
+                    type: 'dragonglass_diamond'
+                });
+
+                // Finish flag behind boss
+                for (let y = 4; y < ROWS; y++) {
+                    map[y][COLS - 2] = finishChar;
+                }
+            }
+
             // Convert to strings
             for (let y = 0; y < ROWS; y++) {
                 map[y] = map[y].join('');
@@ -474,6 +509,20 @@ export class Level {
 
     // ── Theme palettes ─────────────────────────────────────────────
     getTheme() {
+        if (this.levelIndex === 8) {
+            return {
+                sky:            '#0A1A2A',   // Deep icy night sky
+                ground:         '#E0F0FF',   // Snow
+                groundStroke:   '#A0C0E0',
+                brick:          '#80D0FF',   // Ice blocks
+                brickStroke:    '#0080FF',
+                mystery:        '#00FFFF',   // Cyan crystal box
+                pipe:           '#004080',
+                unstable:       '#B0E0FF',
+                unstableStroke: '#60A0FF',
+                cloud:          'rgba(200, 240, 255, 0.15)', // Frost fog
+            };
+        }
         if (this.levelIndex === 7) {
             return {
                 sky:            '#1A3A0A',   // deep jungle green sky
@@ -688,6 +737,44 @@ export class Level {
                 ctx.fillRect(cx, cy, 80, 30);
                 ctx.fillRect(cx + 20, cy - 14, 40, 20);
                 ctx.fillRect(cx - 20, cy + 20, 50, 18);
+            }
+        } else if (this.levelIndex === 8) {
+            // Winter is here — falling snow and frost fog
+            ctx.fillStyle = t.cloud;
+            for (let i = 0; i < 40; i++) {
+                // Thick bottom fog
+                const cx = (i * 150 + now / 20) % (this.width + 200) - 100;
+                ctx.fillRect(cx, this.height - 200 + Math.sin(i) * 30, 200, 50);
+                
+                // Falling snow
+                const sx = (i * 273 + now / 30) % this.width;
+                const sy = ((i * 100) + now / (15 + i % 5)) % this.height;
+                ctx.fillStyle = '#FFFFFF';
+                ctx.globalAlpha = 0.5 + Math.random() * 0.5;
+                ctx.beginPath();
+                ctx.arc(sx, sy, 2 + (i % 3), 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1.0;
+            
+            // Night King global summon effect
+            if (this.winterGlowTimer > 0) {
+                const ratio = Math.min(1, this.winterGlowTimer / 1000);
+                
+                // Flash the screen blue/cyan
+                ctx.fillStyle = `rgba(0, 200, 255, ${0.4 * ratio})`;
+                ctx.fillRect(0, 0, this.width, this.height);
+                
+                // Extra thick white smoke across the sky
+                ctx.fillStyle = `rgba(255, 255, 255, ${0.4 * ratio})`;
+                for (let i = 0; i < 30; i++) {
+                    // Spread smoke out and let it drift
+                    const cx = ((i * 300 + now / 2) % (this.width + 400)) - 200;
+                    const cy = Math.sin(i + now/400) * 150 + 150;
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, 150 + Math.random() * 50, 0, Math.PI * 2);
+                    ctx.fill();
+                }
             }
         } else if (this.levelIndex !== 3 && this.levelIndex !== 6) {
             ctx.fillStyle = t.cloud;

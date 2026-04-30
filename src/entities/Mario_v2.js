@@ -11,7 +11,7 @@ export class Mario {
         this.gravity = 0.5;
         this.grounded = false;
         this.input = input;
-        this.state = 'SMALL'; // SMALL, FOURARMS, HEATBLAST
+        this.state = 'SMALL'; // SMALL, FOURARMS, HEATBLAST, DIAMONDHEAD
         this.transforming = false;
         this.transformTimer = 0;
         this.victory = false;
@@ -151,6 +151,17 @@ export class Mario {
         this.height = 48;
     }
 
+    transformToDiamondhead() {
+        if (this.state === 'DIAMONDHEAD') return;
+        this.state = 'DIAMONDHEAD';
+        this.transforming = true;
+        this.transformTimer = performance.now();
+        this.alienTimer = performance.now();
+        if (this.height < 60) this.y -= (60 - this.height);
+        this.width = 44;
+        this.height = 60;
+    }
+
     update(deltaTime, level) {
         if (this.transforming) {
             if (performance.now() - this.transformTimer > 1000) {
@@ -159,7 +170,7 @@ export class Mario {
         }
 
         // Alien countdown timer — revert to SMALL after 15 seconds
-        if (this.alienTimer > 0 && (this.state === 'FOURARMS' || this.state === 'HEATBLAST' || this.state === 'XLR8' || this.state === 'STINKFLY' || this.state === 'UPGRADE' || this.state === 'WILDMUTT')) {
+        if (this.alienTimer > 0 && (this.state === 'FOURARMS' || this.state === 'HEATBLAST' || this.state === 'XLR8' || this.state === 'STINKFLY' || this.state === 'UPGRADE' || this.state === 'WILDMUTT' || this.state === 'DIAMONDHEAD')) {
             const elapsed = performance.now() - this.alienTimer;
             this.alienTimerRemaining = Math.max(0, Math.ceil((this.alienTimerDuration - elapsed) / 1000));
             if (elapsed >= this.alienTimerDuration) {
@@ -417,9 +428,81 @@ export class Mario {
             this.drawUpgrade(ctx);
         } else if (this.state === 'WILDMUTT') {
             this.drawWildMutt(ctx);
+        } else if (this.state === 'DIAMONDHEAD') {
+            this.drawDiamondhead(ctx);
         } else {
             this.drawMario(ctx);
         }
+    }
+
+    drawDiamondhead(ctx) {
+        const centerX = this.x + 22;
+        const bottomY = this.y + 60;
+
+        ctx.save();
+        ctx.translate(centerX, bottomY);
+        ctx.scale(2, 2);
+
+        // Body
+        ctx.fillStyle = '#00AAAA'; // Dark cyan/teal body
+        ctx.fillRect(-6, -20, 12, 12);
+        
+        // Crystalline shards on back/shoulders
+        ctx.fillStyle = '#A0E6FF';
+        ctx.beginPath();
+        ctx.moveTo(-6, -20); ctx.lineTo(-10, -28); ctx.lineTo(-2, -20);
+        ctx.moveTo(6, -20); ctx.lineTo(10, -28); ctx.lineTo(2, -20);
+        ctx.fill();
+
+        // Chest/Omnitrix
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(-4, -18, 8, 8);
+        ctx.fillStyle = '#39FF14';
+        ctx.beginPath(); ctx.arc(0, -14, 2, 0, Math.PI * 2); ctx.fill();
+
+        // Head
+        ctx.fillStyle = '#00FFFF'; // Bright cyan crystal head
+        ctx.beginPath();
+        ctx.moveTo(-4, -20);
+        ctx.lineTo(-2, -26);
+        ctx.lineTo(2, -26);
+        ctx.lineTo(4, -20);
+        ctx.fill();
+
+        // Eyes
+        ctx.fillStyle = '#FFFF00';
+        ctx.fillRect(-2, -24, 1, 1);
+        ctx.fillRect(1, -24, 1, 1);
+
+        // Legs
+        ctx.fillStyle = '#008888';
+        ctx.fillRect(-5, -8, 4, 8);
+        ctx.fillRect(1, -8, 4, 8);
+
+        // Arms (thick crystal arms)
+        ctx.fillStyle = '#00FFFF';
+        ctx.fillRect(-12, -20, 6, 12);
+        ctx.fillRect(6, -20, 6, 12);
+
+        // Draw Dragonglass if equipped
+        if (this.hasDragonglass) {
+            ctx.fillStyle = '#1A1A1A'; // Obsidian / black
+            ctx.beginPath();
+            if (this.facingRight) {
+                // Right hand
+                ctx.moveTo(9, -8); // Hand pos
+                ctx.lineTo(25, -20); // Tip
+                ctx.lineTo(12, -4);
+            } else {
+                // Left hand
+                ctx.moveTo(-9, -8);
+                ctx.lineTo(-25, -20);
+                ctx.lineTo(-12, -4);
+            }
+            ctx.fill();
+        }
+
+        ctx.restore();
     }
 
     drawMario(ctx) {
@@ -988,7 +1071,7 @@ export class Mario {
 
     drawWildMutt(ctx) {
         const cx = this.x + this.width / 2;
-        const cy = this.y + this.height / 2;
+        const cy = this.y + this.height / 2 + 10; // Anchor lower
         const now = performance.now();
         const flip = this.facingRight ? 1 : -1;
 
@@ -996,106 +1079,116 @@ export class Mario {
         ctx.translate(cx, cy);
         ctx.scale(flip, 1);
 
-        // Body (large quadruped — low to ground)
-        // --- Body (Vibrant Orange Alien) ---
-        ctx.fillStyle = '#FF8C00'; 
-        // Main mass (hunched forward)
-        ctx.beginPath();
-        ctx.ellipse(0, 5, 28, 22, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Shaggy fur on back (darker orange/red)
-        ctx.fillStyle = '#E65C00';
-        ctx.beginPath();
-        ctx.moveTo(-25, -5);
-        ctx.lineTo(-10, -15);
-        ctx.lineTo(10, -18);
-        ctx.lineTo(25, -12);
-        ctx.lineTo(15, 5);
-        ctx.fill();
-
-        // neck/chin fur (shaggy)
-        ctx.fillStyle = '#FF8C00';
-        ctx.beginPath();
-        ctx.moveTo(15, 10);
-        ctx.lineTo(25, 15);
-        ctx.lineTo(20, 25);
-        ctx.lineTo(10, 28);
-        ctx.lineTo(5, 25);
-        ctx.fill();
-
-        // --- Head (No eyes, just mouth and gills) ---
-        // Gill slits (distinct feature on neck)
-        ctx.strokeStyle = '#4A1A00';
-        ctx.lineWidth = 1;
-        for (let i = 0; i < 4; i++) {
-            ctx.beginPath();
-            ctx.moveTo(18 + i * 2, -2);
-            ctx.lineTo(22 + i * 2, 8);
-            ctx.stroke();
+        // Animation offsets
+        let bodyYOffset = 0;
+        let legOffset = 0;
+        if (!this.grounded) {
+            bodyYOffset = -5;
+        } else if (Math.abs(this.vx) > 0.5) {
+            bodyYOffset = Math.sin(now / 80) * 3;
+            legOffset = Math.sin(now / 80) * 8;
         }
 
-        // Large mouth with fangs (lower part of face)
-        ctx.fillStyle = '#1A0800';
-        ctx.fillRect(25, 5, 14, 8);
-        // Fangs (White)
-        ctx.fillStyle = 'white';
-        ctx.beginPath();
-        ctx.moveTo(27, 5); ctx.lineTo(29, 12); ctx.lineTo(31, 5); ctx.fill(); 
-        ctx.beginPath();
-        ctx.moveTo(33, 5); ctx.lineTo(35, 12); ctx.lineTo(37, 5); ctx.fill();
+        // Colors (No strokes, pure blocky colors)
+        const baseOrange = '#FF8C00';
+        const darkOrange = '#C84C00';
 
-        // --- Legs (Massive muscular front arms) ---
-        // Back Leg
-        ctx.fillStyle = '#D64500';
-        ctx.fillRect(-22, 10, 10, 24);
+        // --- Back Legs (Small, blocky) ---
+        ctx.fillStyle = darkOrange;
+        ctx.fillRect(-22, -5 - bodyYOffset, 12, 20 + bodyYOffset); // Thigh
+        ctx.fillRect(-24, 15 - bodyYOffset, 8, 15 + bodyYOffset); // Calf
+        // Back claws
         ctx.fillStyle = '#222';
-        ctx.fillRect(-24, 34, 14, 4); // Back claws
+        ctx.beginPath(); ctx.moveTo(-24, 30); ctx.lineTo(-12, 30); ctx.lineTo(-16, 25); ctx.fill();
 
-        // Massive Front Arm
-        ctx.fillStyle = '#FF8C00';
+        // --- Main Body Arch (Blocky polygons) ---
+        ctx.fillStyle = baseOrange;
         ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.lineTo(15, 15);
-        ctx.lineTo(10, 35);
-        ctx.lineTo(-5, 35);
-        ctx.lineTo(-10, 15);
+        ctx.moveTo(-20, 5 - bodyYOffset);
+        ctx.lineTo(-25, -20 - bodyYOffset); // high arch back
+        ctx.lineTo(0, -35 - bodyYOffset); // peak of arch
+        ctx.lineTo(20, -15 - bodyYOffset); // shoulder dropping down
+        ctx.lineTo(15, 10 - bodyYOffset); // belly
+        ctx.lineTo(-15, 10 - bodyYOffset); // back to start
         ctx.fill();
 
-        // Massive Front Paw/Claws
-        ctx.fillStyle = '#222';
+        // Blocky fur spikes on back
+        ctx.fillStyle = '#FF7B00';
         ctx.beginPath();
-        ctx.moveTo(15, 35);
-        ctx.lineTo(22, 40);
-        ctx.lineTo(5, 40);
-        ctx.lineTo(-10, 35);
+        ctx.moveTo(-20, -15 - bodyYOffset); ctx.lineTo(-25, -25 - bodyYOffset); ctx.lineTo(-10, -25 - bodyYOffset);
+        ctx.moveTo(-5, -30 - bodyYOffset); ctx.lineTo(0, -42 - bodyYOffset); ctx.lineTo(10, -30 - bodyYOffset);
+        ctx.moveTo(10, -20 - bodyYOffset); ctx.lineTo(18, -25 - bodyYOffset); ctx.lineTo(15, -15 - bodyYOffset);
         ctx.fill();
 
-        // --- Omnitrix (Shoulder/Bracer) ---
-        ctx.fillStyle = '#333';
-        ctx.fillRect(-12, -8, 16, 16); // Bracer
+        // --- Head/Snout (Hanging low, blocky) ---
+        ctx.fillStyle = baseOrange;
+        ctx.fillRect(15, 5 - bodyYOffset, 18, 14); // basic snout
+        
+        // Mouth (Black block)
+        ctx.fillStyle = '#111';
+        ctx.fillRect(16, 12 - bodyYOffset, 16, 7);
+
+        // Teeth (White triangles)
+        ctx.fillStyle = '#FFF';
+        ctx.beginPath(); ctx.moveTo(18, 12 - bodyYOffset); ctx.lineTo(20, 16 - bodyYOffset); ctx.lineTo(22, 12 - bodyYOffset); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(28, 12 - bodyYOffset); ctx.lineTo(30, 16 - bodyYOffset); ctx.lineTo(32, 12 - bodyYOffset); ctx.fill();
+
+        // Lower jaw whiskers (Blocky strips)
+        ctx.fillStyle = '#111';
+        ctx.fillRect(18, 19 - bodyYOffset, 2, 6);
+        ctx.fillRect(24, 19 - bodyYOffset, 2, 8);
+        ctx.fillRect(28, 19 - bodyYOffset, 2, 6);
+
+        // Neck Gills (Dark orange blocky lines)
+        ctx.fillStyle = darkOrange;
+        ctx.fillRect(8, -15 - bodyYOffset, 3, 15);
+        ctx.fillRect(14, -10 - bodyYOffset, 3, 12);
+
+        // --- Front Leg (Massive blocky arm) ---
+        ctx.fillStyle = '#FFA500'; // lighter orange for depth
+        ctx.beginPath();
+        ctx.moveTo(5, -15 - bodyYOffset); // shoulder
+        ctx.lineTo(20, -5 - bodyYOffset); // thick top
+        ctx.lineTo(25 + legOffset, 25); // paw front
+        ctx.lineTo(12 + legOffset, 25); // paw back
+        ctx.lineTo(-5, 0 - bodyYOffset); // armpit
+        ctx.fill();
+
+        // Front Claws
+        ctx.fillStyle = '#222';
+        ctx.beginPath(); ctx.moveTo(12 + legOffset, 25); ctx.lineTo(25 + legOffset, 25); ctx.lineTo(18 + legOffset, 20); ctx.fill();
+        ctx.fillRect(12 + legOffset, 25, 4, 6);
+        ctx.fillRect(18 + legOffset, 25, 4, 6);
+        ctx.fillRect(24 + legOffset, 25, 4, 6);
+
+        // --- Omnitrix (Blocky) ---
+        ctx.fillStyle = '#111';
+        ctx.fillRect(6, -24 - bodyYOffset, 12, 12); // padding
+        ctx.fillStyle = '#FFF';
+        ctx.fillRect(8, -22 - bodyYOffset, 2, 2);
+        ctx.fillRect(14, -16 - bodyYOffset, 2, 2);
+        
         ctx.fillStyle = '#000';
+        ctx.fillRect(8, -20 - bodyYOffset, 8, 8);
+        ctx.fillStyle = '#39FF14';
         ctx.beginPath();
-        ctx.arc(-4, 0, 6, 0, Math.PI * 2);
+        ctx.moveTo(8, -20 - bodyYOffset); ctx.lineTo(16, -12 - bodyYOffset);
+        ctx.lineTo(8, -12 - bodyYOffset); ctx.lineTo(16, -20 - bodyYOffset);
         ctx.fill();
-        ctx.fillStyle = '#00FF44';
-        ctx.beginPath();
-        ctx.moveTo(-4, -4); ctx.lineTo(0, 0); ctx.lineTo(-4, 0); ctx.fill();
-        ctx.beginPath();
-        ctx.moveTo(-4, 4); ctx.lineTo(-8, 0); ctx.lineTo(-4, 0); ctx.fill();
 
         // --- Punch animation ---
         if (this.punchActive) {
             const ext = Math.min(1, (now - this.punchTimer) / 150); // 0→1
             const punchX = 35 + ext * 25;
-            ctx.fillStyle = '#FF8C00';
-            ctx.beginPath();
-            ctx.arc(punchX, 10, 14, 0, Math.PI*2);
-            ctx.fill();
+            
+            ctx.fillStyle = baseOrange;
+            ctx.fillRect(punchX - 10, 10 + bodyYOffset, 20, 16);
+            
             // Claws extended
             ctx.fillStyle = '#222';
-            ctx.fillRect(punchX + 5, 6, 14, 5);
-            ctx.fillRect(punchX + 5, 11, 14, 5);
+            ctx.fillRect(punchX + 10, 12 + bodyYOffset, 14, 3);
+            ctx.fillRect(punchX + 10, 18 + bodyYOffset, 14, 3);
+            ctx.fillRect(punchX + 10, 24 + bodyYOffset, 14, 3);
         }
 
         ctx.restore();

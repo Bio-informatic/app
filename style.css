@@ -60,6 +60,11 @@ canvas.level7-theme {
     /* Deep jungle green sky for Wild Mutt level */
 }
 
+canvas.level8-theme {
+    background-color: #0A1A2A;
+    /* Deep icy night sky for Diamondhead level */
+}
+
 #ui-layer {
     position: absolute;
     top: 10px;

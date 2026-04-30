@@ -25,7 +25,12 @@ import { Electromba } from './src/entities/Electromba.js';
 import { Gomboto } from './src/entities/Gomboto.js';
 import { Gorillomba } from './src/entities/Gorillomba.js';
 import { WildMuttItem } from './src/entities/WildMuttItem.js';
-
+import { DiamondheadItem } from './src/entities/DiamondheadItem.js';
+import { DragonglassItem } from './src/entities/DragonglassItem.js';
+import { WhiteWalkerGoomba } from './src/entities/WhiteWalkerGoomba.js';
+import { NightKing } from './src/entities/NightKing.js';
+import { CrystalShard } from './src/entities/CrystalShard.js';
+import { DragonglassDiamond } from './src/entities/DragonglassDiamond.js';
 const sfx = new SoundManager();
 
 const canvas = document.getElementById('gameCanvas');
@@ -71,7 +76,7 @@ const ALIENS = [
     { key: '4', name: 'Stinkfly', icon: '🪰', unlocked: false, lives: 25 },
     { key: '5', name: 'Upgrade', icon: '💻', unlocked: false, lives: 25 },
     { key: '6', name: 'Wild Mutt', icon: '🐺', unlocked: false, lives: 25 },
-    { key: '7', name: '???', icon: '👾', unlocked: false, lives: 25 },
+    { key: '7', name: 'Diamondhead', icon: '💎', unlocked: false, lives: 25 },
     { key: '8', name: '???', icon: '👾', unlocked: false, lives: 25 },
     { key: '9', name: '???', icon: '👾', unlocked: false, lives: 25 },
     { key: '10', name: '???', icon: '👾', unlocked: false, lives: 25 },
@@ -81,7 +86,9 @@ function getDefaultBoxEnemyType(levelIndex) {
     if (levelIndex === 3) return 'lava_goomba';
     if (levelIndex === 4) return 'shield_drone';
     if (levelIndex === 5) return 'ooze_goomba';
+    if (levelIndex === 5) return 'ooze_goomba';
     if (levelIndex === 6) return 'electromba';
+    if (levelIndex === 8) return 'whitewalker_goomba';
     return 'goomba';
 }
 
@@ -90,6 +97,7 @@ function createEnemyByType(type, x, y, entitiesArray = null) {
     if (type === 'shield_drone') return new ShieldDrone(x, y);
     if (type === 'ooze_goomba') return new OozeGoomba(x, y);
     if (type === 'electromba') return new Electromba(x, y, entitiesArray);
+    if (type === 'whitewalker_goomba') return new WhiteWalkerGoomba(x, y);
     return new Goomba(x, y);
 }
 
@@ -178,6 +186,8 @@ function activateAlien(index) {
         mario.transformToUpgrade();
     } else if (alien.name === 'Wild Mutt') {
         mario.transformToWildMutt();
+    } else if (alien.name === 'Diamondhead') {
+        mario.transformToDiamondhead();
     }
 }
 
@@ -227,6 +237,10 @@ let gombotoDefeated = false;
 let gorillomba = null;
 let gorillombaDefeated = false;
 
+// Night King boss reference
+let nightKing = null;
+let nightKingDefeated = false;
+
 function assignBlockHit() {
     mario.onBlockHit = (tileType, bx, by) => {
         if (tileType === 3) {
@@ -246,6 +260,7 @@ function assignBlockHit() {
                 else if (currentLevelIndex === 4) ItemClass = XLR8Item;
                 else if (currentLevelIndex === 5) ItemClass = StinkflyItem;
                 else if (currentLevelIndex === 6) ItemClass = UpgradeItem;
+                else if (currentLevelIndex === 8) ItemClass = DiamondheadItem;
             }
 
             if (ItemClass) {
@@ -300,6 +315,8 @@ function loadLevel(index, carryOverState = null) {
     gombotoDefeated = false;
     gorillomba = null;
     gorillombaDefeated = false;
+    nightKing = null;
+    nightKingDefeated = false;
 
     level.entities.forEach(entityData => {
         if (entityData.type === 'goomba') {
@@ -342,6 +359,13 @@ function loadLevel(index, carryOverState = null) {
             entities.push(gorillomba);
         } else if (entityData.type === 'wild_mutt_item') {
             entities.push(new WildMuttItem(entityData.x, entityData.y));
+        } else if (entityData.type === 'night_king') {
+            nightKing = new NightKing(entityData.x, entityData.y, entities);
+            entities.push(nightKing);
+        } else if (entityData.type === 'dragonglass_diamond') {
+            entities.push(new DragonglassDiamond(entityData.x, entityData.y, entities));
+        } else if (entityData.type === 'whitewalker_goomba') {
+            entities.push(new WhiteWalkerGoomba(entityData.x, entityData.y));
         }
     });
 
@@ -355,6 +379,7 @@ function loadLevel(index, carryOverState = null) {
     canvas.classList.toggle('level5-theme', index === 5);
     canvas.classList.toggle('level6-theme', index === 6);
     canvas.classList.toggle('level7-theme', index === 7);
+    canvas.classList.toggle('level8-theme', index === 8);
 
     // Sound: start level music
     bossEntrancePlayed = false;
@@ -468,6 +493,16 @@ window.addEventListener('keydown', (e) => {
                 // Auto-deactivate after 200ms
                 setTimeout(() => { mario.punchActive = false; }, 200);
             }
+        } else if (mario.state === 'DIAMONDHEAD') {
+            // Shoot crystal shards
+            const now = performance.now();
+            if (!mario.crystalCooldown || now - mario.crystalCooldown > 400) {
+                mario.crystalCooldown = now;
+                const fx = mario.x + (mario.facingRight ? mario.width : 0);
+                const fy = mario.y + mario.height / 2;
+                entities.push(new CrystalShard(fx, fy, mario.facingRight ? 1 : -1, 1));
+                sfx.stomp(); // Plop sound
+            }
         } else if (mario.state === 'UPGRADE') {
             const now = performance.now();
             if (currentLevelIndex === 6 && now - mario.upgradeShotCooldown > 350) {
@@ -577,6 +612,9 @@ function gameLoop(timestamp) {
             }
             if (gorillomba && !gorillomba.dead) {
                 gorillomba.update(deltaTime, level, mario.x + mario.width / 2, mario.y + mario.height / 2);
+            }
+            if (nightKing && !nightKing.dead) {
+                nightKing.update(deltaTime, level, mario.x + mario.width / 2, mario.y + mario.height / 2);
             }
             mario.update(deltaTime, level);
 
@@ -706,7 +744,12 @@ function gameLoop(timestamp) {
                     mario.victory = true;
                     sfx.levelComplete();
                     sfx.stopMusic();
-                    showLevelModal('LEVEL 7 COMPLETE!', 'Wild Mutt\s senses never lied! Gorillomba is defeated!', false);
+                    showLevelModal('LEVEL 7 COMPLETE!', 'Wild Mutt\s senses never lied! Gorillomba is defeated!', true);
+                } else if (currentLevelIndex === 8) {
+                    mario.victory = true;
+                    sfx.levelComplete();
+                    sfx.stopMusic();
+                    showLevelModal('LEVEL 8 COMPLETE!', 'Winter is over! The Night King is shattered!', true);
                 } else {
                     mario.victory = true;
                     showLevelModal('YOU WIN!', 'The universe is safe… for now.', false);
@@ -775,6 +818,25 @@ function gameLoop(timestamp) {
                         }
                     });
                     return; // Don't check mario collision for fireballs
+                } else if (entity.type === 'crystal_shard') {
+                    entities.forEach(target => {
+                        if (target.dead || target === entity) return;
+                        if (target.type === 'fireball' || target.type === 'slimeball' || target.type === 'crystal_shard' || target.type === 'ice_spear') return;
+
+                        if (checkEntityCollision(entity, target)) {
+                            if (target.type === 'dragonglass_diamond') {
+                                target.takeDamage();
+                                entity.dead = true;
+                                sfx.bossHit();
+                            } else if (target.type === 'whitewalker_goomba') {
+                                target.dead = true;
+                                entity.dead = true;
+                                sfx.stomp();
+                            }
+                            // Does not damage Night King
+                        }
+                    });
+                    return;
                 } else if (entity.type === 'slimeball') {
                     entities.forEach(target => {
                         if (target.dead || target === entity) return;
@@ -913,6 +975,21 @@ function gameLoop(timestamp) {
                         renderAlienGrid();
                         openOmnitrixPanel();
 
+                    } else if (entity.type === 'diamondhead_item') {
+                        entity.dead = true;
+                        ALIENS[6].unlocked = true;
+                        ALIENS[6].introMessage = 'I am Diamondhead! Press F to shoot crystal shards! 💎';
+                        mario.transformToDiamondhead();
+                        sfx.collectItem();
+                        renderAlienGrid();
+                        openOmnitrixPanel();
+                    } else if (entity.type === 'dragonglass_item') {
+                        entity.dead = true;
+                        mario.hasDragonglass = true;
+                        sfx.collectItem();
+                        // Flash screen
+                        ctx.fillStyle = 'white';
+                        ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
                     } else if (entity.type === 'ooze_goomba') {
                         // Level 5 Enemies
                         if (mario.vy > 0 && mario.y + mario.height < entity.y + entity.height / 2 + 10) {
@@ -1030,19 +1107,35 @@ function gameLoop(timestamp) {
                             }
                         }
 
-                    } else if (entity.type === 'goomba' && currentLevelIndex === 7) {
-                        // Level 7 goombas: appear/disappear every 2 seconds
-                        const visPhase = Math.floor(performance.now() / 2000) % 2;
-                        if (visPhase === 0) {
-                            // Visible — normal goomba logic
-                            if (mario.vy > 0 && mario.y + mario.height < entity.y + entity.height / 2 + 10) {
+                    } else if (entity.type === 'ice_spear') {
+                        if (checkEntityCollision(mario, entity)) {
+                            if (mario.state === 'FOURARMS' || mario.state === 'HEATBLAST' || mario.state === 'XLR8' || mario.state === 'STINKFLY' || mario.state === 'UPGRADE' || mario.state === 'WILDMUTT' || mario.state === 'DIAMONDHEAD') {
+                                mario.revertToSmall();
+                                mario.vy = -5;
                                 entity.dead = true;
-                                sfx.stomp();
-                                mario.vy = -8;
                             } else {
-                                if (mario.state !== 'SMALL') {
+                                sfx.death();
+                                sfx.stopMusic();
+                                gameState = 'GAMEOVER';
+                            }
+                        }
+                    } else if (entity.type === 'night_king') {
+                        // Contact with Night King
+                        if (mario.hasDragonglass && mario.state === 'DIAMONDHEAD') {
+                            entity.dead = true;
+                            mario.hasDragonglass = false; // consumed
+                            sfx.bossHit();
+                            screenShake = 20;
+                            mario.vy = -10;
+                        } else {
+                            if (mario.vy > 0 && mario.y + mario.height < entity.y + 40) {
+                                mario.y = entity.y - mario.height;
+                                mario.vy = 0;
+                                mario.grounded = true;
+                            } else {
+                                if (mario.state === 'FOURARMS' || mario.state === 'HEATBLAST' || mario.state === 'XLR8' || mario.state === 'STINKFLY' || mario.state === 'UPGRADE' || mario.state === 'WILDMUTT' || mario.state === 'DIAMONDHEAD') {
                                     mario.revertToSmall();
-                                    mario.vy = -5;
+                                    mario.vy = -8;
                                 } else {
                                     sfx.death();
                                     sfx.stopMusic();
@@ -1050,7 +1143,41 @@ function gameLoop(timestamp) {
                                 }
                             }
                         }
-                        // Invisible/ghost phase: harmless, walk through
+                    } else if (entity.type === 'whitewalker_goomba') {
+                        if (mario.state === 'DIAMONDHEAD') {
+                            // Immune! Shatter them on contact
+                            entity.dead = true;
+                            sfx.stomp();
+                        } else if (mario.vy > 0 && mario.y + mario.height < entity.y + entity.height / 2 + 10) {
+                            entity.dead = true;
+                            sfx.stomp();
+                            mario.vy = -8;
+                        } else {
+                            if (mario.state !== 'SMALL') {
+                                mario.revertToSmall();
+                                mario.vy = -5;
+                            } else {
+                                sfx.death();
+                                sfx.stopMusic();
+                                gameState = 'GAMEOVER';
+                            }
+                        }
+                    } else if (entity.type === 'goomba' && currentLevelIndex === 7) {
+                        // Level 7 goombas: Always active, but invisible unless Wild Mutt
+                        if (mario.vy > 0 && mario.y + mario.height < entity.y + entity.height / 2 + 10) {
+                            entity.dead = true;
+                            sfx.stomp();
+                            mario.vy = -8;
+                        } else {
+                            if (mario.state !== 'SMALL') {
+                                mario.revertToSmall();
+                                mario.vy = -5;
+                            } else {
+                                sfx.death();
+                                sfx.stopMusic();
+                                gameState = 'GAMEOVER';
+                            }
+                        }
                     }
                 }
             });
@@ -1153,6 +1280,19 @@ function gameLoop(timestamp) {
                         // Finish flag already placed in map — just ensure finishCols is set
                         const gFlagX = level.cols - 2;
                         level.finishCols.set(gFlagX, { topRow: 4, bottomRow: level.rows - 1 });
+                    }
+                    if (entities[i] === nightKing && nightKing.dead) {
+                        nightKingDefeated = true;
+                        nightKing = null;
+                        console.log('NIGHT KING DEFEATED!');
+                        screenShake = 30;
+                        sfx.bossDefeated();
+                        // Draw Kurdistan Flag!
+                        const flagX = level.cols - 2;
+                        for (let fy = 4; fy < level.rows; fy++) {
+                            level.tiles[fy][flagX] = 5;
+                        }
+                        level.finishCols.set(flagX, { topRow: 4, bottomRow: level.rows - 1 });
                     }
                     entities.splice(i, 1);
                 }
@@ -1321,30 +1461,22 @@ function gameLoop(timestamp) {
         // ── Draw ──────────────────────────────
         level.draw(ctx);
 
-        // Level 7: Draw goombas with vanish effect BEFORE entities loop
-        if (currentLevelIndex === 7) {
-            const visPhase = Math.floor(performance.now() / 2000) % 2;
-            entities.forEach(e => {
-                if (e.type === 'goomba' && !e.dead) {
-                    if (visPhase === 1) {
-                        // Invisible phase: faint shimmer
-                        ctx.globalAlpha = 0.10;
-                        e.draw(ctx);
-                        ctx.globalAlpha = 1.0;
-                    }
-                    // visible phase drawn normally below in the generic loop
-                }
-            });
-        }
-
         entities.forEach(entity => {
             if (entity.type === 'gorillomba' && !entity.dead) {
                 const wildMuttActive = mario.state === 'WILDMUTT';
                 entity.draw(ctx, wildMuttActive);
             } else if (entity.type === 'goomba' && currentLevelIndex === 7) {
-                const visPhase = Math.floor(performance.now() / 2000) % 2;
-                if (visPhase === 0) entity.draw(ctx); // visible phase only
-                // invisible phase already rendered as shimmer above
+                if (mario.state === 'WILDMUTT') {
+                    // Wild Mutt can see them perfectly
+                    entity.draw(ctx);
+                } else {
+                    // Invisible to everyone else (just a faint shimmer)
+                    const now = performance.now();
+                    const pulse = (Math.sin(now / 400) + 1) / 2;
+                    ctx.globalAlpha = 0.05 + pulse * 0.05;
+                    entity.draw(ctx);
+                    ctx.globalAlpha = 1.0;
+                }
             } else {
                 entity.draw(ctx);
             }
@@ -1732,6 +1864,50 @@ function gameLoop(timestamp) {
             ctx.font = 'bold 20px sans-serif';
             ctx.textAlign = 'center';
             ctx.fillText('GORILLOMBA DEFEATED! → REACH THE EXIT!', GAME_WIDTH / 2, 80);
+            ctx.textAlign = 'left';
+        }
+
+        // ── Night King UI HUD (screen-space) ────────
+        if (nightKing && !nightKing.dead && currentLevelIndex === 8) {
+            const barW = 300;
+            const barH = 16;
+            const barX = GAME_WIDTH / 2 - barW / 2;
+            const barY = 50;
+            const hpRatio = 1;
+
+            ctx.fillStyle = 'rgba(0,10,20,0.7)';
+            ctx.fillRect(barX - 4, barY - 4, barW + 8, barH + 24);
+
+            ctx.fillStyle = '#333';
+            ctx.fillRect(barX, barY, barW, barH);
+            ctx.fillStyle = `#00FFFF`;
+            ctx.fillRect(barX, barY, barW * hpRatio, barH);
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(barX, barY, barW, barH);
+            ctx.lineWidth = 1;
+
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = 'bold 12px sans-serif';
+            ctx.textAlign = 'center';
+            if (mario.hasDragonglass) {
+                if (mario.state === 'DIAMONDHEAD') {
+                    ctx.fillText(`❄️ NIGHT KING — TOUCH HIM TO SHATTER HIM!`, GAME_WIDTH / 2, barY + barH + 14);
+                } else {
+                    ctx.fillText(`❄️ NIGHT KING — ONLY DIAMONDHEAD CAN WIELD THE DRAGONGLASS!`, GAME_WIDTH / 2, barY + barH + 14);
+                }
+            } else {
+                ctx.fillText(`❄️ NIGHT KING — IMMUNE TO EVERYTHING! FIND DRAGONGLASS!`, GAME_WIDTH / 2, barY + barH + 14);
+            }
+            ctx.textAlign = 'left';
+        }
+
+        // Night King defeated message
+        if (nightKingDefeated && currentLevelIndex === 8) {
+            ctx.fillStyle = '#00FFFF';
+            ctx.font = 'bold 20px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('NIGHT KING SHATTERED! → REACH THE FLAG!', GAME_WIDTH / 2, 80);
             ctx.textAlign = 'left';
         }
 
