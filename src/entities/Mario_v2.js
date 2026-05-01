@@ -1070,130 +1070,280 @@ export class Mario {
     }
 
     drawWildMutt(ctx) {
-        const cx = this.x + this.width / 2;
-        const cy = this.y + this.height / 2 + 10; // Anchor lower
+        // We draw in a local coordinate system then translate to world.
+        // LOCAL SPACE: beast is drawn around origin (0,0) = bottom-centre of body hump.
+        // Scale is 2px per "unit" so the beast is large and visible.
+        // Total footprint: ~110px wide, ~80px tall — bigger than the 52x48 hitbox (that's fine).
+
         const now = performance.now();
-        const flip = this.facingRight ? 1 : -1;
+        const dir = this.facingRight ? 1 : -1;
 
-        ctx.save();
-        ctx.translate(cx, cy);
-        ctx.scale(flip, 1);
+        // World anchor: feet touch the ground at (this.x + this.width/2, this.y + this.height)
+        const wx = this.x + this.width / 2;
+        const wy = this.y + this.height;
 
-        // Animation offsets
-        let bodyYOffset = 0;
-        let legOffset = 0;
+        // Running/bounce animation
+        let bounce = 0;
+        let runPhase = 0;
         if (!this.grounded) {
-            bodyYOffset = -5;
+            bounce = -8;
         } else if (Math.abs(this.vx) > 0.5) {
-            bodyYOffset = Math.sin(now / 80) * 3;
-            legOffset = Math.sin(now / 80) * 8;
+            runPhase = now / 85;
+            bounce = Math.sin(runPhase) * 4;
         }
 
-        // Colors (No strokes, pure blocky colors)
-        const baseOrange = '#FF8C00';
-        const darkOrange = '#C84C00';
+        const BASE  = '#E8820C'; // bright orange
+        const DARK  = '#9C4F00'; // deep shadow orange
+        const MID   = '#C46000'; // mid-shadow
+        const CLAW  = '#3A3820'; // charcoal claws
+        const BLACK = '#080808';
 
-        // --- Back Legs (Small, blocky) ---
-        ctx.fillStyle = darkOrange;
-        ctx.fillRect(-22, -5 - bodyYOffset, 12, 20 + bodyYOffset); // Thigh
-        ctx.fillRect(-24, 15 - bodyYOffset, 8, 15 + bodyYOffset); // Calf
-        // Back claws
-        ctx.fillStyle = '#222';
-        ctx.beginPath(); ctx.moveTo(-24, 30); ctx.lineTo(-12, 30); ctx.lineTo(-16, 25); ctx.fill();
+        ctx.save();
+        ctx.translate(wx, wy);
+        ctx.scale(dir, 1); // flip for facing direction — all local coords assume facing right
 
-        // --- Main Body Arch (Blocky polygons) ---
-        ctx.fillStyle = baseOrange;
+        const b = bounce; // shorthand
+
+        // ══════════════════════════════════════════════════════
+        // DRAW ORDER (back to front):
+        // tail → back legs → body → fur lines → front legs → neck/head → face → omnitrix
+        // ══════════════════════════════════════════════════════
+
+        // ── 1. TAIL (thin, curled upward at rear) ─────────────
+        ctx.fillStyle = DARK;
         ctx.beginPath();
-        ctx.moveTo(-20, 5 - bodyYOffset);
-        ctx.lineTo(-25, -20 - bodyYOffset); // high arch back
-        ctx.lineTo(0, -35 - bodyYOffset); // peak of arch
-        ctx.lineTo(20, -15 - bodyYOffset); // shoulder dropping down
-        ctx.lineTo(15, 10 - bodyYOffset); // belly
-        ctx.lineTo(-15, 10 - bodyYOffset); // back to start
+        ctx.moveTo(-44, -8 + b);
+        ctx.bezierCurveTo(-60, -14 + b, -65, -36 + b, -52, -46 + b);
+        ctx.bezierCurveTo(-46, -52 + b, -38, -44 + b, -42, -36 + b);
+        ctx.bezierCurveTo(-44, -28 + b, -50, -22 + b, -44, -14 + b);
         ctx.fill();
 
-        // Blocky fur spikes on back
-        ctx.fillStyle = '#FF7B00';
+        // ── 2. BACK LEFT LEG (fully visible, bent like a spring) ─────
+        // Thigh — angled back and down
+        ctx.fillStyle = DARK;
         ctx.beginPath();
-        ctx.moveTo(-20, -15 - bodyYOffset); ctx.lineTo(-25, -25 - bodyYOffset); ctx.lineTo(-10, -25 - bodyYOffset);
-        ctx.moveTo(-5, -30 - bodyYOffset); ctx.lineTo(0, -42 - bodyYOffset); ctx.lineTo(10, -30 - bodyYOffset);
-        ctx.moveTo(10, -20 - bodyYOffset); ctx.lineTo(18, -25 - bodyYOffset); ctx.lineTo(15, -15 - bodyYOffset);
+        ctx.moveTo(-34, -16 + b);
+        ctx.quadraticCurveTo(-50, -8 + b, -46, 0);
+        ctx.lineTo(-34, 0);
+        ctx.quadraticCurveTo(-24, -6 + b, -28, -18 + b);
+        ctx.fill();
+        // paw
+        ctx.fillStyle = MID;
+        ctx.beginPath();
+        ctx.ellipse(-40, 0, 10, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // 4 claws
+        ctx.fillStyle = CLAW;
+        for (let i = 0; i < 4; i++) {
+            ctx.beginPath();
+            ctx.moveTo(-49 + i * 6, 0);
+            ctx.lineTo(-51 + i * 6, 9);
+            ctx.lineTo(-45 + i * 6, 9);
+            ctx.fill();
+        }
+
+        // ── 3. BACK RIGHT LEG (slightly behind, lighter) ─────
+        ctx.fillStyle = MID;
+        ctx.beginPath();
+        ctx.moveTo(-22, -14 + b);
+        ctx.quadraticCurveTo(-36, -4 + b, -32, 0);
+        ctx.lineTo(-22, 0);
+        ctx.quadraticCurveTo(-14, -4 + b, -18, -16 + b);
+        ctx.fill();
+        ctx.fillStyle = MID;
+        ctx.beginPath();
+        ctx.ellipse(-27, 0, 8, 5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = CLAW;
+        for (let i = 0; i < 3; i++) {
+            ctx.beginPath();
+            ctx.moveTo(-33 + i * 6, 0);
+            ctx.lineTo(-35 + i * 6, 7);
+            ctx.lineTo(-29 + i * 6, 7);
+            ctx.fill();
+        }
+
+        // ── 4. MAIN BODY ──────────────────────────────────────
+        // Key to NOT looking like a turtle: body is LONG horizontally (-44 to +20)
+        // and the dorsal ridge is TALL and centered, not a symmetric dome.
+        ctx.fillStyle = BASE;
+        ctx.beginPath();
+        // Start at rear hip
+        ctx.moveTo(-44, -10 + b);
+        // Spine ridge climbs steeply to peaked apex over shoulder blades
+        ctx.bezierCurveTo(
+            -44, -58 + b,   // rear spine going very high
+             -4, -70 + b,   // apex of the arch (tilted forward)
+             18, -44 + b    // front shoulder, lower
+        );
+        // Front shoulder slope down to belly
+        ctx.bezierCurveTo(28, -24 + b,  22, 0 + b,  10, 2 + b);
+        // Belly back to rear
+        ctx.bezierCurveTo(-8, 6 + b,  -36, 4 + b,  -44, -10 + b);
         ctx.fill();
 
-        // --- Head/Snout (Hanging low, blocky) ---
-        ctx.fillStyle = baseOrange;
-        ctx.fillRect(15, 5 - bodyYOffset, 18, 14); // basic snout
-        
-        // Mouth (Black block)
-        ctx.fillStyle = '#111';
-        ctx.fillRect(16, 12 - bodyYOffset, 16, 7);
-
-        // Teeth (White triangles)
-        ctx.fillStyle = '#FFF';
-        ctx.beginPath(); ctx.moveTo(18, 12 - bodyYOffset); ctx.lineTo(20, 16 - bodyYOffset); ctx.lineTo(22, 12 - bodyYOffset); ctx.fill();
-        ctx.beginPath(); ctx.moveTo(28, 12 - bodyYOffset); ctx.lineTo(30, 16 - bodyYOffset); ctx.lineTo(32, 12 - bodyYOffset); ctx.fill();
-
-        // Lower jaw whiskers (Blocky strips)
-        ctx.fillStyle = '#111';
-        ctx.fillRect(18, 19 - bodyYOffset, 2, 6);
-        ctx.fillRect(24, 19 - bodyYOffset, 2, 8);
-        ctx.fillRect(28, 19 - bodyYOffset, 2, 6);
-
-        // Neck Gills (Dark orange blocky lines)
-        ctx.fillStyle = darkOrange;
-        ctx.fillRect(8, -15 - bodyYOffset, 3, 15);
-        ctx.fillRect(14, -10 - bodyYOffset, 3, 12);
-
-        // --- Front Leg (Massive blocky arm) ---
-        ctx.fillStyle = '#FFA500'; // lighter orange for depth
+        // Belly shading (slightly darker to give depth)
+        ctx.fillStyle = MID;
         ctx.beginPath();
-        ctx.moveTo(5, -15 - bodyYOffset); // shoulder
-        ctx.lineTo(20, -5 - bodyYOffset); // thick top
-        ctx.lineTo(25 + legOffset, 25); // paw front
-        ctx.lineTo(12 + legOffset, 25); // paw back
-        ctx.lineTo(-5, 0 - bodyYOffset); // armpit
+        ctx.moveTo(-40, -6 + b);
+        ctx.bezierCurveTo(-38, 4 + b, -8, 8 + b, 10, 2 + b);
+        ctx.bezierCurveTo(22, -4 + b, 20, -14 + b, 14, -18 + b);
+        ctx.bezierCurveTo(0, -8 + b, -20, -4 + b, -40, -6 + b);
         ctx.fill();
 
-        // Front Claws
-        ctx.fillStyle = '#222';
-        ctx.beginPath(); ctx.moveTo(12 + legOffset, 25); ctx.lineTo(25 + legOffset, 25); ctx.lineTo(18 + legOffset, 20); ctx.fill();
-        ctx.fillRect(12 + legOffset, 25, 4, 6);
-        ctx.fillRect(18 + legOffset, 25, 4, 6);
-        ctx.fillRect(24 + legOffset, 25, 4, 6);
+        // ── 5. FUR / MUSCLE SCRATCH LINES ────────────────────
+        ctx.strokeStyle = DARK;
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        // Shoulder blade slashes (right side of body, near front)
+        ctx.moveTo(10, -50 + b);  ctx.lineTo(18, -38 + b);
+        ctx.moveTo( 6, -54 + b);  ctx.lineTo(14, -42 + b);
+        ctx.moveTo( 2, -58 + b);  ctx.lineTo(10, -46 + b);
+        // Mid-back slashes
+        ctx.moveTo(-14, -62 + b); ctx.lineTo(-6, -50 + b);
+        ctx.moveTo(-18, -58 + b); ctx.lineTo(-10, -48 + b);
+        // Lower rib/belly
+        ctx.moveTo(-32, -14 + b); ctx.lineTo(-24, -6 + b);
+        ctx.moveTo(-28, -10 + b); ctx.lineTo(-20, -4 + b);
+        ctx.stroke();
 
-        // --- Omnitrix (Blocky) ---
+        // ── 6. FRONT RIGHT ARM (behind — slightly darker) ────
+        // Long, lean reaching arm planted on ground far forward
+        ctx.fillStyle = MID;
+        ctx.beginPath();
+        ctx.moveTo(14, -30 + b);
+        ctx.quadraticCurveTo(24, -16 + b, 42, -12);
+        ctx.lineTo(50, -4);
+        ctx.lineTo(36, -4);
+        ctx.quadraticCurveTo(18, -8 + b, 8, -22 + b);
+        ctx.fill();
+        // paw
+        ctx.fillStyle = MID;
+        ctx.beginPath();
+        ctx.ellipse(44, -4, 9, 5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // 4 claws
+        ctx.fillStyle = CLAW;
+        for (let i = 0; i < 4; i++) {
+            ctx.beginPath();
+            ctx.moveTo(37 + i * 6, -4);
+            ctx.lineTo(36 + i * 6, 6);
+            ctx.lineTo(41 + i * 6, 6);
+            ctx.fill();
+        }
+
+        // ── 7. NECK ───────────────────────────────────────────
+        // Neck thrusts forward and downward from front of body
+        ctx.fillStyle = BASE;
+        ctx.beginPath();
+        ctx.moveTo(16, -44 + b);
+        ctx.quadraticCurveTo(30, -40 + b, 38, -30 + b);
+        ctx.quadraticCurveTo(44, -20 + b, 40, -10 + b);
+        ctx.quadraticCurveTo(28, -6 + b, 18, -12 + b);
+        ctx.quadraticCurveTo(10, -22 + b, 16, -44 + b);
+        ctx.fill();
+
+        // Neck gill slits (diagonal slashes)
+        ctx.strokeStyle = DARK;
+        ctx.lineWidth = 2.2;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(20, -38 + b); ctx.lineTo(28, -26 + b);
+        ctx.moveTo(24, -34 + b); ctx.lineTo(32, -22 + b);
+        ctx.moveTo(28, -30 + b); ctx.lineTo(36, -20 + b);
+        ctx.stroke();
+
+        // ── 8. HEAD / SNOUT (long, thrust forward and slightly down) ─
+        // Upper snout
+        ctx.fillStyle = BASE;
+        ctx.beginPath();
+        ctx.moveTo(26, -34 + b);  // base of forehead
+        ctx.bezierCurveTo(36, -36 + b, 56, -32 + b, 64, -24 + b); // top lip line
+        ctx.lineTo(64, -18 + b);   // front of face
+        ctx.bezierCurveTo(56, -16 + b, 36, -16 + b, 26, -20 + b); // under snout
+        ctx.closePath();
+        ctx.fill();
+
+        // Lower jaw (slightly darker)
+        ctx.fillStyle = MID;
+        ctx.beginPath();
+        ctx.moveTo(26, -20 + b);
+        ctx.bezierCurveTo(36, -20 + b, 56, -20 + b, 64, -18 + b);
+        ctx.bezierCurveTo(62, -10 + b, 44, -8 + b, 28, -10 + b);
+        ctx.closePath();
+        ctx.fill();
+
+        // ── 9. MOUTH SLIT (the single most important feature) ─
+        ctx.fillStyle = BLACK;
+        ctx.beginPath();
+        ctx.moveTo(28, -22 + b);
+        ctx.bezierCurveTo(44, -19 + b, 58, -19 + b, 64, -22 + b);
+        ctx.bezierCurveTo(58, -16 + b, 44, -16 + b, 28, -18 + b);
+        ctx.fill();
+
+        // White teeth on UPPER jaw edge
+        ctx.fillStyle = '#DDDDB8';
+        const ty = -22 + b; // top of mouth
+        // 4 triangular teeth pointing downward
+        const teeth = [32, 40, 48, 56];
+        teeth.forEach(tx => {
+            ctx.beginPath();
+            ctx.moveTo(tx - 3, ty);
+            ctx.lineTo(tx, ty + 8);
+            ctx.lineTo(tx + 3, ty);
+            ctx.fill();
+        });
+
+        // ── 10. FRONT-LEFT ARM (closest, brightest — dominant arm) ──
+        ctx.fillStyle = BASE;
+        ctx.beginPath();
+        ctx.moveTo(16, -34 + b);
+        ctx.quadraticCurveTo(30, -22 + b, 52, -14);
+        ctx.lineTo(62, -6);
+        ctx.lineTo(46, -6);
+        ctx.quadraticCurveTo(26, -10 + b, 12, -24 + b);
+        ctx.fill();
+        // paw
+        ctx.fillStyle = BASE;
+        ctx.beginPath();
+        ctx.ellipse(54, -5, 11, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // 4 long claws
+        ctx.fillStyle = CLAW;
+        for (let i = 0; i < 4; i++) {
+            ctx.beginPath();
+            ctx.moveTo(45 + i * 7, -5);
+            ctx.lineTo(44 + i * 7, 7);
+            ctx.lineTo(50 + i * 7, 7);
+            ctx.fill();
+        }
+
+        // ── 11. OMNITRIX (green hourglass on collar/neck-base) ───────
         ctx.fillStyle = '#111';
-        ctx.fillRect(6, -24 - bodyYOffset, 12, 12); // padding
-        ctx.fillStyle = '#FFF';
-        ctx.fillRect(8, -22 - bodyYOffset, 2, 2);
-        ctx.fillRect(14, -16 - bodyYOffset, 2, 2);
-        
+        ctx.beginPath();
+        ctx.ellipse(20, -28 + b, 7, 9, 0.3, 0, Math.PI * 2);
+        ctx.fill();
         ctx.fillStyle = '#000';
-        ctx.fillRect(8, -20 - bodyYOffset, 8, 8);
+        ctx.beginPath(); ctx.arc(20, -29 + b, 5, 0, Math.PI * 2); ctx.fill();
         ctx.fillStyle = '#39FF14';
         ctx.beginPath();
-        ctx.moveTo(8, -20 - bodyYOffset); ctx.lineTo(16, -12 - bodyYOffset);
-        ctx.lineTo(8, -12 - bodyYOffset); ctx.lineTo(16, -20 - bodyYOffset);
+        ctx.moveTo(17, -33 + b); ctx.lineTo(23, -28 + b); ctx.lineTo(17, -28 + b); ctx.lineTo(23, -33 + b);
         ctx.fill();
 
-        // --- Punch animation ---
+        // ── 12. PUNCH SWIPE EFFECT ────────────────────────────────────
         if (this.punchActive) {
-            const ext = Math.min(1, (now - this.punchTimer) / 150); // 0→1
-            const punchX = 35 + ext * 25;
-            
-            ctx.fillStyle = baseOrange;
-            ctx.fillRect(punchX - 10, 10 + bodyYOffset, 20, 16);
-            
-            // Claws extended
-            ctx.fillStyle = '#222';
-            ctx.fillRect(punchX + 10, 12 + bodyYOffset, 14, 3);
-            ctx.fillRect(punchX + 10, 18 + bodyYOffset, 14, 3);
-            ctx.fillRect(punchX + 10, 24 + bodyYOffset, 14, 3);
+            const ext = Math.min(1, (now - this.punchTimer) / 150);
+            const sweep = ext * 28;
+            ctx.fillStyle = 'rgba(232, 130, 12, 0.45)';
+            ctx.beginPath();
+            ctx.ellipse(70 + sweep, -5, 22 + sweep, 13, 0, 0, Math.PI * 2);
+            ctx.fill();
         }
 
         ctx.restore();
 
-        // Update punch hit-rect
+        // ── Punch hit-rect ─────────────────────────────────────────────
         if (this.punchActive) {
             const punchOffsetX = this.facingRight ? this.width + 5 : -55;
             this.punchRect = {
@@ -1212,3 +1362,5 @@ export class Mario {
         return this.punchRect;
     }
 }
+
+

@@ -1102,28 +1102,38 @@ export class Level {
      * @param {number} screenH
      */
     drawThermalOverlay(ctx, screenW, screenH) {
-        // Dark tinted vignette — everything dim except thermal objects
         ctx.save();
-        // Semi-opaque dark green tint overlay (like night-vision goggles)
-        const tint = ctx.createRadialGradient(screenW / 2, screenH / 2, screenH * 0.2, screenW / 2, screenH / 2, screenH * 0.75);
-        tint.addColorStop(0, 'rgba(0,10,0,0.50)');
-        tint.addColorStop(1, 'rgba(0,5,0,0.80)');
+
+        // Lighter tint — brighter centre, softer vignette edge
+        const tint = ctx.createRadialGradient(
+            screenW / 2, screenH / 2, screenH * 0.1,
+            screenW / 2, screenH / 2, screenH * 0.75
+        );
+        tint.addColorStop(0, 'rgba(0,30,0,0.15)');   // near-transparent at centre
+        tint.addColorStop(1, 'rgba(0,10,0,0.50)');   // soft dark-green vignette at edges
         ctx.fillStyle = tint;
         ctx.fillRect(0, 0, screenW, screenH);
 
-        // Scanline effect
-        ctx.globalAlpha = 0.07;
+        // Subtle green colour-cast so world still feels infrared
+        ctx.globalAlpha = 0.08;
+        ctx.fillStyle = '#00FF44';
+        ctx.fillRect(0, 0, screenW, screenH);
+        ctx.globalAlpha = 1.0;
+
+        // Very subtle scanlines (half as strong as before)
+        ctx.globalAlpha = 0.04;
         ctx.fillStyle = '#000000';
         for (let sy = 0; sy < screenH; sy += 4) {
             ctx.fillRect(0, sy, screenW, 2);
         }
         ctx.globalAlpha = 1.0;
 
-        // HUD text hint
-        ctx.fillStyle = 'rgba(0,255,100,0.5)';
+        // HUD hint
+        ctx.fillStyle = 'rgba(0,255,100,0.6)';
         ctx.font = 'bold 11px monospace';
         ctx.fillText('[ THERMAL VISION ACTIVE ]', screenW / 2 - 90, 22);
 
         ctx.restore();
     }
+
 }
