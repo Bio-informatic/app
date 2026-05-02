@@ -313,7 +313,6 @@ function loadLevel(index, carryOverState = null) {
     gomrogDefeated = false;
     gomboto = null;
     gombotoDefeated = false;
-    gorillomba = null;
     gorillombaDefeated = false;
     nightKing = null;
     nightKingDefeated = false;
@@ -1233,20 +1232,25 @@ function gameLoop(timestamp) {
                         screenShake = 20;
                         sfx.bossDefeated();
                         console.log('GOOMBABA DEFEATED!');
+                        
+                        // Spawn flag for Level 3
+                        const flagX = level.cols - 2;
+                        for (let fy = 4; fy < level.rows; fy++) {
+                            level.tiles[fy][flagX] = 5;
+                        }
+                        level.finishCols.set(flagX, { topRow: 4, bottomRow: level.rows - 1 });
                     }
-                    // Check if Turtumba died — place finish flag
+                    // Check if Turtumba died
                     if (entities[i] === turtumba) {
                         turtumbaDefeated = true;
                         turtumba = null;
                         screenShake = 25;
                         sfx.bossDefeated();
                         console.log('TURTUMBA DEFEATED!');
-                        // Place finish flag at the right edge of the arena
                         const flagX = level.cols - 2;
                         for (let fy = 4; fy < level.rows; fy++) {
                             level.tiles[fy][flagX] = 5;
                         }
-                        // Also set the finishCols for Level draw
                         level.finishCols.set(flagX, { topRow: 4, bottomRow: level.rows - 1 });
                     }
                     if (entities[i] === bomba && bomba.dead) {
@@ -1271,14 +1275,28 @@ function gameLoop(timestamp) {
                         }
                         level.finishCols.set(flagX, { topRow: 4, bottomRow: level.rows - 1 });
                     }
+                    if (entities[i] === gomboto && gomboto.dead) {
+                        gombotoDefeated = true;
+                        gomboto = null;
+                        console.log('GOMBOTO DEFEATED!');
+                        screenShake = 30;
+                        sfx.bossDefeated();
+                        const flagX = level.cols - 2;
+                        for (let fy = 4; fy < level.rows; fy++) {
+                            level.tiles[fy][flagX] = 5;
+                        }
+                        level.finishCols.set(flagX, { topRow: 4, bottomRow: level.rows - 1 });
+                    }
                     if (entities[i] === gorillomba && gorillomba.dead) {
                         gorillombaDefeated = true;
                         gorillomba = null;
                         console.log('GORILLOMBA DEFEATED!');
                         screenShake = 30;
                         sfx.bossDefeated();
-                        // Finish flag already placed in map — just ensure finishCols is set
                         const gFlagX = level.cols - 2;
+                        for (let fy = 4; fy < level.rows; fy++) {
+                            level.tiles[fy][gFlagX] = 5;
+                        }
                         level.finishCols.set(gFlagX, { topRow: 4, bottomRow: level.rows - 1 });
                     }
                     if (entities[i] === nightKing && nightKing.dead) {
@@ -1287,7 +1305,6 @@ function gameLoop(timestamp) {
                         console.log('NIGHT KING DEFEATED!');
                         screenShake = 30;
                         sfx.bossDefeated();
-                        // Draw Kurdistan Flag!
                         const flagX = level.cols - 2;
                         for (let fy = 4; fy < level.rows; fy++) {
                             level.tiles[fy][flagX] = 5;

@@ -39,8 +39,7 @@ export class Level {
                 }
             }
 
-            // 3. Finish flag at far right (Level 1 & 2 only)
-            //    Level 3 has a boss arena instead — finish unlocks after Goombaba dies
+            // 3. Finish flag at far right (Level 1 only if no boss)
             const finishX = COLS - 1;
             if (levelIndex === 1) {
                 for (let y = 4; y < ROWS; y++) {
@@ -186,6 +185,7 @@ export class Level {
                 }
             }
 
+
             // ── Level 2 Boss Arena ──────────────────────────────────
             if (levelIndex === 2) {
                 // Clear boss zone ground (flat, solid)
@@ -226,10 +226,6 @@ export class Level {
                     y: (GROUND_Y - 3) * TS,
                     type: 'goombaba'
                 });
-                // Finish tile behind boss (revealed after boss dies)
-                for (let y = 4; y < ROWS; y++) {
-                    map[y][COLS - 2] = finishChar;
-                }
             }
 
             // ── Level 4: Speed Panels & Electric Fences & Laser Turrets ────
@@ -403,16 +399,11 @@ export class Level {
                     y: (GROUND_Y - 3) * TS,
                     type: 'gorillomba'
                 });
-                // Wild Mutt item placed just before boss zone
                 this.entities.push({
                     x: (bossZoneStart - 8) * TS,
                     y: (GROUND_Y - 4) * TS,
                     type: 'wild_mutt_item'
                 });
-                // Finish flag behind boss (revealed after defeat)
-                for (let y = 4; y < ROWS; y++) {
-                    map[y][COLS - 2] = finishChar;
-                }
             }
 
             // ── Level 8 Boss Arena (Night King) ───────────────────
@@ -435,17 +426,11 @@ export class Level {
                     type: 'night_king'
                 });
                 
-                // Giant Dragonglass Diamond guarded by Night King
                 this.entities.push({
                     x: (bossZoneStart + 10) * TS,
                     y: (GROUND_Y - 3) * TS,
                     type: 'dragonglass_diamond'
                 });
-
-                // Finish flag behind boss
-                for (let y = 4; y < ROWS; y++) {
-                    map[y][COLS - 2] = finishChar;
-                }
             }
 
             // Convert to strings
