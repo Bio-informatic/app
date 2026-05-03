@@ -10,7 +10,7 @@ export class Level {
         let map = [];
 
         // LEVEL GENERATION
-        if (levelIndex >= 1 && levelIndex <= 8) {
+        if (levelIndex >= 1 && levelIndex <= 9) {
             const ROWS = 24;
             const COLS = levelIndex >= 5 ? 200 : (levelIndex === 4 ? 250 : (levelIndex === 3 ? 200 : 150));
             const TS = this.tileSize;
@@ -62,6 +62,7 @@ export class Level {
             else if (levelIndex === 6) bossZoneStart = COLS - 40;
             else if (levelIndex === 7) bossZoneStart = COLS - 45;
             else if (levelIndex === 8) bossZoneStart = COLS - 50;
+            else if (levelIndex === 9) bossZoneStart = COLS - 40;
 
             // Store slow zone bounds for game.js
             this.slowZoneStart = levelIndex === 4 ? bossZoneStart * TS : -1;
@@ -150,7 +151,8 @@ export class Level {
                     const goombaY = hasGroundBricks ? baseTopY - 1 : GROUND_Y - 1;
                     if (goombaY > 2 && map[goombaY][curX] === skyChar) {
                         let goombaType = 'goomba';
-                        if (levelIndex === 8) goombaType = 'whitewalker_goomba';
+                        if (levelIndex === 9) goombaType = 'jellyfish_goomba';
+                        else if (levelIndex === 8) goombaType = 'whitewalker_goomba';
                         else if (levelIndex === 7) goombaType = 'goomba'; // vanishing goombas — managed in draw
                         else if (levelIndex === 6) goombaType = 'electromba';
                         else if (levelIndex === 5) goombaType = 'ooze_goomba';
@@ -433,6 +435,48 @@ export class Level {
                 });
             }
 
+            // ── Level 9 (Ripjaws) ──────────────────────────────────
+            if (levelIndex === 9) {
+                const midX = Math.floor(COLS / 2);
+                this.waterStartX = midX * TS;
+
+                // Overwrite second half to be a deep water trench
+                for (let y = 0; y < ROWS; y++) {
+                    for (let x = midX; x < COLS; x++) {
+                        // Clear obstacles
+                        map[y][x] = skyChar;
+                    }
+                }
+                
+                // Deep ground
+                for (let y = ROWS - 2; y < ROWS; y++) {
+                    for (let x = midX; x < COLS; x++) {
+                        map[y][x] = groundChar;
+                    }
+                }
+
+                // Drop down wall
+                for (let y = GROUND_Y; y < ROWS; y++) {
+                    map[y][midX] = brickChar;
+                }
+
+                // Jellyfish goombas in water
+                for (let x = midX + 10; x < COLS - 20; x += 15) {
+                    this.entities.push({
+                        x: x * TS,
+                        y: (ROWS - 6 - Math.random()*5) * TS,
+                        type: 'jellyfish_goomba'
+                    });
+                }
+
+                // The Boss
+                this.entities.push({
+                    x: (COLS - 15) * TS,
+                    y: (ROWS - 8) * TS,
+                    type: 'great_octopus'
+                });
+            }
+
             // Convert to strings
             for (let y = 0; y < ROWS; y++) {
                 map[y] = map[y].join('');
@@ -596,6 +640,20 @@ export class Level {
                 cloud:          'rgba(200, 50, 50, 0.20)',
             };
         }
+        if (this.levelIndex === 9) {
+            return {
+                sky:            '#FFDAB9',   // Peach bright desert sky
+                ground:         '#EDC9AF',   // Desert sand
+                groundStroke:   '#C2B280',
+                brick:          '#DAA520',   // Golden sand brick
+                brickStroke:    '#B8860B',
+                mystery:        '#F4A460',
+                pipe:           '#8B4513',
+                unstable:       '#D2B48C',
+                unstableStroke: '#A0522D',
+                cloud:          'rgba(255, 228, 181, 0.6)' // Sand dust
+            };
+        }
         // Level 1 – classic Mario
         return {
             sky:          '#5C94FC',
@@ -618,6 +676,12 @@ export class Level {
         // Sky
         ctx.fillStyle = t.sky;
         ctx.fillRect(0, 0, this.width, this.height);
+
+        // Level 9: deep sea background on the second half
+        if (this.levelIndex === 9 && this.waterStartX) {
+            ctx.fillStyle = '#001F3F'; // Dark navy sea
+            ctx.fillRect(this.waterStartX, 0, this.width - this.waterStartX, this.height);
+        }
 
         // Level 3: lava glow from below
         if (this.levelIndex === 3) {
@@ -760,6 +824,40 @@ export class Level {
                     ctx.arc(cx, cy, 150 + Math.random() * 50, 0, Math.PI * 2);
                     ctx.fill();
                 }
+            }
+        } else if (this.levelIndex === 9) {
+            // Desert Pyramids & Sun
+            ctx.fillStyle = '#FF8C00'; // Sun
+            ctx.beginPath();
+            ctx.arc(300, 150, 60, 0, Math.PI * 2);
+            ctx.fill();
+
+            for (let i = 0; i < 5; i++) {
+                const px = i * 800 + 100;
+                // Left side of pyramid
+                ctx.fillStyle = '#D2B48C';
+                ctx.beginPath();
+                ctx.moveTo(px, this.height);
+                ctx.lineTo(px + 250, 250);
+                ctx.lineTo(px + 500, this.height);
+                ctx.fill();
+                
+                // Right shaded side
+                ctx.fillStyle = '#C2B280';
+                ctx.beginPath();
+                ctx.moveTo(px + 250, 250);
+                ctx.lineTo(px + 500, this.height);
+                ctx.lineTo(px + 250, this.height);
+                ctx.fill();
+            }
+            
+            // Standard clouds
+            ctx.fillStyle = t.cloud;
+            for (let i = 0; i < 20; i++) {
+                const cx = i * 350 + 60;
+                ctx.fillRect(cx, 70, 64, 16);
+                ctx.fillRect(cx + 16, 54, 32, 16);
+                ctx.fillRect(cx + 8, 86, 48, 16);
             }
         } else if (this.levelIndex !== 3 && this.levelIndex !== 6) {
             ctx.fillStyle = t.cloud;
@@ -1005,6 +1103,23 @@ export class Level {
                         break;
                     }
                 }
+            }
+        }
+
+        // ── Level 9 Water Overlay ──────────────────────────────────
+        if (this.levelIndex === 9 && this.waterStartX) {
+            ctx.fillStyle = 'rgba(0, 100, 200, 0.4)'; // Blue overlay
+            ctx.fillRect(this.waterStartX, 0, this.width - this.waterStartX, this.height);
+            
+            // Bubbles
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+            const now = performance.now();
+            for (let i = 0; i < 50; i++) {
+                const bx = this.waterStartX + ((i * 153 + now/20) % (this.width - this.waterStartX));
+                const by = this.height - ((i * 77 + now/30) % this.height);
+                ctx.beginPath();
+                ctx.arc(bx, by + Math.sin(now/500 + i)*10, 2 + (i%3), 0, Math.PI*2);
+                ctx.fill();
             }
         }
 

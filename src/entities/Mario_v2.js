@@ -63,6 +63,20 @@ export class Mario {
         this.punchTimer = 0;
         this.punchCooldown = 0;
         this.punchRect = null; // {x,y,width,height} hit zone
+
+        // Ripjaws sound wave
+        this.soundWaveActive = false;
+    }
+
+    transformToRipjaws() {
+        if (this.state === 'RIPJAWS') return;
+        this.state = 'RIPJAWS';
+        this.transforming = true;
+        this.transformTimer = performance.now();
+        this.alienTimer = performance.now();
+        if (this.height < 55) this.y -= (55 - this.height);
+        this.width = 40;
+        this.height = 55;
     }
 
     transformToFourArms() {
@@ -170,7 +184,7 @@ export class Mario {
         }
 
         // Alien countdown timer — revert to SMALL after 15 seconds
-        if (this.alienTimer > 0 && (this.state === 'FOURARMS' || this.state === 'HEATBLAST' || this.state === 'XLR8' || this.state === 'STINKFLY' || this.state === 'UPGRADE' || this.state === 'WILDMUTT' || this.state === 'DIAMONDHEAD')) {
+        if (this.alienTimer > 0 && (this.state === 'FOURARMS' || this.state === 'HEATBLAST' || this.state === 'XLR8' || this.state === 'STINKFLY' || this.state === 'UPGRADE' || this.state === 'WILDMUTT' || this.state === 'DIAMONDHEAD' || this.state === 'RIPJAWS')) {
             const elapsed = performance.now() - this.alienTimer;
             this.alienTimerRemaining = Math.max(0, Math.ceil((this.alienTimerDuration - elapsed) / 1000));
             if (elapsed >= this.alienTimerDuration) {
@@ -178,11 +192,17 @@ export class Mario {
             }
         }
 
+        let inWater = level.waterStartX !== undefined && this.x > level.waterStartX;
+        let activeGravity = inWater ? 0.2 : this.gravity;
+
         // Apply Gravity (Stinkfly flies naturally)
         if (this.state === 'STINKFLY') {
             this.vy = 0; // zero gravity base
         } else {
-            this.vy += this.gravity;
+            this.vy += activeGravity;
+            if (inWater && this.state === 'RIPJAWS' && this.input.isDown('ArrowUp')) {
+                this.vy -= 0.6; // Swim up faster
+            }
         }
 
         // Horizontal Movement
@@ -215,6 +235,17 @@ export class Mario {
                 this.dashTrail[i].alpha -= 0.1;
                 if (this.dashTrail[i].alpha <= 0) this.dashTrail.splice(i, 1);
             }
+        }
+
+        // --- Ripjaws logic ---
+        if (this.state === 'RIPJAWS') {
+            if (this.input.isDown('f')) {
+                this.soundWaveActive = true;
+            } else {
+                this.soundWaveActive = false;
+            }
+        } else {
+            this.soundWaveActive = false;
         }
 
         // Move X
@@ -430,6 +461,8 @@ export class Mario {
             this.drawWildMutt(ctx);
         } else if (this.state === 'DIAMONDHEAD') {
             this.drawDiamondhead(ctx);
+        } else if (this.state === 'RIPJAWS') {
+            this.drawRipjaws(ctx);
         } else {
             this.drawMario(ctx);
         }
@@ -1360,6 +1393,130 @@ export class Mario {
     /** Returns active punch rect in world coords (for game.js collision), or null */
     getPunchRect() {
         return this.punchRect;
+    }
+
+    drawRipjaws(ctx) {
+        const cx = this.x + this.width / 2;
+        const cy = this.y + this.height; // anchor bottom
+        const flip = this.facingRight ? 1 : -1;
+        const now = performance.now();
+
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.scale(flip, 1);
+        ctx.translate(0, -this.height);
+
+        const skinColor = '#8FBC8F'; // Pale grey-green
+        const suitColor = '#111';
+        const finColor = '#6B8E23';
+
+        // Dorsal Fin
+        ctx.fillStyle = finColor;
+        ctx.beginPath();
+        ctx.moveTo(-10, 10);
+        ctx.lineTo(-20, 30);
+        ctx.lineTo(-5, 40);
+        ctx.fill();
+
+        // Legs
+        ctx.fillStyle = skinColor;
+        ctx.fillRect(-10, 40, 6, 15);
+        ctx.fillRect(4, 40, 6, 15);
+        // Feet claws
+        ctx.fillStyle = '#222';
+        ctx.beginPath(); ctx.moveTo(-10, 55); ctx.lineTo(-15, 60); ctx.lineTo(-4, 55); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(4, 55); ctx.lineTo(-1, 60); ctx.lineTo(10, 55); ctx.fill();
+
+        // Body (Black suit)
+        ctx.fillStyle = suitColor;
+        ctx.beginPath();
+        ctx.moveTo(-12, 15);
+        ctx.lineTo(12, 15);
+        ctx.lineTo(8, 45);
+        ctx.lineTo(-8, 45);
+        ctx.fill();
+
+        // Omnitrix Belt
+        ctx.fillStyle = '#FFF';
+        ctx.fillRect(-8, 30, 16, 4);
+        ctx.fillStyle = '#000';
+        ctx.beginPath(); ctx.arc(0, 32, 4, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#39FF14';
+        ctx.beginPath(); ctx.moveTo(-3,30); ctx.lineTo(3,34); ctx.lineTo(-3,34); ctx.lineTo(3,30); ctx.fill();
+
+        // Arms
+        ctx.fillStyle = skinColor;
+        ctx.fillRect(8, 15, 6, 15); // right arm
+        ctx.fillRect(-14, 15, 6, 15); // left arm
+        // Gloves/Claws
+        ctx.fillStyle = suitColor;
+        ctx.fillRect(8, 30, 6, 10);
+        ctx.fillRect(-14, 30, 6, 10);
+        ctx.fillStyle = skinColor;
+        ctx.beginPath(); ctx.moveTo(11, 40); ctx.lineTo(14, 48); ctx.lineTo(8, 40); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(-11, 40); ctx.lineTo(-8, 48); ctx.lineTo(-14, 40); ctx.fill();
+
+        // Head
+        ctx.fillStyle = skinColor;
+        // Massive jaw shape protruding forward
+        ctx.beginPath();
+        ctx.moveTo(-10, 15);
+        ctx.lineTo(-5, -5);
+        ctx.lineTo(15, -2);
+        ctx.lineTo(25, 5); // snout tip
+        ctx.lineTo(20, 15);
+        ctx.lineTo(5, 18);
+        ctx.fill();
+
+        // Angler light
+        ctx.strokeStyle = finColor;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-2, -5);
+        ctx.quadraticCurveTo(5, -15, 18, -10);
+        ctx.stroke();
+        // Light bulb
+        ctx.fillStyle = '#FFFFCC';
+        ctx.shadowColor = '#FFFFCC';
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.arc(18, -10, 4, 0, Math.PI*2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // Eye
+        ctx.fillStyle = '#39FF14'; // Green glowing eye
+        ctx.beginPath();
+        ctx.arc(8, 4, 2.5, 0, Math.PI*2);
+        ctx.fill();
+
+        // Mouth & Teeth
+        ctx.fillStyle = '#111';
+        ctx.beginPath();
+        ctx.moveTo(8, 12);
+        ctx.lineTo(24, 8);
+        ctx.lineTo(15, 15);
+        ctx.fill();
+
+        ctx.fillStyle = '#FFF'; // Sharp teeth
+        ctx.beginPath(); ctx.moveTo(10, 12); ctx.lineTo(12, 16); ctx.lineTo(14, 12); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(16, 10); ctx.lineTo(18, 14); ctx.lineTo(20, 10); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(20, 8);  ctx.lineTo(22, 12); ctx.lineTo(24, 8);  ctx.fill();
+
+        // Sound Waves Animation
+        if (this.soundWaveActive) {
+            ctx.strokeStyle = 'rgba(0, 255, 255, 0.7)';
+            ctx.lineWidth = 2;
+            const t = (now % 500) / 500;
+            for (let i = 0; i < 3; i++) {
+                const r = (t + i/3) * 50;
+                ctx.beginPath();
+                ctx.arc(24, 10, r, -Math.PI/4, Math.PI/4);
+                ctx.stroke();
+            }
+        }
+
+        ctx.restore();
     }
 }
 

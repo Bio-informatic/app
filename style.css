@@ -65,6 +65,11 @@ canvas.level8-theme {
     /* Deep icy night sky for Diamondhead level */
 }
 
+canvas.level9-theme {
+    background-color: #FFDAB9;
+    /* Peach bright desert sky for Ripjaws level */
+}
+
 #ui-layer {
     position: absolute;
     top: 10px;

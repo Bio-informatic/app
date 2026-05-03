@@ -31,6 +31,11 @@ import { WhiteWalkerGoomba } from './src/entities/WhiteWalkerGoomba.js';
 import { NightKing } from './src/entities/NightKing.js';
 import { CrystalShard } from './src/entities/CrystalShard.js';
 import { DragonglassDiamond } from './src/entities/DragonglassDiamond.js';
+import { RipjawsItem } from './src/entities/RipjawsItem.js';
+import { JellyfishGoomba } from './src/entities/JellyfishGoomba.js';
+import { GreatOctopus } from './src/entities/GreatOctopus.js';
+import { MucusProjectile } from './src/entities/MucusProjectile.js';
+
 const sfx = new SoundManager();
 
 const canvas = document.getElementById('gameCanvas');
@@ -77,7 +82,7 @@ const ALIENS = [
     { key: '5', name: 'Upgrade', icon: '💻', unlocked: false, lives: 25 },
     { key: '6', name: 'Wild Mutt', icon: '🐺', unlocked: false, lives: 25 },
     { key: '7', name: 'Diamondhead', icon: '💎', unlocked: false, lives: 25 },
-    { key: '8', name: '???', icon: '👾', unlocked: false, lives: 25 },
+    { key: '8', name: 'Ripjaws', icon: '🦈', unlocked: false, lives: 25 },
     { key: '9', name: '???', icon: '👾', unlocked: false, lives: 25 },
     { key: '10', name: '???', icon: '👾', unlocked: false, lives: 25 },
 ];
@@ -89,15 +94,17 @@ function getDefaultBoxEnemyType(levelIndex) {
     if (levelIndex === 5) return 'ooze_goomba';
     if (levelIndex === 6) return 'electromba';
     if (levelIndex === 8) return 'whitewalker_goomba';
+    if (levelIndex === 9) return 'jellyfish_goomba';
     return 'goomba';
 }
 
-function createEnemyByType(type, x, y, entitiesArray = null) {
+function createEnemyByType(type, x, y, entitiesArray = null, fromBox = false) {
     if (type === 'lava_goomba') return new LavaGoomba(x, y);
     if (type === 'shield_drone') return new ShieldDrone(x, y);
     if (type === 'ooze_goomba') return new OozeGoomba(x, y);
     if (type === 'electromba') return new Electromba(x, y, entitiesArray);
     if (type === 'whitewalker_goomba') return new WhiteWalkerGoomba(x, y);
+    if (type === 'jellyfish_goomba') return new JellyfishGoomba(x, y, fromBox);
     return new Goomba(x, y);
 }
 
@@ -188,6 +195,8 @@ function activateAlien(index) {
         mario.transformToWildMutt();
     } else if (alien.name === 'Diamondhead') {
         mario.transformToDiamondhead();
+    } else if (alien.name === 'Ripjaws') {
+        mario.transformToRipjaws();
     }
 }
 
@@ -261,12 +270,13 @@ function assignBlockHit() {
                 else if (currentLevelIndex === 5) ItemClass = StinkflyItem;
                 else if (currentLevelIndex === 6) ItemClass = UpgradeItem;
                 else if (currentLevelIndex === 8) ItemClass = DiamondheadItem;
+                else if (currentLevelIndex === 9) ItemClass = RipjawsItem;
             }
 
             if (ItemClass) {
                 entities.push(new ItemClass(bx, by - 32));
             } else {
-                entities.push(createEnemyByType(getDefaultBoxEnemyType(currentLevelIndex), bx, by - 32, entities));
+                entities.push(createEnemyByType(getDefaultBoxEnemyType(currentLevelIndex), bx, by - 32, entities, true));
             }
         }
     };
@@ -365,6 +375,12 @@ function loadLevel(index, carryOverState = null) {
             entities.push(new DragonglassDiamond(entityData.x, entityData.y, entities));
         } else if (entityData.type === 'whitewalker_goomba') {
             entities.push(new WhiteWalkerGoomba(entityData.x, entityData.y));
+        } else if (entityData.type === 'ripjaws_item') {
+            entities.push(new RipjawsItem(entityData.x, entityData.y));
+        } else if (entityData.type === 'great_octopus') {
+            entities.push(new GreatOctopus(entityData.x, entityData.y, entities));
+        } else if (entityData.type === 'jellyfish_goomba') {
+            entities.push(new JellyfishGoomba(entityData.x, entityData.y));
         }
     });
 
@@ -379,6 +395,7 @@ function loadLevel(index, carryOverState = null) {
     canvas.classList.toggle('level6-theme', index === 6);
     canvas.classList.toggle('level7-theme', index === 7);
     canvas.classList.toggle('level8-theme', index === 8);
+    canvas.classList.toggle('level9-theme', index === 9);
 
     // Sound: start level music
     bossEntrancePlayed = false;
@@ -749,6 +766,11 @@ function gameLoop(timestamp) {
                     sfx.levelComplete();
                     sfx.stopMusic();
                     showLevelModal('LEVEL 8 COMPLETE!', 'Winter is over! The Night King is shattered!', true);
+                } else if (currentLevelIndex === 9) {
+                    mario.victory = true;
+                    sfx.levelComplete();
+                    sfx.stopMusic();
+                    showLevelModal('LEVEL 9 COMPLETE!', 'The Great Octopus is defeated! Ripjaws rules the sea!', true);
                 } else {
                     mario.victory = true;
                     showLevelModal('YOU WIN!', 'The universe is safe… for now.', false);
@@ -786,6 +808,23 @@ function gameLoop(timestamp) {
                     // skipped to avoid double update
                 } else if (entity.type === 'gorillomba') {
                     // skipped to avoid double update
+                } else if (entity.type === 'great_octopus') {
+                    entity.update(deltaTime, level, mario.x, mario.y);
+                    if (mario.state === 'RIPJAWS' && mario.soundWaveActive) {
+                        const dist = Math.hypot(mario.x - (entity.x + 75), mario.y - (entity.y + 75));
+                        if (dist < 300) {
+                            entity.soundDamage += deltaTime * 2;
+                        }
+                    }
+                    if (entity.dead && !entity.flagSpawned) {
+                        entity.flagSpawned = true;
+                        const flagX = level.cols - 2;
+                        for (let fy = 4; fy < level.rows; fy++) {
+                            level.tiles[fy][flagX] = 5;
+                        }
+                        level.finishCols.set(flagX, { topRow: 4, bottomRow: level.rows - 1 });
+                        sfx.bossDefeated();
+                    }
                 } else {
                     entity.update(deltaTime, level);
                 }
@@ -1171,6 +1210,34 @@ function gameLoop(timestamp) {
                             if (mario.state !== 'SMALL') {
                                 mario.revertToSmall();
                                 mario.vy = -5;
+                            } else {
+                                sfx.death();
+                                sfx.stopMusic();
+                                gameState = 'GAMEOVER';
+                            }
+                        }
+                    } else if (entity.type === 'ripjaws_item') {
+                        entity.dead = true;
+                        ALIENS[7].unlocked = true;
+                        ALIENS[7].introMessage = 'I am Ripjaws! I am the master of the sea! Press F to emit SONAR WAVES! 🦈';
+                        mario.transformToRipjaws();
+                        sfx.collectItem();
+                        renderAlienGrid();
+                        openOmnitrixPanel();
+                    } else if (entity.type === 'jellyfish_goomba' || entity.type === 'mucus_projectile') {
+                        sfx.death();
+                        sfx.stopMusic();
+                        gameState = 'GAMEOVER';
+                    } else if (entity.type === 'great_octopus') {
+                        if (mario.vy > 0 && mario.y + mario.height < entity.y + 40) {
+                            mario.y = entity.y - mario.height;
+                            mario.vy = 0;
+                            mario.grounded = true;
+                        } else {
+                            if (mario.state !== 'SMALL') {
+                                mario.revertToSmall();
+                                mario.vy = -8;
+                                mario.vx = -5;
                             } else {
                                 sfx.death();
                                 sfx.stopMusic();
