@@ -193,16 +193,14 @@ export class Mario {
         }
 
         let inWater = level.waterStartX !== undefined && this.x > level.waterStartX;
+        this.inWater = inWater;
         let activeGravity = inWater ? 0.2 : this.gravity;
 
-        // Apply Gravity (Stinkfly flies naturally)
-        if (this.state === 'STINKFLY') {
+        // Apply Gravity (Stinkfly flies naturally, Ripjaws swims naturally in water)
+        if (this.state === 'STINKFLY' || (inWater && this.state === 'RIPJAWS')) {
             this.vy = 0; // zero gravity base
         } else {
             this.vy += activeGravity;
-            if (inWater && this.state === 'RIPJAWS' && this.input.isDown('ArrowUp')) {
-                this.vy -= 0.6; // Swim up faster
-            }
         }
 
         // Horizontal Movement
@@ -210,6 +208,7 @@ export class Mario {
         if (this.state === 'XLR8') moveSpeed = this.speed * 2.5;
         if (this.dashActive) moveSpeed = this.speed * 4;
         if (this.state === 'STINKFLY') moveSpeed = this.speed * 1.5;
+        if (this.state === 'RIPJAWS' && inWater) moveSpeed = this.speed * 2.2; // Fast swimmer
 
         if (this.input.isDown('ArrowRight')) {
             this.vx = moveSpeed;
@@ -239,7 +238,7 @@ export class Mario {
 
         // --- Ripjaws logic ---
         if (this.state === 'RIPJAWS') {
-            if (this.input.isDown('f')) {
+            if (this.input.isDown('F')) {
                 this.soundWaveActive = true;
             } else {
                 this.soundWaveActive = false;
@@ -256,13 +255,17 @@ export class Mario {
         const jumpJustPressed = jumpPressed && !this._jumpWasDown;
         this._jumpWasDown = jumpPressed;
 
-        if (this.state === 'STINKFLY') {
-            this.wingStamina = this.maxWingStamina; // no long drain since natural flight
+        if (this.state === 'STINKFLY' || (inWater && this.state === 'RIPJAWS')) {
+            if (this.state === 'STINKFLY') this.wingStamina = this.maxWingStamina;
+            
             if (jumpPressed) {
-                this.vy = -moveSpeed; // Fly up
+                this.vy = -moveSpeed; // Fly/Swim up
                 this._justJumped = true;
             } else if (this.input.isDown('ArrowDown')) {
-                this.vy = moveSpeed; // Fly down
+                this.vy = moveSpeed; // Fly/Swim down
+            } else {
+                // If swimming/flying and no vertical keys, stay buoyant but allow X movement
+                this.vy = 0;
             }
         } else {
             if (jumpPressed && this.grounded) {
@@ -1395,16 +1398,41 @@ export class Mario {
         return this.punchRect;
     }
 
+    getRipjawsLightPosition() {
+        const cx = this.x + this.width / 2;
+        const cy = this.y + this.height / 2;
+
+        if (this.state !== 'RIPJAWS') {
+            return { x: cx, y: cy };
+        }
+
+        if (this.inWater) {
+            return this.facingRight
+                ? { x: cx + 10, y: cy + 18 }
+                : { x: cx - 10, y: cy + 18 };
+        }
+
+        return this.facingRight
+            ? { x: cx + 18, y: this.y + 8 }
+            : { x: cx - 18, y: this.y + 8 };
+    }
+
     drawRipjaws(ctx) {
         const cx = this.x + this.width / 2;
-        const cy = this.y + this.height; // anchor bottom
+        const cy = this.y + this.height / 2;
         const flip = this.facingRight ? 1 : -1;
         const now = performance.now();
 
         ctx.save();
         ctx.translate(cx, cy);
+        
+        // Swim horizontal pose if in water
+        if (this.inWater) {
+            ctx.rotate(this.facingRight ? Math.PI/2 : -Math.PI/2);
+        }
+        
         ctx.scale(flip, 1);
-        ctx.translate(0, -this.height);
+        ctx.translate(0, -this.height/2);
 
         const skinColor = '#8FBC8F'; // Pale grey-green
         const suitColor = '#111';
@@ -1509,9 +1537,9 @@ export class Mario {
             ctx.lineWidth = 2;
             const t = (now % 500) / 500;
             for (let i = 0; i < 3; i++) {
-                const r = (t + i/3) * 50;
+                const r = (t + i/3) * 400; // Much larger visuals
                 ctx.beginPath();
-                ctx.arc(24, 10, r, -Math.PI/4, Math.PI/4);
+                ctx.arc(24, 10, r, -Math.PI/3, Math.PI/3);
                 ctx.stroke();
             }
         }

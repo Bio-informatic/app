@@ -675,12 +675,16 @@ export class Level {
 
         // Sky
         ctx.fillStyle = t.sky;
-        ctx.fillRect(0, 0, this.width, this.height);
+        ctx.fillRect(0, -1000, this.width, this.height + 2000);
 
         // Level 9: deep sea background on the second half
         if (this.levelIndex === 9 && this.waterStartX) {
-            ctx.fillStyle = '#001F3F'; // Dark navy sea
-            ctx.fillRect(this.waterStartX, 0, this.width - this.waterStartX, this.height);
+            const seaGrad = ctx.createLinearGradient(this.waterStartX, -200, this.waterStartX, this.height);
+            seaGrad.addColorStop(0, '#07243F');
+            seaGrad.addColorStop(0.45, '#04182D');
+            seaGrad.addColorStop(1, '#010814');
+            ctx.fillStyle = seaGrad;
+            ctx.fillRect(this.waterStartX, -1000, this.width - this.waterStartX, this.height + 2000);
         }
 
         // Level 3: lava glow from below
@@ -834,30 +838,79 @@ export class Level {
 
             for (let i = 0; i < 5; i++) {
                 const px = i * 800 + 100;
-                // Left side of pyramid
-                ctx.fillStyle = '#D2B48C';
-                ctx.beginPath();
-                ctx.moveTo(px, this.height);
-                ctx.lineTo(px + 250, 250);
-                ctx.lineTo(px + 500, this.height);
-                ctx.fill();
-                
-                // Right shaded side
-                ctx.fillStyle = '#C2B280';
-                ctx.beginPath();
-                ctx.moveTo(px + 250, 250);
-                ctx.lineTo(px + 500, this.height);
-                ctx.lineTo(px + 250, this.height);
-                ctx.fill();
+                // Only draw if pyramid is on the land side
+                if (px + 500 < this.waterStartX) {
+                    // Left side of pyramid
+                    ctx.fillStyle = '#D2B48C';
+                    ctx.beginPath();
+                    ctx.moveTo(px, this.height);
+                    ctx.lineTo(px + 250, 250);
+                    ctx.lineTo(px + 500, this.height);
+                    ctx.fill();
+                    
+                    // Right shaded side
+                    ctx.fillStyle = '#C2B280';
+                    ctx.beginPath();
+                    ctx.moveTo(px + 250, 250);
+                    ctx.lineTo(px + 500, this.height);
+                    ctx.lineTo(px + 250, this.height);
+                    ctx.fill();
+                }
             }
             
-            // Standard clouds
+            // Standard clouds - only on land side
             ctx.fillStyle = t.cloud;
             for (let i = 0; i < 20; i++) {
                 const cx = i * 350 + 60;
-                ctx.fillRect(cx, 70, 64, 16);
-                ctx.fillRect(cx + 16, 54, 32, 16);
-                ctx.fillRect(cx + 8, 86, 48, 16);
+                if (cx < this.waterStartX) {
+                    ctx.fillRect(cx, 70, 64, 16);
+                    ctx.fillRect(cx + 16, 54, 32, 16);
+                    ctx.fillRect(cx + 8, 86, 48, 16);
+                }
+            }
+
+            if (this.waterStartX) {
+                const seaWidth = this.width - this.waterStartX;
+
+                const haze = ctx.createLinearGradient(this.waterStartX, 0, this.waterStartX, this.height);
+                haze.addColorStop(0, 'rgba(20, 120, 170, 0.12)');
+                haze.addColorStop(0.55, 'rgba(8, 55, 100, 0.16)');
+                haze.addColorStop(1, 'rgba(0, 0, 0, 0.32)');
+                ctx.fillStyle = haze;
+                ctx.fillRect(this.waterStartX, -100, seaWidth, this.height + 200);
+
+                for (let i = 0; i < 6; i++) {
+                    const ridgeX = this.waterStartX + 140 + i * 310;
+                    const ridgeH = 70 + (i % 3) * 40;
+                    ctx.fillStyle = `rgba(10, 28, 45, ${0.35 + (i % 2) * 0.1})`;
+                    ctx.beginPath();
+                    ctx.moveTo(ridgeX - 90, this.height);
+                    ctx.quadraticCurveTo(ridgeX, this.height - ridgeH, ridgeX + 90, this.height);
+                    ctx.fill();
+                }
+
+                ctx.strokeStyle = 'rgba(18, 60, 55, 0.45)';
+                ctx.lineWidth = 5;
+                ctx.lineCap = 'round';
+                for (let i = 0; i < 18; i++) {
+                    const sx = this.waterStartX + 60 + i * 120;
+                    const baseY = this.height - 64;
+                    const sway = Math.sin(now / 800 + i * 0.9) * 18;
+                    ctx.beginPath();
+                    ctx.moveTo(sx, baseY);
+                    ctx.quadraticCurveTo(sx + sway, baseY - 45, sx + sway * 0.5, baseY - 95 - (i % 4) * 12);
+                    ctx.stroke();
+                }
+
+                ctx.fillStyle = 'rgba(180, 230, 255, 0.12)';
+                for (let i = 0; i < 90; i++) {
+                    const px = this.waterStartX + ((i * 173 + now / 18) % seaWidth);
+                    const py = ((i * 97 + now / 28) % (this.height + 300)) - 120;
+                    const r = 1 + (i % 3);
+                    ctx.beginPath();
+                    ctx.arc(px, py, r, 0, Math.PI * 2);
+                    ctx.fill();
+                }
             }
         } else if (this.levelIndex !== 3 && this.levelIndex !== 6) {
             ctx.fillStyle = t.cloud;
@@ -1108,15 +1161,30 @@ export class Level {
 
         // ── Level 9 Water Overlay ──────────────────────────────────
         if (this.levelIndex === 9 && this.waterStartX) {
-            ctx.fillStyle = 'rgba(0, 100, 200, 0.4)'; // Blue overlay
-            ctx.fillRect(this.waterStartX, 0, this.width - this.waterStartX, this.height);
+            ctx.fillStyle = 'rgba(0, 60, 110, 0.2)';
+            ctx.fillRect(this.waterStartX, -1000, this.width - this.waterStartX, this.height + 2000);
+
+            // Light Rays
+            ctx.save();
+            ctx.globalAlpha = 0.05;
+            ctx.fillStyle = '#FFFFFF';
+            const now = performance.now();
+            for (let i = 0; i < 6; i++) {
+                const rx = this.waterStartX + 100 + i * 400 + Math.sin(now / 2500 + i) * 80;
+                ctx.beginPath();
+                ctx.moveTo(rx, -1000);
+                ctx.lineTo(rx + 120, -1000);
+                ctx.lineTo(rx + 40, this.height + 1000);
+                ctx.lineTo(rx - 80, this.height + 1000);
+                ctx.fill();
+            }
+            ctx.restore();
             
             // Bubbles
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-            const now = performance.now();
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
             for (let i = 0; i < 50; i++) {
                 const bx = this.waterStartX + ((i * 153 + now/20) % (this.width - this.waterStartX));
-                const by = this.height - ((i * 77 + now/30) % this.height);
+                const by = (this.height + 500) - ((i * 77 + now/30) % (this.height + 1000));
                 ctx.beginPath();
                 ctx.arc(bx, by + Math.sin(now/500 + i)*10, 2 + (i%3), 0, Math.PI*2);
                 ctx.fill();
@@ -1232,6 +1300,56 @@ export class Level {
         ctx.fillStyle = 'rgba(0,255,100,0.6)';
         ctx.font = 'bold 11px monospace';
         ctx.fillText('[ THERMAL VISION ACTIVE ]', screenW / 2 - 90, 22);
+
+        ctx.restore();
+    }
+
+    drawLevel9WaterDarkness(ctx, mario) {
+        if (this.levelIndex !== 9 || !this.waterStartX) return;
+
+        const overlayTop = -1000;
+        const overlayHeight = this.height + 2000;
+        const overlayWidth = this.width - this.waterStartX;
+
+        ctx.save();
+        ctx.fillStyle = 'rgba(0, 8, 20, 0.38)';
+        ctx.fillRect(this.waterStartX, overlayTop, overlayWidth, overlayHeight);
+
+        if (mario && mario.state === 'RIPJAWS' && mario.inWater) {
+            const light = mario.getRipjawsLightPosition();
+            const visibilityMask = ctx.createRadialGradient(light.x, light.y, 20, light.x, light.y, 420);
+            visibilityMask.addColorStop(0, 'rgba(0, 8, 20, 0)');
+            visibilityMask.addColorStop(0.2, 'rgba(0, 8, 20, 0.015)');
+            visibilityMask.addColorStop(0.45, 'rgba(0, 8, 20, 0.05)');
+            visibilityMask.addColorStop(0.75, 'rgba(0, 8, 20, 0.16)');
+            visibilityMask.addColorStop(1, 'rgba(0, 8, 20, 0.42)');
+            ctx.fillStyle = visibilityMask;
+            ctx.fillRect(this.waterStartX, overlayTop, overlayWidth, overlayHeight);
+
+            const frontBiasX = light.x + (mario.facingRight ? 120 : -120);
+            const coneMask = ctx.createRadialGradient(frontBiasX, light.y + 10, 16, frontBiasX, light.y + 10, 320);
+            coneMask.addColorStop(0, 'rgba(0, 8, 20, 0.01)');
+            coneMask.addColorStop(0.45, 'rgba(0, 8, 20, 0.045)');
+            coneMask.addColorStop(1, 'rgba(0, 8, 20, 0.16)');
+            ctx.fillStyle = coneMask;
+            ctx.fillRect(this.waterStartX, overlayTop, overlayWidth, overlayHeight);
+
+            ctx.globalCompositeOperation = 'screen';
+            const glow = ctx.createRadialGradient(light.x, light.y, 6, light.x, light.y, 240);
+            glow.addColorStop(0, 'rgba(255, 255, 220, 0.4)');
+            glow.addColorStop(0.35, 'rgba(140, 220, 255, 0.2)');
+            glow.addColorStop(1, 'rgba(140, 220, 255, 0)');
+            ctx.fillStyle = glow;
+            ctx.fillRect(this.waterStartX, overlayTop, overlayWidth, overlayHeight);
+        }
+        else {
+            const darkSea = ctx.createLinearGradient(this.waterStartX, 0, this.waterStartX, this.height);
+            darkSea.addColorStop(0, 'rgba(0, 8, 20, 0.22)');
+            darkSea.addColorStop(0.5, 'rgba(0, 8, 20, 0.34)');
+            darkSea.addColorStop(1, 'rgba(0, 8, 20, 0.5)');
+            ctx.fillStyle = darkSea;
+            ctx.fillRect(this.waterStartX, overlayTop, overlayWidth, overlayHeight);
+        }
 
         ctx.restore();
     }

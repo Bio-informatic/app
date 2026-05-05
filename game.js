@@ -812,8 +812,8 @@ function gameLoop(timestamp) {
                     entity.update(deltaTime, level, mario.x, mario.y);
                     if (mario.state === 'RIPJAWS' && mario.soundWaveActive) {
                         const dist = Math.hypot(mario.x - (entity.x + 75), mario.y - (entity.y + 75));
-                        if (dist < 300) {
-                            entity.soundDamage += deltaTime * 2;
+                        if (dist < 600) { // Wide range
+                            entity.soundDamage += deltaTime * 4; // Faster damage
                         }
                     }
                     if (entity.dead && !entity.flagSpawned) {
@@ -1566,6 +1566,9 @@ function gameLoop(timestamp) {
             }
         });
         mario.draw(ctx);
+        if (currentLevelIndex === 9) {
+            level.drawLevel9WaterDarkness(ctx, mario);
+        }
 
         // ── Draw Shockwaves ───────────────────
         for (let i = shockwaves.length - 1; i >= 0; i--) {
