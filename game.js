@@ -35,6 +35,9 @@ import { RipjawsItem } from './src/entities/RipjawsItem.js';
 import { JellyfishGoomba } from './src/entities/JellyfishGoomba.js';
 import { GreatOctopus } from './src/entities/GreatOctopus.js';
 import { MucusProjectile } from './src/entities/MucusProjectile.js';
+import { GreyMatterItem } from './src/entities/GreyMatterItem.js';
+import { OmnitrixVirus } from './src/entities/OmnitrixVirus.js';
+import { VilgaxSpider } from './src/entities/VilgaxSpider.js';
 
 const sfx = new SoundManager();
 
@@ -83,7 +86,7 @@ const ALIENS = [
     { key: '6', name: 'Wild Mutt', icon: '🐺', unlocked: false, lives: 25 },
     { key: '7', name: 'Diamondhead', icon: '💎', unlocked: false, lives: 25 },
     { key: '8', name: 'Ripjaws', icon: '🦈', unlocked: false, lives: 25 },
-    { key: '9', name: '???', icon: '👾', unlocked: false, lives: 25 },
+    { key: '9', name: 'Grey Matter', icon: '🐸', unlocked: false, lives: 25 },
     { key: '10', name: '???', icon: '👾', unlocked: false, lives: 25 },
 ];
 
@@ -95,6 +98,7 @@ function getDefaultBoxEnemyType(levelIndex) {
     if (levelIndex === 6) return 'electromba';
     if (levelIndex === 8) return 'whitewalker_goomba';
     if (levelIndex === 9) return 'jellyfish_goomba';
+    if (levelIndex === 10) return 'omnitrix_virus';
     return 'goomba';
 }
 
@@ -105,6 +109,7 @@ function createEnemyByType(type, x, y, entitiesArray = null, fromBox = false) {
     if (type === 'electromba') return new Electromba(x, y, entitiesArray);
     if (type === 'whitewalker_goomba') return new WhiteWalkerGoomba(x, y);
     if (type === 'jellyfish_goomba') return new JellyfishGoomba(x, y, fromBox);
+    if (type === 'omnitrix_virus') return new OmnitrixVirus(x, y);
     return new Goomba(x, y);
 }
 
@@ -197,6 +202,8 @@ function activateAlien(index) {
         mario.transformToDiamondhead();
     } else if (alien.name === 'Ripjaws') {
         mario.transformToRipjaws();
+    } else if (alien.name === 'Grey Matter') {
+        mario.transformToGreyMatter();
     }
 }
 
@@ -250,6 +257,10 @@ let gorillombaDefeated = false;
 let nightKing = null;
 let nightKingDefeated = false;
 
+// Vilgax Spider boss reference (Level 10)
+let vilgaxSpider = null;
+export let vilgaxSpiderDefeated = false; // exported for Level_v2.js palette swap
+
 function assignBlockHit() {
     mario.onBlockHit = (tileType, bx, by) => {
         if (tileType === 3) {
@@ -271,6 +282,7 @@ function assignBlockHit() {
                 else if (currentLevelIndex === 6) ItemClass = UpgradeItem;
                 else if (currentLevelIndex === 8) ItemClass = DiamondheadItem;
                 else if (currentLevelIndex === 9) ItemClass = RipjawsItem;
+                else if (currentLevelIndex === 10) ItemClass = GreyMatterItem;
             }
 
             if (ItemClass) {
@@ -326,6 +338,8 @@ function loadLevel(index, carryOverState = null) {
     gorillombaDefeated = false;
     nightKing = null;
     nightKingDefeated = false;
+    vilgaxSpider = null;
+    vilgaxSpiderDefeated = false;
 
     level.entities.forEach(entityData => {
         if (entityData.type === 'goomba') {
@@ -381,8 +395,16 @@ function loadLevel(index, carryOverState = null) {
             entities.push(new GreatOctopus(entityData.x, entityData.y, entities));
         } else if (entityData.type === 'jellyfish_goomba') {
             entities.push(new JellyfishGoomba(entityData.x, entityData.y));
+        } else if (entityData.type === 'grey_matter_item') {
+            entities.push(new GreyMatterItem(entityData.x, entityData.y));
+        } else if (entityData.type === 'omnitrix_virus') {
+            entities.push(new OmnitrixVirus(entityData.x, entityData.y));
+        } else if (entityData.type === 'vilgax_spider') {
+            vilgaxSpider = new VilgaxSpider(entityData.x, entityData.y, entities);
+            entities.push(vilgaxSpider);
         }
     });
+
 
     levelTitleTimer = performance.now();
     gameState = 'PLAYING';
@@ -396,6 +418,8 @@ function loadLevel(index, carryOverState = null) {
     canvas.classList.toggle('level7-theme', index === 7);
     canvas.classList.toggle('level8-theme', index === 8);
     canvas.classList.toggle('level9-theme', index === 9);
+    canvas.classList.toggle('level10-theme', index === 10);
+    canvas.classList.remove('fixed');
 
     // Sound: start level music
     bossEntrancePlayed = false;
@@ -455,6 +479,19 @@ window.addEventListener('keydown', (e) => {
     //   FOURARMS: Ground Pound
     //   HEATBLAST: Shoot Fireball (rapid press = bigger fire)
     if (e.code === 'KeyF' && mario && gameState === 'PLAYING') {
+        // Vilgax Spider final hits execution check
+        if (typeof vilgaxSpider !== 'undefined' && vilgaxSpider && vilgaxSpider.stunned && !vilgaxSpider.dead) {
+            const dist = Math.hypot((mario.x + mario.width/2) - (vilgaxSpider.x + vilgaxSpider.width/2), 
+                                    (mario.y + mario.height/2) - (vilgaxSpider.y + vilgaxSpider.height/2));
+            if (dist < 300) {
+                vilgaxSpider.finalHits++;
+                sfx.bossHit();
+                screenShake = 15;
+                console.log(`Executed Vilgax hit: ${vilgaxSpider.finalHits}/3`);
+                return; // Prioritize this action over others!
+            }
+        }
+
         if (mario.state === 'HEATBLAST') {
             // Fireball — rapid press increases power
             const now = performance.now();
@@ -1244,9 +1281,66 @@ function gameLoop(timestamp) {
                                 gameState = 'GAMEOVER';
                             }
                         }
+                    } else if (entity.type === 'grey_matter_item') {
+                        entity.dead = true;
+                        ALIENS[8].unlocked = true;
+                        ALIENS[8].introMessage = 'I am Grey Matter! Small but highly intelligent! Hold F for 2 seconds to reprogram nearby viruses! 🐸';
+                        mario.transformToGreyMatter();
+                        sfx.collectItem();
+                        renderAlienGrid();
+                        openOmnitrixPanel();
+                    } else if (entity.type === 'omnitrix_virus' && !entity.fixed) {
+                        // Contact with unfixed viruses is always harmful now, you must use Hacking Wave!
+                        if (mario.state !== 'SMALL') {
+                            mario.revertToSmall();
+                            mario.vy = -5;
+                            mario.vx = (mario.x < entity.x) ? -5 : 5;
+                        } else {
+                            sfx.death();
+                            sfx.stopMusic();
+                            gameState = 'GAMEOVER';
+                        }
+                    } else if (entity.type === 'vilgax_spider') {
+                        if (vilgaxSpider.stunned) {
+                            // Safe to approach!
+                        } else {
+                            if (mario.vy > 0 && mario.y + mario.height < entity.y + 40) {
+                                mario.y = entity.y - mario.height;
+                                mario.vy = 0;
+                                mario.grounded = true;
+                            } else {
+                                if (mario.state !== 'SMALL') {
+                                    mario.revertToSmall();
+                                    mario.vy = -8;
+                                    mario.vx = -5;
+                                } else {
+                                    sfx.death();
+                                    sfx.stopMusic();
+                                    gameState = 'GAMEOVER';
+                                }
+                            }
+                        }
                     }
                 }
             });
+
+            // ── Grey Matter Hacking Wave ───────────────────────────────
+            if (mario.state === 'GREYMATTER' && mario.hackingWaveTriggered) {
+                mario.hackingWaveTriggered = false;
+                screenShake = 15;
+                sfx.stomp(); // Reuse stomp sound for wave
+                
+                // Reprogram all unfixed viruses within a large radius
+                entities.forEach(entity => {
+                    if (entity.type === 'omnitrix_virus' && !entity.fixed) {
+                         const dist = Math.hypot(mario.x - entity.x, mario.y - entity.y);
+                         if (dist < 400) {
+                             entity.fixed = true;
+                             entity.followTarget = vilgaxSpider;
+                         }
+                    }
+                });
+            }
 
             // ── Wild Mutt Punch Gorillomba ─────────────────────────
             if (mario.state === 'WILDMUTT' && mario.punchActive && gorillomba && !gorillomba.dead) {
@@ -1370,6 +1464,20 @@ function gameLoop(timestamp) {
                         nightKingDefeated = true;
                         nightKing = null;
                         console.log('NIGHT KING DEFEATED!');
+                        screenShake = 30;
+                        sfx.bossDefeated();
+                        const flagX = level.cols - 2;
+                        for (let fy = 4; fy < level.rows; fy++) {
+                            level.tiles[fy][flagX] = 5;
+                        }
+                        level.finishCols.set(flagX, { topRow: 4, bottomRow: level.rows - 1 });
+                    }
+                    if (entities[i] === vilgaxSpider && vilgaxSpider.dead) {
+                        vilgaxSpiderDefeated = true;
+                        vilgaxSpider = null;
+                        level.omnitrixFixed = true;
+                        canvas.classList.add('fixed');
+                        console.log('VILGAX SPIDER DEFEATED!');
                         screenShake = 30;
                         sfx.bossDefeated();
                         const flagX = level.cols - 2;

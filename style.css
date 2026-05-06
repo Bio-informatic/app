@@ -70,6 +70,13 @@ canvas.level9-theme {
     /* Peach bright desert sky for Ripjaws level */
 }
 
+canvas.level10-theme {
+    background-color: #2A0A0A;
+}
+canvas.level10-theme.fixed {
+    background-color: #0A2A0A;
+}
+
 #ui-layer {
     position: absolute;
     top: 10px;

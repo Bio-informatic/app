@@ -6,12 +6,13 @@ export class Level {
         this.entities = [];
         this.levelIndex = levelIndex;
         this.unstableTiles = [];
+        this.omnitrixFixed = false;
 
         let map = [];
 
         // LEVEL GENERATION
-        if (levelIndex >= 1 && levelIndex <= 9) {
-            const ROWS = 24;
+        if (levelIndex >= 1 && levelIndex <= 10) {
+            const ROWS = 20;
             const COLS = levelIndex >= 5 ? 200 : (levelIndex === 4 ? 250 : (levelIndex === 3 ? 200 : 150));
             const TS = this.tileSize;
             const skyChar = '.';
@@ -63,6 +64,7 @@ export class Level {
             else if (levelIndex === 7) bossZoneStart = COLS - 45;
             else if (levelIndex === 8) bossZoneStart = COLS - 50;
             else if (levelIndex === 9) bossZoneStart = COLS - 40;
+            else if (levelIndex === 10) bossZoneStart = COLS - 50;
 
             // Store slow zone bounds for game.js
             this.slowZoneStart = levelIndex === 4 ? bossZoneStart * TS : -1;
@@ -112,7 +114,11 @@ export class Level {
                     baseTopY = GROUND_Y - height;
                     for (let px = 0; px < width; px++) {
                         for (let py = baseTopY; py < GROUND_Y; py++) {
-                            map[py][curX + px] = levelIndex === 6 ? eBlockChar : brickChar;
+                            if (levelIndex === 10) {
+                                map[py][curX + px] = 'E';
+                            } else {
+                                map[py][curX + px] = levelIndex === 6 ? eBlockChar : brickChar;
+                            }
                         }
                     }
                 }
@@ -151,7 +157,8 @@ export class Level {
                     const goombaY = hasGroundBricks ? baseTopY - 1 : GROUND_Y - 1;
                     if (goombaY > 2 && map[goombaY][curX] === skyChar) {
                         let goombaType = 'goomba';
-                        if (levelIndex === 9) goombaType = 'jellyfish_goomba';
+                        if (levelIndex === 10) goombaType = 'omnitrix_virus';
+                        else if (levelIndex === 9) goombaType = 'jellyfish_goomba';
                         else if (levelIndex === 8) goombaType = 'whitewalker_goomba';
                         else if (levelIndex === 7) goombaType = 'goomba'; // vanishing goombas — managed in draw
                         else if (levelIndex === 6) goombaType = 'electromba';
@@ -477,6 +484,46 @@ export class Level {
                 });
             }
 
+            // ── Level 10 Boss Arena (Vilgax Spider & Grey Matter Item) ──────
+            if (levelIndex === 10) {
+                for (let y = GROUND_Y; y < ROWS; y++) {
+                    for (let x = bossZoneStart; x < COLS; x++) {
+                        map[y][x] = groundChar;
+                    }
+                }
+                for (let y = GROUND_Y - 6; y < GROUND_Y; y++) {
+                    map[y][bossZoneStart] = 'E'; // EBlock wall
+                    map[y][COLS - 1] = 'E';
+                }
+                
+                // Spawn Vilgax Spider
+                this.entities.push({
+                    x: (bossZoneStart + 15) * TS,
+                    y: (GROUND_Y - 5) * TS,
+                    type: 'vilgax_spider'
+                });
+            }
+
+            // ── Cleanup Pass: Un-attach Mystery Boxes ───────────────────────
+            for (let y = 1; y < ROWS - 1; y++) {
+                for (let x = 1; x < COLS - 1; x++) {
+                    if (map[y][x] === mysteryChar) {
+                        const badBlocks = ['2', '4', 'E', mysteryChar];
+                        let fail = false;
+                        // Avoid bricks top/bottom
+                        if (badBlocks.includes(map[y - 1][x])) fail = true;
+                        if (badBlocks.includes(map[y + 1][x])) fail = true;
+                        // Avoid mystery boxes left/right
+                        if (map[y][x - 1] === mysteryChar) fail = true;
+                        if (map[y][x + 1] === mysteryChar) fail = true;
+
+                        if (fail) {
+                            map[y][x] = skyChar; // Remove invalid box
+                        }
+                    }
+                }
+            }
+
             // Convert to strings
             for (let y = 0; y < ROWS; y++) {
                 map[y] = map[y].join('');
@@ -502,9 +549,9 @@ export class Level {
                 else if (char === 'U') this.tiles[y][x] = 7;
                 else if (char === 'L') this.tiles[y][x] = 9;  // Lava
                 else if (char === 'S') this.tiles[y][x] = 10; // Speed panel
-                else if (char === 'E' && levelIndex !== 6) this.tiles[y][x] = 11; // Electric fence
-                // In Level 6, E is electronic block
-                else if (char === 'E' && levelIndex === 6) this.tiles[y][x] = 13;
+                else if (char === 'E' && levelIndex !== 6 && levelIndex !== 10) this.tiles[y][x] = 11; // Electric fence
+                // In Level 6 & 10, E is electronic block
+                else if (char === 'E' && (levelIndex === 6 || levelIndex === 10)) this.tiles[y][x] = 13;
                 else if (char === 'W') this.tiles[y][x] = 12; // Wire hole
                 else if (char === 'F') {
                     this.tiles[y][x] = 5;
@@ -531,13 +578,42 @@ export class Level {
         if (this.levelIndex === 3) {
             this.entities.push({ x: 300, y: 150, type: 'xlr8_item' });
         }
-        
-
-
     }
+
 
     // ── Theme palettes ─────────────────────────────────────────────
     getTheme() {
+        if (this.levelIndex === 10) {
+            if (this.omnitrixFixed) {
+                // Fixed: Omnitrix Green
+                return {
+                    sky:            '#0A2A0A',
+                    ground:         '#1A4A1A',
+                    groundStroke:   '#00FF00',
+                    brick:          '#2A6A2A',
+                    brickStroke:    '#AAFFAA',
+                    mystery:        '#00FF00',
+                    pipe:           '#003300',
+                    unstable:       '#3A8A3A',
+                    unstableStroke: '#6AFFAA',
+                    cloud:          'rgba(0, 255, 0, 0.1)'
+                };
+            } else {
+                // Broken: Glitchy Red
+                return {
+                    sky:            '#2A0A0A',
+                    ground:         '#4A1A1A',
+                    groundStroke:   '#FF0000',
+                    brick:          '#6A2A2A',
+                    brickStroke:    '#FFAAAA',
+                    mystery:        '#FF0000',
+                    pipe:           '#330000',
+                    unstable:       '#8A3A3A',
+                    unstableStroke: '#FF6AAA',
+                    cloud:          'rgba(255, 0, 0, 0.1)'
+                };
+            }
+        }
         if (this.levelIndex === 8) {
             return {
                 sky:            '#0A1A2A',   // Deep icy night sky
@@ -1138,16 +1214,20 @@ export class Level {
                         break;
                     }
 
-                    case 13: { // Electronic Block (Level 6)
-                        ctx.fillStyle = '#1A1A24';
+                    case 13: { // Electronic Block (Level 6 & 10)
+                        const isRed = this.levelIndex === 10 && !this.omnitrixFixed;
+                        const isGreen = this.levelIndex === 10 && this.omnitrixFixed;
+                        const activeColor = isRed ? '#F00' : (isGreen ? '#0F0' : '#00FFCC');
+
+                        ctx.fillStyle = isRed ? '#2A0505' : (isGreen ? '#052A05' : '#1A1A24');
                         ctx.fillRect(px, py, ts, ts);
-                        ctx.strokeStyle = '#00FFCC';
+                        ctx.strokeStyle = activeColor;
                         ctx.beginPath();
                         ctx.moveTo(px, py+ts/2); ctx.lineTo(px+ts, py+ts/2);
                         ctx.moveTo(px+ts/2, py); ctx.lineTo(px+ts/2, py+ts);
                         ctx.stroke();
                         ctx.strokeRect(px, py, ts, ts);
-                        ctx.fillStyle = '#00FFCC';
+                        ctx.fillStyle = activeColor;
                         ctx.fillRect(px + 14, py + 14, 4, 4);
                         if (Math.random() > 0.99) {
                             ctx.fillStyle = '#FFFFFF';

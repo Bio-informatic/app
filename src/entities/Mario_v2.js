@@ -66,6 +66,10 @@ export class Mario {
 
         // Ripjaws sound wave
         this.soundWaveActive = false;
+
+        // Grey Matter hacking
+        this.hackingTimer = 0;
+        this.hackingWaveTriggered = false;
     }
 
     transformToRipjaws() {
@@ -77,6 +81,17 @@ export class Mario {
         if (this.height < 55) this.y -= (55 - this.height);
         this.width = 40;
         this.height = 55;
+    }
+
+    transformToGreyMatter() {
+        if (this.state === 'GREYMATTER') return;
+        this.state = 'GREYMATTER';
+        this.transforming = true;
+        this.transformTimer = performance.now();
+        this.alienTimer = performance.now();
+        this.y += (this.height - 24);
+        this.width = 16;
+        this.height = 24;
     }
 
     transformToFourArms() {
@@ -234,6 +249,21 @@ export class Mario {
                 this.dashTrail[i].alpha -= 0.1;
                 if (this.dashTrail[i].alpha <= 0) this.dashTrail.splice(i, 1);
             }
+        }
+
+        // --- Grey Matter Hacking ---
+        if (this.state === 'GREYMATTER') {
+            if (this.input.isDown('F')) {
+                this.hackingTimer += (deltaTime || 16);
+                if (this.hackingTimer >= 2000) {
+                    this.hackingWaveTriggered = true;
+                    this.hackingTimer = 0;
+                }
+            } else {
+                this.hackingTimer = 0;
+            }
+        } else {
+            this.hackingTimer = 0;
         }
 
         // --- Ripjaws logic ---
@@ -466,9 +496,99 @@ export class Mario {
             this.drawDiamondhead(ctx);
         } else if (this.state === 'RIPJAWS') {
             this.drawRipjaws(ctx);
+        } else if (this.state === 'GREYMATTER') {
+            this.drawGreyMatter(ctx);
         } else {
             this.drawMario(ctx);
         }
+    }
+
+    drawGreyMatter(ctx) {
+        const cx = this.x + 8; // width is 16
+        const bottomY = this.y + 24;
+        const now = performance.now();
+        const walkBob = !this.grounded ? 0 : Math.sin(now / 100 + this.x / 10) * 1.5;
+
+        ctx.save();
+        ctx.translate(cx, bottomY - 10 + walkBob); // Center pivot for torso
+
+        // Hacking Wave Charging Aura
+        if (this.hackingTimer > 0) {
+            ctx.save();
+            const chargePct = this.hackingTimer / 2000;
+            ctx.beginPath();
+            ctx.arc(0, -10, 15 + chargePct * 20, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(57, 255, 20, ${0.1 + chargePct * 0.3})`;
+            ctx.fill();
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = `rgba(57, 255, 20, ${0.6 + chargePct * 0.4})`;
+            ctx.stroke();
+
+            // Particles
+            for (let i = 0; i < Math.floor(chargePct * 5); i++) {
+                ctx.fillStyle = '#FFF';
+                ctx.fillRect((Math.random()-0.5)*40, -10 + (Math.random()-0.5)*40, 2, 2);
+            }
+            ctx.restore();
+        }
+
+        // Legs (tiny, black & green)
+        ctx.fillStyle = '#000';
+        ctx.fillRect(-6, 4, 3, 6);
+        ctx.fillRect(3, 4, 3, 6);
+        ctx.fillStyle = '#111'; // Feet
+        ctx.fillRect(-7, 9, 5, 2);
+        ctx.fillRect(2, 9, 5, 2);
+
+        // Body (Green outfit with black stripe)
+        ctx.fillStyle = '#39FF14'; // Iconic green
+        ctx.fillRect(-5, -6, 10, 10);
+        ctx.fillStyle = '#000'; // Black middle bar
+        ctx.fillRect(-5, -2, 10, 4);
+        ctx.fillStyle = '#fff'; // White collar/belt
+        ctx.fillRect(-4, -6, 8, 2);
+        ctx.fillRect(-4, 3, 8, 2);
+
+        // Arms (Longer than legs)
+        const armSwing = !this.grounded ? -0.5 : Math.sin(now / 150 + this.x / 10) * 0.5;
+        ctx.fillStyle = '#000'; // Black upper
+        ctx.save();
+        ctx.translate(-5, -4);
+        ctx.rotate(armSwing);
+        ctx.fillRect(-2, 0, 3, 8);
+        ctx.fillStyle = '#888'; // Grey hands
+        ctx.fillRect(-3, 6, 5, 4);
+        ctx.restore();
+
+        ctx.save();
+        ctx.translate(5, -4);
+        ctx.rotate(-armSwing);
+        ctx.fillStyle = '#000';
+        ctx.fillRect(-1, 0, 3, 8);
+        ctx.fillStyle = '#888';
+        ctx.fillRect(-2, 6, 5, 4);
+        ctx.restore();
+
+        // Enormous Frog-like Head
+        ctx.fillStyle = '#A9A9A9'; // Grey skin
+        ctx.beginPath();
+        ctx.ellipse(0, -9, 12, 8, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Large horizontally stretched eyes
+        ctx.fillStyle = '#39FF14';
+        ctx.beginPath(); ctx.ellipse(-6, -10, 5, 3, -0.2, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(6, -10, 5, 3, 0.2, 0, Math.PI * 2); ctx.fill();
+        
+        ctx.fillStyle = '#000';
+        ctx.fillRect(-8, -11, 4, 2);
+        ctx.fillRect(4, -11, 4, 2);
+
+        // Mouth (tiny)
+        ctx.fillStyle = '#333';
+        ctx.fillRect(-1, -4, 2, 1);
+
+        ctx.restore();
     }
 
     drawDiamondhead(ctx) {
