@@ -141,28 +141,87 @@ export class VilgaxSpider {
         ctx.lineWidth = 2;
         ctx.stroke();
 
-        // Floating Vilgax Hologram Head
-        const hY = this.y + 10 + Math.sin(now / 300) * 10;
-        ctx.fillStyle = 'rgba(255, 0, 0, 0.3)'; // Blood red hologram
+        // Authentic Physical Vilgax Head & Shoulders attached to the Spider Torso
+        const hY = cy - 40 + (this.stunned ? 20 : Math.sin(now / 300) * 3); // Bob slightly with breathing, drop if stunned
+        
+        // Massive Dark Red Armored Collar (Neck Base)
+        ctx.fillStyle = '#401010'; // Dark brown/red
         ctx.beginPath();
-        ctx.moveTo(cx, cy);
-        ctx.lineTo(cx - 40, hY - 30);
-        ctx.lineTo(cx + 40, hY - 30);
+        ctx.ellipse(cx, hY + 15, 30, 15, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#111';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        ctx.fillStyle = '#601515'; // Darker red details
+        ctx.fillRect(cx - 20, hY + 10, 40, 15);
+        ctx.strokeRect(cx - 20, hY + 10, 40, 15);
+
+        // Alien Skin/Head Base
+        ctx.fillStyle = '#8A9A8A'; // Pale sickly green/grey skin
+        ctx.beginPath();
+        ctx.moveTo(cx - 15, hY + 10);
+        ctx.quadraticCurveTo(cx - 20, hY - 30, cx, hY - 35); // Left dome
+        ctx.quadraticCurveTo(cx + 20, hY - 30, cx + 15, hY + 10); // Right dome
+        ctx.fill();
+        ctx.stroke();
+
+        // Dark shadowing on the cranial ridges
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+        ctx.beginPath();
+        ctx.moveTo(cx - 10, hY - 20);
+        ctx.lineTo(cx + 10, hY - 20);
+        ctx.lineTo(cx + 5, hY - 35);
+        ctx.lineTo(cx - 5, hY - 35);
         ctx.fill();
 
-        // Face details
-        ctx.fillStyle = 'rgba(255, 50, 50, 0.8)';
-        // Head shape
-        ctx.fillRect(cx - 20, hY - 40, 40, 40);
-        // Eyes
-        ctx.fillStyle = '#FFF';
-        ctx.fillRect(cx - 15, hY - 30, 10, 6);
-        ctx.fillRect(cx + 5, hY - 30, 10, 6);
-        // Squid tentacles
-        ctx.fillStyle = 'rgba(255, 50, 50, 0.8)';
-        ctx.fillRect(cx - 15, hY, 8, 20);
-        ctx.fillRect(cx - 4, hY, 8, 25);
-        ctx.fillRect(cx + 7, hY, 8, 20);
+        // Eyes (Fierce, glowing orange-red slits wrapped in black sockets)
+        ctx.fillStyle = '#000'; // Black eye bed
+        ctx.beginPath();
+        ctx.ellipse(cx - 10, hY - 15, 6, 3, -0.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(cx + 10, hY - 15, 6, 3, 0.2, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.fillStyle = '#FF3300'; // Glowing red pupil
+        ctx.beginPath();
+        ctx.ellipse(cx - 10, hY - 15, 3, 1.5, -0.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(cx + 10, hY - 15, 3, 1.5, 0.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Iconic Front Tentacles covering the mouth/lower face
+        // 4 distinct pale green tentacles
+        ctx.fillStyle = '#8A9A8A';
+        ctx.strokeStyle = '#111';
+        ctx.lineWidth = 2;
+        
+        const tentacleSway = this.stunned ? 0 : Math.sin(now / 200) * 2;
+        const drawTentacle = (x, y, length, curve) => {
+            ctx.beginPath();
+            ctx.moveTo(x - 3, y);
+            ctx.quadraticCurveTo(x + curve + tentacleSway, y + length/2, x - 1, y + length);
+            ctx.quadraticCurveTo(x + curve + tentacleSway + 2, y + length/2, x + 3, y);
+            ctx.fill();
+            ctx.stroke();
+        };
+
+        // Outer Left
+        drawTentacle(cx - 12, hY - 5, 25, -6);
+        // Inner Left
+        drawTentacle(cx - 4, hY - 5, 32, -2);
+        // Inner Right
+        drawTentacle(cx + 4, hY - 5, 32, 2);
+        // Outer Right
+        drawTentacle(cx + 12, hY - 5, 25, 6);
+
+        // Breathing tube/respirator gear going into the sides of the mask
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = '#333';
+        ctx.beginPath(); ctx.moveTo(cx - 20, hY + 15); ctx.quadraticCurveTo(cx - 30, hY, cx - 25, hY - 5); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cx + 20, hY + 15); ctx.quadraticCurveTo(cx + 30, hY, cx + 25, hY - 5); ctx.stroke();
 
         // HP Bar
         ctx.fillStyle = '#333';

@@ -509,15 +509,17 @@ export class Mario {
         const now = performance.now();
         const walkBob = !this.grounded ? 0 : Math.sin(now / 100 + this.x / 10) * 1.5;
 
+        const scaleFactor = 0.60;
+
         ctx.save();
-        ctx.translate(cx, bottomY - 10 + walkBob); // Center pivot for torso
+        ctx.translate(cx, bottomY - (10 * scaleFactor) + walkBob); // Center pivot for torso, adjusted for scale
 
         // Hacking Wave Charging Aura
         if (this.hackingTimer > 0) {
             ctx.save();
             const chargePct = this.hackingTimer / 2000;
             ctx.beginPath();
-            ctx.arc(0, -10, 15 + chargePct * 20, 0, Math.PI * 2);
+            ctx.arc(0, -10 * scaleFactor, 15 + chargePct * 20, 0, Math.PI * 2);
             ctx.fillStyle = `rgba(57, 255, 20, ${0.1 + chargePct * 0.3})`;
             ctx.fill();
             ctx.lineWidth = 2;
@@ -527,68 +529,146 @@ export class Mario {
             // Particles
             for (let i = 0; i < Math.floor(chargePct * 5); i++) {
                 ctx.fillStyle = '#FFF';
-                ctx.fillRect((Math.random()-0.5)*40, -10 + (Math.random()-0.5)*40, 2, 2);
+                ctx.fillRect((Math.random()-0.5)*40, (-10 * scaleFactor) + (Math.random()-0.5)*40, 2, 2);
             }
             ctx.restore();
         }
 
-        // Legs (tiny, black & green)
-        ctx.fillStyle = '#000';
-        ctx.fillRect(-6, 4, 3, 6);
-        ctx.fillRect(3, 4, 3, 6);
-        ctx.fillStyle = '#111'; // Feet
-        ctx.fillRect(-7, 9, 5, 2);
-        ctx.fillRect(2, 9, 5, 2);
+        if (!this.facingRight) ctx.scale(-1, 1); // Flip horizontally for everything EXCEPT the aura
+        ctx.scale(scaleFactor, scaleFactor);
 
-        // Body (Green outfit with black stripe)
-        ctx.fillStyle = '#39FF14'; // Iconic green
-        ctx.fillRect(-5, -6, 10, 10);
-        ctx.fillStyle = '#000'; // Black middle bar
-        ctx.fillRect(-5, -2, 10, 4);
-        ctx.fillStyle = '#fff'; // White collar/belt
-        ctx.fillRect(-4, -6, 8, 2);
-        ctx.fillRect(-4, 3, 8, 2);
-
-        // Arms (Longer than legs)
-        const armSwing = !this.grounded ? -0.5 : Math.sin(now / 150 + this.x / 10) * 0.5;
-        ctx.fillStyle = '#000'; // Black upper
-        ctx.save();
-        ctx.translate(-5, -4);
-        ctx.rotate(armSwing);
-        ctx.fillRect(-2, 0, 3, 8);
-        ctx.fillStyle = '#888'; // Grey hands
-        ctx.fillRect(-3, 6, 5, 4);
-        ctx.restore();
-
-        ctx.save();
-        ctx.translate(5, -4);
-        ctx.rotate(-armSwing);
-        ctx.fillStyle = '#000';
-        ctx.fillRect(-1, 0, 3, 8);
-        ctx.fillStyle = '#888';
-        ctx.fillRect(-2, 6, 5, 4);
-        ctx.restore();
-
-        // Enormous Frog-like Head
-        ctx.fillStyle = '#A9A9A9'; // Grey skin
+        // White backpack element (draw before torso so it's behind)
+        ctx.fillStyle = '#D3D3D3';
         ctx.beginPath();
-        ctx.ellipse(0, -9, 12, 8, 0, 0, Math.PI * 2);
+        ctx.arc(-4, -18, 6, 0, Math.PI * 2);
         ctx.fill();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = '#000';
+        ctx.stroke();
 
-        // Large horizontally stretched eyes
-        ctx.fillStyle = '#39FF14';
-        ctx.beginPath(); ctx.ellipse(-6, -10, 5, 3, -0.2, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.ellipse(6, -10, 5, 3, 0.2, 0, Math.PI * 2); ctx.fill();
-        
+        // Webbed Feet (Grey)
+        ctx.fillStyle = '#848B8A';
+        ctx.lineWidth = 1.5;
+        // Back foot
+        ctx.beginPath();
+        ctx.moveTo(-2, 10); ctx.lineTo(-12, 10); ctx.lineTo(-14, 8); ctx.lineTo(-6, 6); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(-6, 10); ctx.lineTo(-8, 7); ctx.stroke(); // toe line
+        // Front foot
+        ctx.beginPath();
+        ctx.moveTo(2, 10); ctx.lineTo(12, 10); ctx.lineTo(14, 8); ctx.lineTo(6, 6); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(6, 10); ctx.lineTo(8, 7); ctx.stroke(); // toe line
+
+        // Legs (Bottom half black, top half green)
+        // Back leg
+        ctx.fillStyle = '#18B22A'; // bright lime-ish green
+        ctx.fillRect(-5, -4, 3, 6); // thigh
         ctx.fillStyle = '#000';
-        ctx.fillRect(-8, -11, 4, 2);
-        ctx.fillRect(4, -11, 4, 2);
+        ctx.fillRect(-5, 2, 3, 8); // calf
+        
+        // Front leg
+        ctx.fillStyle = '#18B22A';
+        ctx.fillRect(2, -4, 3, 6);
+        ctx.fillStyle = '#000';
+        ctx.fillRect(2, 2, 3, 8);
 
-        // Mouth (tiny)
-        ctx.fillStyle = '#333';
-        ctx.fillRect(-1, -4, 2, 1);
+        // Torso
+        // Belt
+        ctx.fillStyle = '#000';
+        ctx.fillRect(-4, -15, 8, 5); // Wide black belt
+        
+        // Shirt
+        ctx.fillStyle = '#18B22A';
+        ctx.fillRect(-4, -20, 8, 5);
+        
+        // Vertical black stripe and neck
+        ctx.fillStyle = '#000';
+        ctx.fillRect(-1.5, -23, 3, 8); // skinny long dark neck
 
+        // Arms (Very long, reaching below hips)
+        const armSwing = !this.grounded ? -0.5 : Math.sin(now / 150 + this.x / 10) * 0.4;
+        
+        // Back Arm
+        ctx.save();
+        ctx.translate(-3, -20); // shoulder joint
+        ctx.rotate(armSwing);
+        ctx.fillStyle = '#18B22A'; // Upper arm
+        ctx.fillRect(-1.5, 0, 3, 8);
+        ctx.fillStyle = '#000'; // Lower arm
+        ctx.fillRect(-2, 6, 4, 10);
+        ctx.fillStyle = '#18B22A'; // Green block on wrist/glove
+        ctx.fillRect(-1, 11, 2, 4);
+        // Grey Fingers
+        ctx.fillStyle = '#848B8A';
+        ctx.fillRect(-2, 16, 1.5, 7);
+        ctx.fillRect(0.5, 16, 1.5, 7);
         ctx.restore();
+
+        // Front Arm
+        ctx.save();
+        ctx.translate(3, -20);
+        ctx.rotate(-armSwing);
+        ctx.fillStyle = '#18B22A';
+        ctx.fillRect(-1.5, 0, 3, 8);
+        ctx.fillStyle = '#000';
+        ctx.fillRect(-2, 6, 4, 10);
+        ctx.fillStyle = '#18B22A'; 
+        ctx.fillRect(-1, 11, 2, 4);
+        // Fingers (flat grey rectangles)
+        ctx.fillStyle = '#848B8A';
+        ctx.fillRect(-2, 16, 1.5, 7);
+        ctx.fillRect(0.5, 16, 1.5, 7);
+        ctx.restore();
+
+        // Head (Enormous, wide, grey)
+        ctx.save();
+        ctx.translate(2, -22); // base of neck
+        ctx.fillStyle = '#848B8A';
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 1.5;
+        
+        ctx.beginPath();
+        ctx.moveTo(0, 3); // chin
+        ctx.lineTo(-4, 3); 
+        ctx.quadraticCurveTo(-15, 0, -20, -6); // back cheek
+        ctx.quadraticCurveTo(-24, -14, -12, -15); // back top
+        ctx.quadraticCurveTo(0, -12, 10, -15); // middle dip
+        ctx.quadraticCurveTo(22, -14, 18, -6); // front top to cheek
+        ctx.quadraticCurveTo(12, 0, 2, 3);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Eyes
+        ctx.lineWidth = 2.5; 
+        
+        // Back Eye
+        ctx.fillStyle = '#A3E319';
+        ctx.beginPath();
+        ctx.ellipse(-11, -7, 6, 3.5, -0.1, 0, Math.PI * 2);
+        ctx.fill(); ctx.stroke();
+        // pupil
+        ctx.fillStyle = '#111';
+        ctx.fillRect(-14, -7.5, 6, 1.5);
+        
+        // Front Eye
+        ctx.fillStyle = '#A3E319';
+        ctx.beginPath();
+        ctx.ellipse(10, -7, 7, 4, 0.1, 0, Math.PI * 2);
+        ctx.fill(); ctx.stroke();
+        // pupil
+        ctx.fillStyle = '#111';
+        ctx.fillRect(7, -7.5, 7, 1.5);
+
+        // Mouth (frown)
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(-3, -1);
+        ctx.quadraticCurveTo(0, -2, 3, -1);
+        ctx.stroke();
+
+        ctx.restore(); // restore head
+
+        ctx.restore(); // restore global
     }
 
     drawDiamondhead(ctx) {
