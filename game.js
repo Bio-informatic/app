@@ -503,8 +503,8 @@ window.addEventListener('keydown', (e) => {
     if (e.code === 'KeyF' && mario && gameState === 'PLAYING') {
         // Vilgax Spider final hits execution check
         if (typeof vilgaxSpider !== 'undefined' && vilgaxSpider && vilgaxSpider.stunned && !vilgaxSpider.dead) {
-            const dist = Math.hypot((mario.x + mario.width/2) - (vilgaxSpider.x + vilgaxSpider.width/2), 
-                                    (mario.y + mario.height/2) - (vilgaxSpider.y + vilgaxSpider.height/2));
+            const dist = Math.hypot((mario.x + mario.width / 2) - (vilgaxSpider.x + vilgaxSpider.width / 2),
+                (mario.y + mario.height / 2) - (vilgaxSpider.y + vilgaxSpider.height / 2));
             if (dist < 300) {
                 vilgaxSpider.finalHits++;
                 sfx.bossHit();
@@ -591,8 +591,8 @@ window.addEventListener('keydown', (e) => {
             // Technopathic Absorb (Nearby objects/enemies)
             entities.forEach(target => {
                 if (target.dead || target.absorbed) return;
-                const dist = Math.abs((mario.x + mario.width/2) - (target.x + target.width/2));
-                const distY = Math.abs((mario.y + mario.height/2) - (target.y + target.height/2));
+                const dist = Math.abs((mario.x + mario.width / 2) - (target.x + target.width / 2));
+                const distY = Math.abs((mario.y + mario.height / 2) - (target.y + target.height / 2));
                 if (dist < 60 && distY < 60) {
                     if (target.type === 'electromba') {
                         if (currentLevelIndex !== 6 || (target.isHacked && target.isHacked())) {
@@ -605,7 +605,7 @@ window.addEventListener('keydown', (e) => {
                             target.absorbed = true;
                             mario.controllingBoss = target; // Boss control mode
                             mario.y = target.y - mario.height; // pop him up slightly
-                            
+
                             // Place finish flag!
                             const flagX = level.cols - 2;
                             for (let fy = 4; fy < level.rows; fy++) {
@@ -620,8 +620,8 @@ window.addEventListener('keydown', (e) => {
             });
 
             // Check grid blocks
-            const mCX = Math.floor((mario.x + mario.width/2) / level.tileSize);
-            const mCY = Math.floor((mario.y + mario.height/2) / level.tileSize);
+            const mCX = Math.floor((mario.x + mario.width / 2) / level.tileSize);
+            const mCY = Math.floor((mario.y + mario.height / 2) / level.tileSize);
             for (let dy = -1; dy <= 1; dy++) {
                 for (let dx = -1; dx <= 1; dx++) {
                     const tx = mCX + dx;
@@ -680,7 +680,7 @@ function gameLoop(timestamp) {
 
         if (gameState === 'PLAYING') {
             if (bomba && !bomba.dead) {
-                bomba.update(deltaTime, level, mario.x + mario.width/2, mario.y + mario.height/2);
+                bomba.update(deltaTime, level, mario.x + mario.width / 2, mario.y + mario.height / 2);
             }
             if (gomrog && !gomrog.dead) {
                 gomrog.update(deltaTime, level, mario.x, mario.y);
@@ -951,7 +951,7 @@ function gameLoop(timestamp) {
                     entities.forEach(target => {
                         if (target.dead || target === entity) return;
                         if (target.type === 'fireball' || target.type === 'slimeball') return;
-                        
+
                         if (target.type === 'gomrog') {
                             const tRect = target.getTongueRect();
                             if (tRect && checkEntityCollision(entity, tRect) && target.tongueLength > 0) {
@@ -1187,7 +1187,7 @@ function gameLoop(timestamp) {
                                 mario.grounded = true;
                             } else {
                                 // Push horizontally out
-                                if (mario.x < entity.x + entity.width/2) {
+                                if (mario.x < entity.x + entity.width / 2) {
                                     mario.x = entity.x - mario.width;
                                 } else {
                                     mario.x = entity.x + entity.width;
@@ -1391,7 +1391,7 @@ function gameLoop(timestamp) {
                             entity.hitsTaken = (entity.hitsTaken || 0) + 1;
                             sfx.bossHit();
                             screenShake = 20;
-                            
+
                             if (entity.hitsTaken >= 10) {
                                 entity.acquired = true;
                                 screenShake = 40;
@@ -1441,15 +1441,15 @@ function gameLoop(timestamp) {
                 mario.hackingWaveTriggered = false;
                 screenShake = 15;
                 sfx.stomp(); // Reuse stomp sound for wave
-                
+
                 // Reprogram all unfixed viruses within a large radius
                 entities.forEach(entity => {
                     if (entity.type === 'omnitrix_virus' && !entity.fixed) {
-                         const dist = Math.hypot(mario.x - entity.x, mario.y - entity.y);
-                         if (dist < 400) {
-                             entity.fixed = true;
-                             entity.followTarget = vilgaxSpider;
-                         }
+                        const dist = Math.hypot(mario.x - entity.x, mario.y - entity.y);
+                        if (dist < 400) {
+                            entity.fixed = true;
+                            entity.followTarget = vilgaxSpider;
+                        }
                     }
                 });
             }
@@ -1505,7 +1505,7 @@ function gameLoop(timestamp) {
                         screenShake = 20;
                         sfx.bossDefeated();
                         console.log('GOOMBABA DEFEATED!');
-                        
+
                         // Spawn flag for Level 3
                         const flagX = level.cols - 2;
                         for (let fy = 4; fy < level.rows; fy++) {
@@ -1617,7 +1617,7 @@ function gameLoop(timestamp) {
             // ── Ground Pound Impact ───────────
             if (mario.groundPoundLanded) {
                 mario.groundPoundLanded = false;
-                
+
                 const mult = mario.gpMultiplier || 1;
                 screenShake = 12 * Math.max(1, mult * 0.8);
 
@@ -1639,7 +1639,7 @@ function gameLoop(timestamp) {
                         const dist = Math.sqrt((cx - ex) ** 2 + (cy - ey) ** 2);
                         if (dist < KILL_RADIUS) entity.takeDamage(5 * mult);
                     } else if (entity.type === 'bomba' && entity.hasShooter) {
-                        const sx = entity.x + entity.width/2;
+                        const sx = entity.x + entity.width / 2;
                         const sy = entity.y - 10;
                         const dist = Math.sqrt((cx - sx) ** 2 + (cy - sy) ** 2);
                         if (dist < KILL_RADIUS && mult >= 2.9) {
@@ -1690,7 +1690,7 @@ function gameLoop(timestamp) {
                 } else if (currentLevelIndex === 6 && gomboto && !gomboto.dead) {
                     const dist = Math.abs(mario.x - gomboto.x);
                     if (dist < 500) {
-                        sfx.bossEntrance('BOMBA'); 
+                        sfx.bossEntrance('BOMBA');
                         sfx.bossVoiceLine('GOMBOTO');
                         bossEntrancePlayed = true;
                     }
@@ -1730,11 +1730,11 @@ function gameLoop(timestamp) {
                 const footY = Math.floor((mario.y + mario.height) / level.tileSize); // +1px for floor touch
                 const leftX = Math.floor(mario.x / level.tileSize);
                 const rightX = Math.floor((mario.x + mario.width - 0.1) / level.tileSize);
-                
+
                 let touchingFence = false;
                 let touchingWire = false;
                 let touchingElecBlock = false;
-                
+
                 for (let yy = topY; yy <= footY; yy++) {
                     for (let xx = leftX; xx <= rightX; xx++) {
                         if (level.tiles[yy]) {
@@ -1745,7 +1745,7 @@ function gameLoop(timestamp) {
                         }
                     }
                 }
-                
+
                 if (touchingFence) {
                     const fenceOn = (performance.now() % 4000) < 2000;
                     if (fenceOn && !mario.dashActive && !mario.hasUpgradeElectricImmunity(currentLevelIndex)) {
@@ -1757,7 +1757,7 @@ function gameLoop(timestamp) {
                         }
                     }
                 }
-                
+
                 if (touchingWire && !mario.hasUpgradeElectricImmunity(currentLevelIndex)) {
                     if (gameState !== 'GAMEOVER') {
                         sfx.death();
@@ -1831,13 +1831,13 @@ function gameLoop(timestamp) {
             ctx.arc(mario.x + mario.width / 2, mario.y + mario.height, 20 * (mario.gpMultiplier || 1), 0, Math.PI * 2);
             ctx.fill();
         }
-        
+
         // Charging ground pound indicator
         if (mario.state === 'FOURARMS' && mario._gpCharging && mario.gpChargePercent > 0) {
             ctx.strokeStyle = `rgba(255, ${255 - mario.gpChargePercent * 255}, 0, 0.8)`;
             ctx.lineWidth = 4;
             ctx.beginPath();
-            ctx.arc(mario.x + mario.width / 2, mario.y + mario.height / 2, 30 + Math.sin(performance.now()/50)*5, 0, Math.PI * 2 * mario.gpChargePercent);
+            ctx.arc(mario.x + mario.width / 2, mario.y + mario.height / 2, 30 + Math.sin(performance.now() / 50) * 5, 0, Math.PI * 2 * mario.gpChargePercent);
             ctx.stroke();
         }
 
@@ -1875,13 +1875,17 @@ function gameLoop(timestamp) {
                 : (titleDur - titleAge) / 600;
             const titles = [
                 '',
-                'Find the Mystery Watch!',
-                'The Four Arms Level',
+                'Find the Mystery!',
+                'Raise your arms 👐',
                 'Welcome to HELL 🔥',
-                'XLR8 — LIGHT SPEED! ⚡',
+                'LIGHT SPEED! ⚡',
                 'The Toxic Sewers 🪰',
                 'Welcome to the Damaged World 💻',
-                'The Hidden Senses Jungle 🐺'
+                'The Hidden Senses Jungle 🐺',
+                'Winter is Here! ❄️',
+                'Sea in Desert 🏖️',
+                'Inside the Omnitrix ⌚',
+                'The Last Battle 💀'
             ];
             const subtitle = titles[currentLevelIndex] || `Level ${currentLevelIndex}`;
             ctx.save();
@@ -1893,6 +1897,10 @@ function gameLoop(timestamp) {
             else if (currentLevelIndex === 5) { titleBg = 'rgba(20,40,20,0.80)'; titleColor = '#88FF00'; }
             else if (currentLevelIndex === 6) { titleBg = 'rgba(10,10,12,0.85)'; titleColor = '#00FFCC'; }
             else if (currentLevelIndex === 7) { titleBg = 'rgba(5,20,5,0.85)'; titleColor = '#AAFF44'; }
+            else if (currentLevelIndex === 8) { titleBg = 'rgba(0,10,40,0.80)'; titleColor = '#88CCFF'; }
+            else if (currentLevelIndex === 9) { titleBg = 'rgba(0,20,50,0.80)'; titleColor = '#0088FF'; }
+            else if (currentLevelIndex === 10) { titleBg = 'rgba(10,25,10,0.80)'; titleColor = '#55FF55'; }
+            else if (currentLevelIndex === 11) { titleBg = 'rgba(20,0,30,0.85)'; titleColor = '#AA00FF'; }
             ctx.fillStyle = titleBg;
             ctx.fillRect(GAME_WIDTH / 2 - 230, GAME_HEIGHT / 3 - 38, 460, 80);
             ctx.fillStyle = titleColor;
@@ -2278,20 +2286,20 @@ function checkEntityCollision(rect1, rect2) {
 requestAnimationFrame(gameLoop);
 
 // ── TEMPORARY DEV TOOLS ──────────────────
-window.devWarp = function(levelNum) {
+window.devWarp = function (levelNum) {
     console.log('[DEV] Warping to Level ' + levelNum);
-    
+
     // Give all unlocks up to the current level
     mario.hasWatch = true;
     for (let i = 0; i < levelNum - 1; i++) {
         if (ALIENS[i]) ALIENS[i].unlocked = true;
     }
-    
+
     // Hide UI panels if any
     document.getElementById('level-complete-modal').style.display = 'none';
     document.getElementById('omnitrix-intro').style.display = 'none';
     closeOmnitrixPanel();
-    
+
     // Reset state & load level
     sfx.stopMusic();
     gameState = 'PLAYING';
