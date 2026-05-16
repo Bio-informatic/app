@@ -1,17 +1,19 @@
 import { MucusProjectile } from './MucusProjectile.js';
 
-export class GreatOctopus {
+export class Octumba {
     constructor(x, y, entitiesArray) {
         this.x = x;
         this.y = y;
         this.width = 150;
         this.height = 150;
-        this.type = 'great_octopus';
+        this.type = 'octumba';
         this.dead = false;
         this.entities = entitiesArray;
         
         this.soundDamage = 0; // accumulated damage from sound waves
         this.maxSoundDamage = 10000; // 10 seconds of continuous sound
+        this.hp = 10000;
+        this.maxHp = 10000;
         
         this.timer = 0;
         this.shootCooldown = 2000;
@@ -25,6 +27,7 @@ export class GreatOctopus {
         if (this.soundDamage > 0) {
             this.soundDamage -= deltaTime * 0.5; // decays somewhat slowly
         }
+        this.hp = this.maxSoundDamage - this.soundDamage;
 
         // Check if dead
         if (this.soundDamage >= this.maxSoundDamage) {
@@ -33,14 +36,21 @@ export class GreatOctopus {
         }
 
         this.shootCooldown -= deltaTime;
-        // Shoot mucus
-        if (this.shootCooldown <= 0) {
+        // Shoot mucus only when player is nearby (within 800px)
+        const dist = Math.hypot(this.x + 75 - playerX, this.y + 75 - playerY);
+        if (this.shootCooldown <= 0 && dist < 800) {
             this.shootCooldown = 1500 + Math.random() * 1000;
             if (this.entities) {
                 // Shoot from mouth
                 this.entities.push(new MucusProjectile(this.x + 75, this.y + 75, playerX, playerY));
             }
         }
+    }
+
+    takeDamage(amount) {
+        this.soundDamage += (amount || 1) * 500; // projectiles help sound damage
+        this.hp = this.maxSoundDamage - this.soundDamage;
+        if (this.soundDamage >= this.maxSoundDamage) this.dead = true;
     }
 
     draw(ctx) {

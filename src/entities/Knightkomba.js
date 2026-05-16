@@ -1,6 +1,6 @@
 import { WhiteWalkerGoomba } from './WhiteWalkerGoomba.js';
 
-export class NightKing {
+export class Knightkomba {
     constructor(x, y, entitiesArray) {
         this.x = x;
         this.y = y;
@@ -9,7 +9,7 @@ export class NightKing {
         this.vx = 0;
         this.vy = 0;
         this.hp = 1; // Only dies to Dragonglass
-        this.type = 'night_king';
+        this.type = 'knightkomba';
         this.dead = false;
         this.timer = 0;
         this.entities = entitiesArray;
@@ -99,6 +99,7 @@ export class NightKing {
 
     takeDamage(damage) {
         // Immune to normal damage! Handled externally if dragonglass is used.
+        // But we want projectiles to hit him visually.
     }
 
     draw(ctx) {

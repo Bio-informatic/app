@@ -434,11 +434,11 @@ export class Level {
                 this.entities.push({
                     x: (bossZoneStart + 25) * TS,
                     y: (GROUND_Y - 4) * TS,
-                    type: 'night_king'
+                    type: 'knightkomba'
                 });
                 
                 this.entities.push({
-                    x: (bossZoneStart + 10) * TS,
+                    x: (bossZoneStart + 40) * TS,
                     y: (GROUND_Y - 3) * TS,
                     type: 'dragonglass_diamond'
                 });
@@ -480,9 +480,9 @@ export class Level {
 
                 // The Boss
                 this.entities.push({
-                    x: (COLS - 15) * TS,
-                    y: (ROWS - 8) * TS,
-                    type: 'great_octopus'
+                    x: bossZoneStart * TS,
+                    y: (GROUND_Y - 6) * TS,
+                    type: 'octumba'
                 });
             }
 
@@ -498,11 +498,11 @@ export class Level {
                     map[y][COLS - 1] = 'E';
                 }
                 
-                // Spawn Vilgax Spider
+                // Spawn Vilgumbobo
                 this.entities.push({
                     x: (bossZoneStart + 15) * TS,
                     y: (GROUND_Y - 5) * TS,
-                    type: 'vilgax_spider'
+                    type: 'vilgumbobo'
                 });
             }
 
@@ -529,9 +529,9 @@ export class Level {
 
                 // Spawn Evil Ghostfreak
                 this.entities.push({
-                    x: (bossZoneStart + 15) * TS,
-                    y: (GROUND_Y - 5) * TS,
-                    type: 'evil_ghostfreak'
+                    x: (bossZoneStart + 25) * TS,
+                    y: (GROUND_Y - 4) * TS,
+                    type: 'freakosto'
                 });
             }
 

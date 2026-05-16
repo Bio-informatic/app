@@ -18,7 +18,7 @@ export class Gomrog {
         this.state = 'WAITING'; // WAITING, TONGUE_ATTACK, RETRACTING
         this.stateTimer = 0;
         this.attackCooldown = 0;
-        this.attackInterval = 8000;
+        this.attackInterval = 3000;
         
         this.tongueLength = 0;
         this.maxTongueLength = 300;

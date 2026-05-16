@@ -6,8 +6,8 @@ export class Bomba {
         this.height = 160;
         this.type = 'bomba';
         this.dead = false;
-        this.hp = 1;
-        this.maxHp = 1;
+        this.hp = 2;
+        this.maxHp = 2;
         
         this.hasShooter = true;
         this.windowOpen = false;
@@ -32,7 +32,7 @@ export class Bomba {
             const dist = Math.abs((this.x + this.width/2) - userX);
             if (dist < 400) {
                 this.bombTimer += deltaTime;
-                if (this.bombTimer > 5000) {
+                if (this.bombTimer > 3000) {
                     this.bombTimer = 0;
                     // Shoot bomb at user
                     let dx = userX - (this.x + this.width/2);
@@ -80,13 +80,23 @@ export class Bomba {
     }
     
     breakShooter() {
+        this.hp = 1;
         this.hasShooter = false;
         this.windowOpen = true;
     }
     
     killGoomba() {
+        this.hp = 0;
         this.goombaDead = true;
         this.dead = true;
+    }
+
+    takeDamage(amount) {
+        if (this.hasShooter) {
+            this.breakShooter();
+        } else {
+            this.killGoomba();
+        }
     }
 
     draw(ctx) {

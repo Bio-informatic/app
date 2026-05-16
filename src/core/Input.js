@@ -3,6 +3,9 @@ export class Input {
         this.keys = {};
 
         window.addEventListener('keydown', (e) => {
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyF'].includes(e.code)) {
+                e.preventDefault();
+            }
             this.keys[e.code] = true;
         });
 

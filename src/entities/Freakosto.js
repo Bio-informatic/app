@@ -1,10 +1,10 @@
-export class EvilGhostfreak {
+export class Freakosto {
     constructor(x, y, entitiesArray) {
         this.x = x;
         this.y = y;
         this.width = 64;
         this.height = 96;
-        this.type = 'evil_ghostfreak';
+        this.type = 'freakosto';
         this.dead = false;
         this.entities = entitiesArray;
         this.health = 100;
@@ -49,6 +49,11 @@ export class EvilGhostfreak {
 
         this.floatPhase += 0.05;
         this.y += Math.sin(this.floatPhase) * 2;
+    }
+
+    takeDamage(amount) {
+        this.hitsTaken += (amount || 1);
+        if (this.hitsTaken >= 10) this.dead = true;
     }
 
     draw(ctx) {

@@ -1,12 +1,12 @@
 import { OmnitrixVirus } from './OmnitrixVirus.js';
 
-export class VilgaxSpider {
+export class Vilgumbobo {
     constructor(x, y, entities) {
         this.x = x;
         this.y = y;
         this.width = 160;
         this.height = 140;
-        this.type = 'vilgax_spider';
+        this.type = 'vilgumbobo';
         this.dead = false;
         this.hp = 100; // Not hurt by players, only viruses
         
@@ -88,6 +88,11 @@ export class VilgaxSpider {
             width: this.width - 40,
             height: this.height - 40
         };
+    }
+
+    takeDamage(amount) {
+        this.hp -= (amount || 1);
+        if (this.hp <= 0) this.dead = true;
     }
 
     draw(ctx) {

@@ -28,19 +28,19 @@ import { WildMuttItem } from './src/entities/WildMuttItem.js';
 import { DiamondheadItem } from './src/entities/DiamondheadItem.js';
 import { DragonglassItem } from './src/entities/DragonglassItem.js';
 import { WhiteWalkerGoomba } from './src/entities/WhiteWalkerGoomba.js';
-import { NightKing } from './src/entities/NightKing.js';
+import { Knightkomba } from './src/entities/Knightkomba.js';
 import { CrystalShard } from './src/entities/CrystalShard.js';
 import { DragonglassDiamond } from './src/entities/DragonglassDiamond.js';
 import { RipjawsItem } from './src/entities/RipjawsItem.js';
 import { JellyfishGoomba } from './src/entities/JellyfishGoomba.js';
-import { GreatOctopus } from './src/entities/GreatOctopus.js';
+import { Octumba } from './src/entities/Octumba.js';
 import { MucusProjectile } from './src/entities/MucusProjectile.js';
 import { GreyMatterItem } from './src/entities/GreyMatterItem.js';
 import { OmnitrixVirus } from './src/entities/OmnitrixVirus.js';
-import { VilgaxSpider } from './src/entities/VilgaxSpider.js';
+import { Vilgumbobo } from './src/entities/Vilgumbobo.js';
 import { GhostfreakItem } from './src/entities/GhostfreakItem.js';
 import { GhostGoomba } from './src/entities/GhostGoomba.js';
-import { EvilGhostfreak } from './src/entities/EvilGhostfreak.js';
+import { Freakosto } from './src/entities/Freakosto.js';
 
 const sfx = new SoundManager();
 
@@ -141,11 +141,7 @@ function renderAlienGrid() {
         alienGrid.appendChild(slot);
     });
     const hintBar = document.getElementById('panel-hint-bar');
-    if (introMsg) {
-        hintBar.innerHTML = `<span style="color:#FFD700;font-size:12px;">${introMsg}</span><br><br>Press <b>1–0</b> to transform • <b>C</b> to close`;
-    } else {
-        hintBar.innerHTML = `Press <b>1–0</b> to transform • <b>C</b> to close`;
-    }
+    hintBar.innerHTML = `Press <b>1–0</b> to transform • <b>C</b> to close`;
 }
 renderAlienGrid();
 
@@ -260,17 +256,21 @@ let gombotoDefeated = false;
 let gorillomba = null;
 let gorillombaDefeated = false;
 
-// Night King boss reference
-let nightKing = null;
-let nightKingDefeated = false;
+// Knightkomba boss reference
+let knightkomba = null;
+let knightkombaDefeated = false;
 
-// Vilgax Spider boss reference (Level 10)
-let vilgaxSpider = null;
-export let vilgaxSpiderDefeated = false; // exported for Level_v2.js palette swap
+// Octumba boss reference (Level 9)
+let octumba = null;
+let octumbaDefeated = false;
 
-// Evil Ghostfreak boss reference (Level 11)
-let evilGhostfreak = null;
-let evilGhostfreakDefeated = false;
+// Vilgumbobo boss reference (Level 10)
+let vilgumbobo = null;
+export let vilgumboboDefeated = false; // exported for Level_v2.js palette swap
+
+// Freakosto boss reference (Level 11)
+let freakosto = null;
+let freakostoDefeated = false;
 
 function assignBlockHit() {
     mario.onBlockHit = (tileType, bx, by) => {
@@ -348,12 +348,14 @@ function loadLevel(index, carryOverState = null) {
     gomboto = null;
     gombotoDefeated = false;
     gorillombaDefeated = false;
-    nightKing = null;
-    nightKingDefeated = false;
-    vilgaxSpider = null;
-    vilgaxSpiderDefeated = false;
-    evilGhostfreak = null;
-    evilGhostfreakDefeated = false;
+    knightkomba = null;
+    knightkombaDefeated = false;
+    octumba = null;
+    octumbaDefeated = false;
+    vilgumbobo = null;
+    vilgumboboDefeated = false;
+    freakosto = null;
+    freakostoDefeated = false;
 
     level.entities.forEach(entityData => {
         if (entityData.type === 'goomba') {
@@ -396,29 +398,30 @@ function loadLevel(index, carryOverState = null) {
             entities.push(gorillomba);
         } else if (entityData.type === 'wild_mutt_item') {
             entities.push(new WildMuttItem(entityData.x, entityData.y));
-        } else if (entityData.type === 'night_king') {
-            nightKing = new NightKing(entityData.x, entityData.y, entities);
-            entities.push(nightKing);
+        } else if (entityData.type === 'knightkomba') {
+            knightkomba = new Knightkomba(entityData.x, entityData.y, entities);
+            entities.push(knightkomba);
         } else if (entityData.type === 'dragonglass_diamond') {
             entities.push(new DragonglassDiamond(entityData.x, entityData.y, entities));
         } else if (entityData.type === 'whitewalker_goomba') {
             entities.push(new WhiteWalkerGoomba(entityData.x, entityData.y));
         } else if (entityData.type === 'ripjaws_item') {
             entities.push(new RipjawsItem(entityData.x, entityData.y));
-        } else if (entityData.type === 'great_octopus') {
-            entities.push(new GreatOctopus(entityData.x, entityData.y, entities));
+        } else if (entityData.type === 'octumba') {
+            octumba = new Octumba(entityData.x, entityData.y, entities);
+            entities.push(octumba);
         } else if (entityData.type === 'jellyfish_goomba') {
             entities.push(new JellyfishGoomba(entityData.x, entityData.y));
         } else if (entityData.type === 'grey_matter_item') {
             entities.push(new GreyMatterItem(entityData.x, entityData.y));
         } else if (entityData.type === 'omnitrix_virus') {
             entities.push(new OmnitrixVirus(entityData.x, entityData.y));
-        } else if (entityData.type === 'vilgax_spider') {
-            vilgaxSpider = new VilgaxSpider(entityData.x, entityData.y, entities);
-            entities.push(vilgaxSpider);
-        } else if (entityData.type === 'evil_ghostfreak') {
-            evilGhostfreak = new EvilGhostfreak(entityData.x, entityData.y, entities);
-            entities.push(evilGhostfreak);
+        } else if (entityData.type === 'vilgumbobo') {
+            vilgumbobo = new Vilgumbobo(entityData.x, entityData.y, entities);
+            entities.push(vilgumbobo);
+        } else if (entityData.type === 'freakosto') {
+            freakosto = new Freakosto(entityData.x, entityData.y, entities);
+            entities.push(freakosto);
         } else if (entityData.type === 'ghost_goomba') {
             entities.push(new GhostGoomba(entityData.x, entityData.y));
         } else if (entityData.type === 'ghostfreak_item') {
@@ -498,27 +501,27 @@ window.addEventListener('keydown', (e) => {
     }
 
     // F key — context-dependent:
-    //   FOURARMS: Ground Pound
-    //   HEATBLAST: Shoot Fireball (rapid press = bigger fire)
     if (e.code === 'KeyF' && mario && gameState === 'PLAYING') {
-        // Vilgax Spider final hits execution check
-        if (typeof vilgaxSpider !== 'undefined' && vilgaxSpider && vilgaxSpider.stunned && !vilgaxSpider.dead) {
-            const dist = Math.hypot((mario.x + mario.width / 2) - (vilgaxSpider.x + vilgaxSpider.width / 2),
-                (mario.y + mario.height / 2) - (vilgaxSpider.y + vilgaxSpider.height / 2));
+        if (e.repeat) return; // Prevent performance issues from key repeat
+        e.preventDefault();
+
+        // Vilgumbobo final hits execution check
+        if (typeof vilgumbobo !== 'undefined' && vilgumbobo && vilgumbobo.stunned && !vilgumbobo.dead) {
+            const dist = Math.hypot((mario.x + mario.width / 2) - (vilgumbobo.x + vilgumbobo.width / 2),
+                (mario.y + mario.height / 2) - (vilgumbobo.y + vilgumbobo.height / 2));
             if (dist < 300) {
-                vilgaxSpider.finalHits++;
+                vilgumbobo.finalHits++;
                 sfx.bossHit();
                 screenShake = 15;
-                console.log(`Executed Vilgax hit: ${vilgaxSpider.finalHits}/3`);
-                return; // Prioritize this action over others!
+                return;
             }
         }
 
         if (mario.state === 'HEATBLAST') {
             // Fireball — rapid press increases power
             const now = performance.now();
-            const rapidWindow = 500; // 500ms window to press again for power up
-            const cooldownMs = 300;  // minimum time between actual shots
+            const rapidWindow = 500;
+            const cooldownMs = 300;
 
             if (now - mario.fireballLastPress < rapidWindow) {
                 mario.fireballPower = Math.min(mario.fireballPower + 1, 5);
@@ -527,7 +530,6 @@ window.addEventListener('keydown', (e) => {
             }
             mario.fireballLastPress = now;
 
-            // Actually fire if off cooldown
             if (now - mario.fireballCooldown > cooldownMs) {
                 mario.fireballCooldown = now;
                 const dir = mario.facingRight ? 1 : -1;
@@ -535,48 +537,41 @@ window.addEventListener('keydown', (e) => {
                 const fy = mario.y + mario.height / 2 - 6;
                 entities.push(new Fireball(fx, fy, dir, mario.fireballPower));
                 sfx.fireball(mario.fireballPower);
-                console.log(`FIREBALL! Power: ${mario.fireballPower}`);
             }
         } else if (mario.state === 'XLR8') {
-            // Speed Dash
             const now = performance.now();
             if (now - mario.dashCooldown > mario.dashCooldownMs && !mario.dashActive) {
                 mario.dashActive = true;
                 mario.dashTimer = now;
                 mario.dashCooldown = now;
-                console.log('XLR8 SPEED DASH!');
             }
         } else if (mario.state === 'STINKFLY') {
-            // Slime Spit
             const now = performance.now();
             if (!mario.slimeCooldown || now - mario.slimeCooldown > 400) {
                 mario.slimeCooldown = now;
                 const fx = mario.x + mario.width / 2 - 8;
                 const fy = mario.y + mario.height;
                 entities.push(new Slimeball(fx, fy, mario.facingRight));
-                sfx.stomp(); // Plop sound
-                mario.vy = Math.min(0, mario.vy - 3); // recoil
+                sfx.stomp();
+                mario.vy = Math.min(0, mario.vy - 3);
             }
         } else if (mario.state === 'WILDMUTT') {
-            // Punch attack
             const now = performance.now();
             if (!mario.punchCooldown || now - mario.punchCooldown > 500) {
                 mario.punchCooldown = now;
                 mario.punchActive = true;
                 mario.punchTimer = now;
                 sfx.stomp();
-                // Auto-deactivate after 200ms
                 setTimeout(() => { mario.punchActive = false; }, 200);
             }
         } else if (mario.state === 'DIAMONDHEAD') {
-            // Shoot crystal shards
             const now = performance.now();
             if (!mario.crystalCooldown || now - mario.crystalCooldown > 400) {
                 mario.crystalCooldown = now;
                 const fx = mario.x + (mario.facingRight ? mario.width : 0);
                 const fy = mario.y + mario.height / 2;
                 entities.push(new CrystalShard(fx, fy, mario.facingRight ? 1 : -1, 1));
-                sfx.stomp(); // Plop sound
+                sfx.stomp();
             }
         } else if (mario.state === 'UPGRADE') {
             const now = performance.now();
@@ -588,7 +583,6 @@ window.addEventListener('keydown', (e) => {
                 sfx.stomp();
             }
 
-            // Technopathic Absorb (Nearby objects/enemies)
             entities.forEach(target => {
                 if (target.dead || target.absorbed) return;
                 const dist = Math.abs((mario.x + mario.width / 2) - (target.x + target.width / 2));
@@ -597,21 +591,18 @@ window.addEventListener('keydown', (e) => {
                     if (target.type === 'electromba') {
                         if (currentLevelIndex !== 6 || (target.isHacked && target.isHacked())) {
                             target.absorbed = true;
-                            target.type = 'goomba'; // behaves like normal goomba
+                            target.type = 'goomba';
                             sfx.stomp();
                         }
                     } else if (target.type === 'gomboto') {
                         if (currentLevelIndex !== 6 || target.claimReady) {
                             target.absorbed = true;
-                            mario.controllingBoss = target; // Boss control mode
-                            mario.y = target.y - mario.height; // pop him up slightly
-
-                            // Place finish flag!
+                            mario.controllingBoss = target;
+                            mario.y = target.y - mario.height;
                             const flagX = level.cols - 2;
                             for (let fy = 4; fy < level.rows; fy++) {
                                 level.tiles[fy][flagX] = 5;
                             }
-                            // Ensure Kurdistan flag draws by populating finishCols
                             level.finishCols.set(flagX, { topRow: 4, bottomRow: level.rows - 1 });
                             sfx.bossHit();
                         }
@@ -619,7 +610,6 @@ window.addEventListener('keydown', (e) => {
                 }
             });
 
-            // Check grid blocks
             const mCX = Math.floor((mario.x + mario.width / 2) / level.tileSize);
             const mCY = Math.floor((mario.y + mario.height / 2) / level.tileSize);
             for (let dy = -1; dy <= 1; dy++) {
@@ -627,10 +617,10 @@ window.addEventListener('keydown', (e) => {
                     const tx = mCX + dx;
                     const ty = mCY + dy;
                     if (level.tiles[ty] && level.tiles[ty][tx]) {
-                        if (level.tiles[ty][tx] === 12) { // wire hole -> normal ground
+                        if (level.tiles[ty][tx] === 12) {
                             level.tiles[ty][tx] = 1;
                             sfx.stomp();
-                        } else if (level.tiles[ty][tx] === 13) { // electronic block -> normal brick
+                        } else if (level.tiles[ty][tx] === 13) {
                             level.tiles[ty][tx] = 2;
                             sfx.stomp();
                         }
@@ -638,6 +628,11 @@ window.addEventListener('keydown', (e) => {
                 }
             }
         }
+    }
+
+    // Prevent default scrolling for arrow keys and space
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
+        e.preventDefault();
     }
 
     // Number keys 1–0 transform when panel is open
@@ -688,11 +683,14 @@ function gameLoop(timestamp) {
             if (gorillomba && !gorillomba.dead) {
                 gorillomba.update(deltaTime, level, mario.x + mario.width / 2, mario.y + mario.height / 2);
             }
-            if (nightKing && !nightKing.dead) {
-                nightKing.update(deltaTime, level, mario.x + mario.width / 2, mario.y + mario.height / 2);
+            if (knightkomba && !knightkomba.dead) {
+                knightkomba.update(deltaTime, level, mario.x + mario.width / 2, mario.y + mario.height / 2);
             }
-            if (evilGhostfreak && !evilGhostfreak.dead) {
-                evilGhostfreak.update(deltaTime, level, mario.x, mario.y);
+            if (freakosto && !freakosto.dead) {
+                freakosto.update(deltaTime, level, mario.x, mario.y);
+            }
+            if (octumba && !octumba.dead) {
+                octumba.update(deltaTime, level, mario.x, mario.y);
             }
             mario.update(deltaTime, level);
 
@@ -880,12 +878,12 @@ function gameLoop(timestamp) {
                     // skipped to avoid double update
                 } else if (entity.type === 'gorillomba') {
                     // skipped to avoid double update
-                } else if (entity.type === 'great_octopus') {
+                } else if (entity.type === 'octumba') {
                     entity.update(deltaTime, level, mario.x, mario.y);
                     if (mario.state === 'RIPJAWS' && mario.soundWaveActive) {
                         const dist = Math.hypot(mario.x - (entity.x + 75), mario.y - (entity.y + 75));
                         if (dist < 600) { // Wide range
-                            entity.soundDamage += deltaTime * 4; // Faster damage
+                            entity.takeDamage(deltaTime * 0.005); // Faster damage
                         }
                     }
                     if (entity.dead && !entity.flagSpawned) {
@@ -912,38 +910,56 @@ function gameLoop(timestamp) {
                 if (entity.type === 'fireball') {
                     entities.forEach(target => {
                         if (target.dead || target === entity) return;
-                        if (target.type === 'fireball') return; // fireballs don't collide
+                        if (target.type === 'fireball') return; 
 
                         if (checkEntityCollision(entity, target)) {
-                            if (target.type === 'goombaba') {
-                                target.takeDamage(entity.damage);
+                            // Any target with takeDamage or specific bosses
+                            if (target.takeDamage) {
+                                target.takeDamage(entity.damage || 1);
                                 entity.dead = true;
-                                screenShake = Math.min(entity.power * 2, 10);
                                 sfx.bossHit();
-                            } else if (target.type === 'goomba') {
+                                screenShake = Math.min((entity.power || 1) * 2, 10);
+                            } else if (target.type === 'goomba' || target.type === 'ooze_goomba' || target.type === 'lava_goomba' || target.type === 'whitewalker_goomba') {
                                 target.dead = true;
                                 entity.dead = true;
                                 sfx.fireballHit();
+                            } else if (target.type === 'octumba' || target.type === 'freakosto' || target.type === 'vilgumbobo' || target.type === 'knightkomba' || target.type === 'gorillomba') {
+                                // For bosses without direct takeDamage or special ones
+                                if (target.hp !== undefined) {
+                                    target.hp -= (entity.damage || 1);
+                                    if (target.hp <= 0) target.dead = true;
+                                    entity.dead = true;
+                                    sfx.bossHit();
+                                } else if (target.hitsTaken !== undefined) {
+                                    // Hits-based bosses like Freakosto
+                                    target.hitsTaken += 0.5; // fireball is half a hit
+                                    if (target.hitsTaken >= 10) target.dead = true;
+                                    entity.dead = true;
+                                    sfx.bossHit();
+                                }
                             }
                         }
                     });
-                    return; // Don't check mario collision for fireballs
+                    return; 
                 } else if (entity.type === 'crystal_shard') {
                     entities.forEach(target => {
                         if (target.dead || target === entity) return;
                         if (target.type === 'fireball' || target.type === 'slimeball' || target.type === 'crystal_shard' || target.type === 'ice_spear') return;
 
                         if (checkEntityCollision(entity, target)) {
-                            if (target.type === 'dragonglass_diamond') {
-                                target.takeDamage();
+                            if (target.takeDamage) {
+                                target.takeDamage(1);
                                 entity.dead = true;
                                 sfx.bossHit();
-                            } else if (target.type === 'whitewalker_goomba') {
+                            } else if (target.type === 'goomba' || target.type === 'ooze_goomba' || target.type === 'whitewalker_goomba') {
                                 target.dead = true;
                                 entity.dead = true;
                                 sfx.stomp();
+                            } else if (target.type === 'dragonglass_diamond') {
+                                target.takeDamage();
+                                entity.dead = true;
+                                sfx.bossHit();
                             }
-                            // Does not damage Night King
                         }
                     });
                     return;
@@ -952,24 +968,26 @@ function gameLoop(timestamp) {
                         if (target.dead || target === entity) return;
                         if (target.type === 'fireball' || target.type === 'slimeball') return;
 
-                        if (target.type === 'gomrog') {
-                            const tRect = target.getTongueRect();
-                            if (tRect && checkEntityCollision(entity, tRect) && target.tongueLength > 0) {
-                                entity.dead = true; // Tongue blocks the shot
-                            } else if (checkEntityCollision(entity, target)) {
-                                target.takeDamage();
-                                entity.dead = true;
-                                sfx.bossHit();
-                            }
-                        } else if (checkEntityCollision(entity, target)) {
-                            if (entity.source === 'upgrade' && (target.type === 'electromba' || target.type === 'gomboto')) {
+                        if (checkEntityCollision(entity, target)) {
+                            if (target.type === 'gomrog') {
+                                const tRect = target.getTongueRect();
+                                if (tRect && checkEntityCollision(entity, tRect) && target.tongueLength > 0) {
+                                    entity.dead = true; // Tongue blocks the shot
+                                } else {
+                                    target.takeDamage();
+                                    entity.dead = true;
+                                    sfx.bossHit();
+                                }
+                            } else if (entity.source === 'upgrade' && (target.type === 'electromba' || target.type === 'gomboto')) {
                                 target.hacked = true;
                                 mario.activateUpgradeElectricImmunity();
                                 entity.dead = true;
                                 sfx.bossHit();
-                                return;
-                            }
-                            if (target.type === 'ooze_goomba' || target.type === 'goomba') {
+                            } else if (target.takeDamage) {
+                                target.takeDamage(1);
+                                entity.dead = true;
+                                sfx.bossHit();
+                            } else if (target.type === 'goomba' || target.type === 'ooze_goomba' || target.type === 'lava_goomba') {
                                 target.dead = true;
                                 entity.dead = true;
                                 sfx.stomp();
@@ -1229,7 +1247,7 @@ function gameLoop(timestamp) {
                                 gameState = 'GAMEOVER';
                             }
                         }
-                    } else if (entity.type === 'night_king') {
+                    } else if (entity.type === 'knightkomba') {
                         // Contact with Night King
                         if (mario.hasDragonglass && mario.state === 'DIAMONDHEAD') {
                             entity.dead = true;
@@ -1300,7 +1318,7 @@ function gameLoop(timestamp) {
                         sfx.death();
                         sfx.stopMusic();
                         gameState = 'GAMEOVER';
-                    } else if (entity.type === 'great_octopus') {
+                    } else if (entity.type === 'octumba') {
                         if (mario.vy > 0 && mario.y + mario.height < entity.y + 40) {
                             mario.y = entity.y - mario.height;
                             mario.vy = 0;
@@ -1335,8 +1353,8 @@ function gameLoop(timestamp) {
                             sfx.stopMusic();
                             gameState = 'GAMEOVER';
                         }
-                    } else if (entity.type === 'vilgax_spider') {
-                        if (vilgaxSpider.stunned) {
+                    } else if (entity.type === 'vilgumbobo') {
+                        if (vilgumbobo.stunned) {
                             // Safe to approach!
                         } else {
                             if (mario.vy > 0 && mario.y + mario.height < entity.y + 40) {
@@ -1383,7 +1401,7 @@ function gameLoop(timestamp) {
                                 gameState = 'GAMEOVER';
                             }
                         }
-                    } else if (entity.type === 'evil_ghostfreak') {
+                    } else if (entity.type === 'freakosto') {
                         if (entity.acquired) return; // skip if already acquired
                         if (entity.invulnerableTimer > 0) return; // skip if invulnerable
 
@@ -1448,7 +1466,7 @@ function gameLoop(timestamp) {
                         const dist = Math.hypot(mario.x - entity.x, mario.y - entity.y);
                         if (dist < 400) {
                             entity.fixed = true;
-                            entity.followTarget = vilgaxSpider;
+                            entity.followTarget = vilgumbobo;
                         }
                     }
                 });
@@ -1572,10 +1590,10 @@ function gameLoop(timestamp) {
                         }
                         level.finishCols.set(gFlagX, { topRow: 4, bottomRow: level.rows - 1 });
                     }
-                    if (entities[i] === nightKing && nightKing.dead) {
-                        nightKingDefeated = true;
-                        nightKing = null;
-                        console.log('NIGHT KING DEFEATED!');
+                    if (entities[i] === knightkomba && knightkomba.dead) {
+                        knightkombaDefeated = true;
+                        knightkomba = null;
+                        console.log('KNIGHTKOMBA DEFEATED!');
                         screenShake = 30;
                         sfx.bossDefeated();
                         const flagX = level.cols - 2;
@@ -1584,12 +1602,12 @@ function gameLoop(timestamp) {
                         }
                         level.finishCols.set(flagX, { topRow: 4, bottomRow: level.rows - 1 });
                     }
-                    if (entities[i] === vilgaxSpider && vilgaxSpider.dead) {
-                        vilgaxSpiderDefeated = true;
-                        vilgaxSpider = null;
+                    if (entities[i] === vilgumbobo && vilgumbobo.dead) {
+                        vilgumboboDefeated = true;
+                        vilgumbobo = null;
                         level.omnitrixFixed = true;
                         canvas.classList.add('fixed');
-                        console.log('VILGAX SPIDER DEFEATED!');
+                        console.log('VILGUMBOBO DEFEATED!');
                         screenShake = 30;
                         sfx.bossDefeated();
                         const flagX = level.cols - 2;
@@ -1598,10 +1616,22 @@ function gameLoop(timestamp) {
                         }
                         level.finishCols.set(flagX, { topRow: 4, bottomRow: level.rows - 1 });
                     }
-                    if (entities[i] === evilGhostfreak && evilGhostfreak.dead) {
-                        evilGhostfreakDefeated = true;
-                        evilGhostfreak = null;
-                        console.log('EVIL GHOSTFREAK DEFEATED!');
+                    if (entities[i] === freakosto && freakosto.dead) {
+                        freakostoDefeated = true;
+                        freakosto = null;
+                        console.log('FREAKOSTO DEFEATED!');
+                        screenShake = 30;
+                        sfx.bossDefeated();
+                        const flagX = level.cols - 2;
+                        for (let fy = 4; fy < level.rows; fy++) {
+                            level.tiles[fy][flagX] = 5;
+                        }
+                        level.finishCols.set(flagX, { topRow: 4, bottomRow: level.rows - 1 });
+                    }
+                    if (entities[i] === octumba && octumba.dead) {
+                        octumbaDefeated = true;
+                        octumba = null;
+                        console.log('OCTUMBA DEFEATED!');
                         screenShake = 30;
                         sfx.bossDefeated();
                         const flagX = level.cols - 2;
@@ -2008,233 +2038,74 @@ function gameLoop(timestamp) {
         }
 
         // ── Boss HP Bar (screen-space) ────────
-        if (goombaba && !goombaba.dead && currentLevelIndex === 3) {
-            const barW = 300;
-            const barH = 16;
-            const barX = GAME_WIDTH / 2 - barW / 2;
-            const barY = 50;
-            const hpRatio = goombaba.hp / goombaba.maxHp;
+        let bossData = null;
+        if (currentLevelIndex === 2 && bomba && !bomba.dead) bossData = { entity: bomba, name: 'BOMBA', color: '#FFDD88', bg: 'rgba(50,30,0,0.7)' };
+        else if (currentLevelIndex === 3 && goombaba && !goombaba.dead) bossData = { entity: goombaba, name: 'GOOMBABA', color: '#FFD700', bg: 'rgba(0,0,0,0.6)' };
+        else if (currentLevelIndex === 4 && turtumba && !turtumba.dead) bossData = { entity: turtumba, name: 'TURTUMBA', color: '#00FF66', bg: 'rgba(0,20,0,0.7)' };
+        else if (currentLevelIndex === 5 && gomrog && !gomrog.dead) bossData = { entity: gomrog, name: 'GOMROG', color: '#00FF66', bg: 'rgba(0,40,0,0.7)' };
+        else if (currentLevelIndex === 6 && gomboto && !gomboto.dead) bossData = { entity: gomboto, name: 'GOMBOTO', color: '#00FFCC', bg: 'rgba(0,40,40,0.7)' };
+        else if (currentLevelIndex === 7 && gorillomba && !gorillomba.dead) bossData = { entity: gorillomba, name: 'GORILLOMBA', color: '#AAFF44', bg: 'rgba(20,10,0,0.7)' };
+        else if (currentLevelIndex === 8 && knightkomba && !knightkomba.dead) bossData = { entity: knightkomba, name: 'KNIGHTKOMBA', color: '#FFFFFF', bg: 'rgba(0,10,20,0.7)' };
+        else if (currentLevelIndex === 9 && octumba && !octumba.dead) bossData = { entity: octumba, name: 'OCTUMBA', color: '#0088FF', bg: 'rgba(0,10,40,0.7)' };
+        else if (currentLevelIndex === 10 && vilgumbobo && !vilgumbobo.dead) bossData = { entity: vilgumbobo, name: 'VILGUMBOBO', color: '#55FF55', bg: 'rgba(10,25,10,0.8)' };
+        else if (currentLevelIndex === 11 && freakosto && !freakosto.dead) bossData = { entity: freakosto, name: 'FREAKOSTO', color: '#AA00FF', bg: 'rgba(20,0,30,0.8)' };
 
-            ctx.fillStyle = 'rgba(0,0,0,0.6)';
-            ctx.fillRect(barX - 4, barY - 4, barW + 8, barH + 24);
+        if (bossData) {
+            // Distance check — only show if Ben 10 is close (800px threshold)
+            const dist = Math.hypot(mario.x - bossData.entity.x, mario.y - bossData.entity.y);
+            if (dist < 800) {
+                const barW = 300;
+                const barH = 16;
+                const barX = GAME_WIDTH / 2 - barW / 2;
+                const barY = 50;
+                let hpRatio = 1;
+                
+                if (bossData.entity.maxHp) hpRatio = bossData.entity.hp / bossData.entity.maxHp;
+                else if (bossData.entity.hitsTaken !== undefined) hpRatio = (10 - bossData.entity.hitsTaken) / 10;
+                else if (currentLevelIndex === 8) hpRatio = 1;
 
-            ctx.fillStyle = '#333';
-            ctx.fillRect(barX, barY, barW, barH);
-            const r = Math.floor(255 * (1 - hpRatio));
-            const g = Math.floor(255 * hpRatio);
-            ctx.fillStyle = `rgb(${r}, ${g}, 0)`;
-            ctx.fillRect(barX, barY, barW * hpRatio, barH);
-            ctx.strokeStyle = '#FF6600';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(barX, barY, barW, barH);
-            ctx.lineWidth = 1;
+                ctx.fillStyle = bossData.bg;
+                ctx.fillRect(barX - 4, barY - 4, barW + 8, barH + 24);
 
-            ctx.fillStyle = '#FFD700';
-            ctx.font = 'bold 12px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText(`GOOMBABA — ${goombaba.hp}/${goombaba.maxHp}`, GAME_WIDTH / 2, barY + barH + 14);
-            ctx.textAlign = 'left';
-        }
+                ctx.fillStyle = '#333';
+                ctx.fillRect(barX, barY, barW, barH);
+                
+                const r = Math.floor(255 * (1 - hpRatio));
+                const g = Math.floor(255 * hpRatio);
+                ctx.fillStyle = (currentLevelIndex === 8 || currentLevelIndex === 11) ? bossData.color : `rgb(${r}, ${g}, 0)`;
+                ctx.fillRect(barX, barY, barW * Math.max(0, hpRatio), barH);
+                
+                ctx.strokeStyle = bossData.color;
+                ctx.lineWidth = 2;
+                ctx.strokeRect(barX, barY, barW, barH);
+                ctx.lineWidth = 1;
 
-        // Boss defeated message
-        if (bossDefeated && currentLevelIndex === 3) {
-            ctx.fillStyle = '#FF6600';
-            ctx.font = 'bold 20px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('GOOMBABA DEFEATED! → REACH THE EXIT!', GAME_WIDTH / 2, 80);
-            ctx.textAlign = 'left';
-        }
-
-        // ── Turtumba HP Bar (screen-space) ────────
-        if (turtumba && !turtumba.dead && currentLevelIndex === 4) {
-            const barW = 300;
-            const barH = 16;
-            const barX = GAME_WIDTH / 2 - barW / 2;
-            const barY = 50;
-            const hpRatio = turtumba.hp / turtumba.maxHp;
-
-            ctx.fillStyle = 'rgba(0,20,0,0.7)';
-            ctx.fillRect(barX - 4, barY - 4, barW + 8, barH + 24);
-
-            ctx.fillStyle = '#333';
-            ctx.fillRect(barX, barY, barW, barH);
-            const r = Math.floor(255 * (1 - hpRatio));
-            const g = Math.floor(255 * hpRatio);
-            ctx.fillStyle = `rgb(${r}, ${g}, 0)`;
-            ctx.fillRect(barX, barY, barW * hpRatio, barH);
-            ctx.strokeStyle = '#00FF00';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(barX, barY, barW, barH);
-            ctx.lineWidth = 1;
-
-            ctx.fillStyle = '#00FF66';
-            ctx.font = 'bold 12px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText(`🐢 TURTUMBA — ${turtumba.hp}/${turtumba.maxHp}`, GAME_WIDTH / 2, barY + barH + 14);
-            ctx.textAlign = 'left';
-        }
-
-        // Turtumba defeated message
-        if (turtumbaDefeated && currentLevelIndex === 4) {
-            ctx.fillStyle = '#00FF66';
-            ctx.font = 'bold 20px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('TURTUMBA DEFEATED! → REACH THE FLAG!', GAME_WIDTH / 2, 80);
-            ctx.textAlign = 'left';
-        }
-
-        // ── Bomba UI HUD (screen-space) ────────
-        if (bomba && !bomba.dead && currentLevelIndex === 2) {
-            const barW = 300;
-            const barH = 16;
-            const barX = GAME_WIDTH / 2 - barW / 2;
-            const barY = 50;
-
-            ctx.fillStyle = '#FFDD88';
-            ctx.font = 'bold 12px sans-serif';
-            ctx.textAlign = 'center';
-            if (bomba.windowOpen) {
-                ctx.fillText(`💣 BOMBA — SHOOTER DESTROYED! TRANSFORM TO SMALL BEN TO ENTER THE WINDOW!`, GAME_WIDTH / 2, barY + barH + 14);
-            } else {
-                ctx.fillText(`💣 BOMBA — Use FULLY CHARGED Four Arms Ground Pound on the Shooter!`, GAME_WIDTH / 2, barY + barH + 14);
+                ctx.fillStyle = bossData.color;
+                ctx.font = 'bold 12px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(bossData.name, GAME_WIDTH / 2, barY + barH + 14);
+                ctx.textAlign = 'left';
             }
-            ctx.textAlign = 'left';
         }
 
-        // Bomba defeated message
-        if (bombaDefeated && currentLevelIndex === 2) {
-            ctx.fillStyle = '#FFDD88';
+        // Defeated messages
+        let defeatedMsg = null;
+        if (bombaDefeated && currentLevelIndex === 2) defeatedMsg = { text: 'BOMBA DEFEATED! → REACH THE EXIT!', color: '#FFDD88' };
+        else if (bossDefeated && currentLevelIndex === 3) defeatedMsg = { text: 'GOOMBABA DEFEATED! → REACH THE EXIT!', color: '#FF6600' };
+        else if (turtumbaDefeated && currentLevelIndex === 4) defeatedMsg = { text: 'TURTUMBA DEFEATED! → REACH THE FLAG!', color: '#00FF66' };
+        else if (gomrogDefeated && currentLevelIndex === 5) defeatedMsg = { text: 'GOMROG DEFEATED! → REACH THE EXIT!', color: '#00FF66' };
+        else if (gombotoDefeated && currentLevelIndex === 6) defeatedMsg = { text: 'GOMBOTO DEFEATED! → REACH THE FLAG!', color: '#00FFCC' };
+        else if (gorillombaDefeated && currentLevelIndex === 7) defeatedMsg = { text: 'GORILLOMBA DEFEATED! → REACH THE EXIT!', color: '#AAFF44' };
+        else if (knightkombaDefeated && currentLevelIndex === 8) defeatedMsg = { text: 'KNIGHTKOMBA SHATTERED! → REACH THE FLAG!', color: '#00FFFF' };
+        else if (octumbaDefeated && currentLevelIndex === 9) defeatedMsg = { text: 'OCTUMBA DEFEATED! → REACH THE EXIT!', color: '#0088FF' };
+        else if (vilgumboboDefeated && currentLevelIndex === 10) defeatedMsg = { text: 'VILGUMBOBO DEFEATED! → REACH THE FLAG!', color: '#55FF55' };
+        else if (freakostoDefeated && currentLevelIndex === 11) defeatedMsg = { text: 'FREAKOSTO DEFEATED! → YOU WON!', color: '#AA00FF' };
+
+        if (defeatedMsg) {
+            ctx.fillStyle = defeatedMsg.color;
             ctx.font = 'bold 20px sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillText('BOMBA DEFEATED! → REACH THE EXIT!', GAME_WIDTH / 2, 80);
-            ctx.textAlign = 'left';
-        }
-
-        // ── Gomrog UI HUD (screen-space) ────────
-        if (gomrog && !gomrog.dead && currentLevelIndex === 5) {
-            const barW = 300;
-            const barH = 16;
-            const barX = GAME_WIDTH / 2 - barW / 2;
-            const barY = 50;
-            const hpRatio = gomrog.hp / gomrog.maxHp;
-
-            ctx.fillStyle = 'rgba(0,40,0,0.7)';
-            ctx.fillRect(barX - 4, barY - 4, barW + 8, barH + 24);
-
-            ctx.fillStyle = '#333';
-            ctx.fillRect(barX, barY, barW, barH);
-            const r = Math.floor(255 * (1 - hpRatio));
-            const g = Math.floor(255 * hpRatio);
-            ctx.fillStyle = `rgb(${r}, ${g}, 0)`;
-            ctx.fillRect(barX, barY, barW * hpRatio, barH);
-            ctx.strokeStyle = '#00FF00';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(barX, barY, barW, barH);
-            ctx.lineWidth = 1;
-
-            ctx.fillStyle = '#00FF66';
-            ctx.font = 'bold 12px sans-serif';
-            ctx.textAlign = 'center';
-            if (gomrog.state === 'TONGUE_ATTACK') {
-                ctx.fillText(`🐸 GOMROG — AVOID HIS TONGUE AND SHOOT GOMROG! ${gomrog.hp}/${gomrog.maxHp}`, GAME_WIDTH / 2, barY + barH + 14);
-            } else {
-                ctx.fillText(`🐸 GOMROG — HIT HIS BODY 10 TIMES TO DROP HIM IN THE POND! ${gomrog.hp}/${gomrog.maxHp}`, GAME_WIDTH / 2, barY + barH + 14);
-            }
-            ctx.textAlign = 'left';
-        }
-
-        // Gomrog defeated message
-        if (gomrogDefeated && currentLevelIndex === 5) {
-            ctx.fillStyle = '#00FF66';
-            ctx.font = 'bold 20px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('GOMROG DEFEATED! → REACH THE EXIT!', GAME_WIDTH / 2, 80);
-            ctx.textAlign = 'left';
-        }
-
-        // ── Gorillomba UI HUD (screen-space) ────────
-        if (gorillomba && !gorillomba.dead && currentLevelIndex === 7) {
-            const barW = 300;
-            const barH = 16;
-            const barX = GAME_WIDTH / 2 - barW / 2;
-            const barY = 50;
-            const hpRatio = gorillomba.hp / gorillomba.maxHp;
-
-            ctx.fillStyle = 'rgba(20,10,0,0.7)';
-            ctx.fillRect(barX - 4, barY - 4, barW + 8, barH + 24);
-
-            ctx.fillStyle = '#333';
-            ctx.fillRect(barX, barY, barW, barH);
-            const r = Math.floor(255 * (1 - hpRatio));
-            const g = Math.floor(255 * hpRatio);
-            ctx.fillStyle = `rgb(${r}, ${g}, 0)`;
-            ctx.fillRect(barX, barY, barW * hpRatio, barH);
-            ctx.strokeStyle = '#AAFF44';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(barX, barY, barW, barH);
-            ctx.lineWidth = 1;
-
-            ctx.fillStyle = '#AAFF44';
-            ctx.font = 'bold 12px sans-serif';
-            ctx.textAlign = 'center';
-            if (mario.state !== 'WILDMUTT') {
-                ctx.fillText(`🦍 GORILLOMBA — YOU MUST BE WILD MUTT TO SEE AND HIT HIM! ???/???`, GAME_WIDTH / 2, barY + barH + 14);
-            } else {
-                ctx.fillText(`🦍 GORILLOMBA — PUNCH HIS CHEST TO DEFEAT HIM! ${gorillomba.hp}/${gorillomba.maxHp}`, GAME_WIDTH / 2, barY + barH + 14);
-            }
-            ctx.textAlign = 'left';
-        }
-
-        // Gorillomba defeated message
-        if (gorillombaDefeated && currentLevelIndex === 7) {
-            ctx.fillStyle = '#AAFF44';
-            ctx.font = 'bold 20px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('GORILLOMBA DEFEATED! → REACH THE EXIT!', GAME_WIDTH / 2, 80);
-            ctx.textAlign = 'left';
-        }
-
-        // ── Night King UI HUD (screen-space) ────────
-        if (nightKing && !nightKing.dead && currentLevelIndex === 8) {
-            const barW = 300;
-            const barH = 16;
-            const barX = GAME_WIDTH / 2 - barW / 2;
-            const barY = 50;
-            const hpRatio = 1;
-
-            ctx.fillStyle = 'rgba(0,10,20,0.7)';
-            ctx.fillRect(barX - 4, barY - 4, barW + 8, barH + 24);
-
-            ctx.fillStyle = '#333';
-            ctx.fillRect(barX, barY, barW, barH);
-            ctx.fillStyle = `#00FFFF`;
-            ctx.fillRect(barX, barY, barW * hpRatio, barH);
-            ctx.strokeStyle = '#FFFFFF';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(barX, barY, barW, barH);
-            ctx.lineWidth = 1;
-
-            ctx.fillStyle = '#FFFFFF';
-            ctx.font = 'bold 12px sans-serif';
-            ctx.textAlign = 'center';
-            if (mario.hasDragonglass) {
-                if (mario.state === 'DIAMONDHEAD') {
-                    ctx.fillText(`❄️ NIGHT KING — TOUCH HIM TO SHATTER HIM!`, GAME_WIDTH / 2, barY + barH + 14);
-                } else {
-                    ctx.fillText(`❄️ NIGHT KING — ONLY DIAMONDHEAD CAN WIELD THE DRAGONGLASS!`, GAME_WIDTH / 2, barY + barH + 14);
-                }
-            } else {
-                ctx.fillText(`❄️ NIGHT KING — IMMUNE TO EVERYTHING! FIND DRAGONGLASS!`, GAME_WIDTH / 2, barY + barH + 14);
-            }
-            ctx.textAlign = 'left';
-        }
-
-        // Night King defeated message
-        if (nightKingDefeated && currentLevelIndex === 8) {
-            ctx.fillStyle = '#00FFFF';
-            ctx.font = 'bold 20px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('NIGHT KING SHATTERED! → REACH THE FLAG!', GAME_WIDTH / 2, 80);
+            ctx.fillText(defeatedMsg.text, GAME_WIDTH / 2, 80);
             ctx.textAlign = 'left';
         }
 
