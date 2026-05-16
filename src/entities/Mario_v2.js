@@ -58,11 +58,13 @@ export class Mario {
         this.upgradeShotCooldown = 0;
         this.upgradeElectricImmunity = false;
 
-        // Wild Mutt punch
+        // Wild Mutt punch & pounce
         this.punchActive = false;
         this.punchTimer = 0;
         this.punchCooldown = 0;
         this.punchRect = null; // {x,y,width,height} hit zone
+        this.pounceActive = false;
+        this.pounceCooldown = 0;
 
         // Ripjaws sound wave
         this.soundWaveActive = false;
@@ -240,14 +242,23 @@ export class Mario {
         if (this.state === 'GHOSTFREAK') moveSpeed = this.speed * 1.5;
         if (this.state === 'RIPJAWS' && inWater) moveSpeed = this.speed * 2.2; // Fast swimmer
 
-        if (this.input.isDown('ArrowRight')) {
-            this.vx = moveSpeed;
-            this.facingRight = true;
-        } else if (this.input.isDown('ArrowLeft')) {
-            this.vx = -moveSpeed;
-            this.facingRight = false;
+        if (this.pounceActive) {
+            // Keep pounce velocity until grounded or timeout
+            if (this.grounded && performance.now() - this.pounceStartTime > 100) {
+                this.pounceActive = false;
+            } else if (performance.now() - this.pounceStartTime > 600) {
+                this.pounceActive = false;
+            }
         } else {
-            this.vx = 0;
+            if (this.input.isDown('ArrowRight')) {
+                this.vx = moveSpeed;
+                this.facingRight = true;
+            } else if (this.input.isDown('ArrowLeft')) {
+                this.vx = -moveSpeed;
+                this.facingRight = false;
+            } else {
+                this.vx = 0;
+            }
         }
 
         // XLR8 Speed Dash update

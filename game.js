@@ -557,12 +557,14 @@ window.addEventListener('keydown', (e) => {
             }
         } else if (mario.state === 'WILDMUTT') {
             const now = performance.now();
-            if (!mario.punchCooldown || now - mario.punchCooldown > 500) {
-                mario.punchCooldown = now;
-                mario.punchActive = true;
-                mario.punchTimer = now;
-                sfx.stomp();
-                setTimeout(() => { mario.punchActive = false; }, 200);
+            if (!mario.pounceCooldown || now - mario.pounceCooldown > 800) {
+                mario.pounceCooldown = now;
+                mario.pounceActive = true;
+                mario.pounceStartTime = now;
+                mario.vy = -12; // Pounce jump height
+                mario.vx = mario.facingRight ? 16 : -16; // Pounce distance
+                mario.grounded = false;
+                sfx.stomp(); // Pounce sound
             }
         } else if (mario.state === 'DIAMONDHEAD') {
             const now = performance.now();
@@ -1021,16 +1023,21 @@ function gameLoop(timestamp) {
                         showOmnitrixIntro();
 
                     } else if (entity.type === 'goomba') {
-                        if (mario.vy > 0 && mario.y + mario.height < entity.y + entity.height / 2 + 10) {
+                        if (mario.pounceActive) {
+                            entity.dead = true;
+                            sfx.stomp();
+                            mario.vy = -8;
+                            mario.pounceActive = false;
+                        } else if (mario.vy > 0 && mario.y + mario.height < entity.y + entity.height / 2 + 10) {
                             entity.dead = true;
                             sfx.stomp();
                             mario.vy = -8;
                         } else {
-                            if (mario.state === 'FOURARMS' || mario.state === 'HEATBLAST' || mario.state === 'XLR8' || mario.state === 'STINKFLY') {
+                            if (mario.state === 'FOURARMS' || mario.state === 'HEATBLAST' || mario.state === 'XLR8' || mario.state === 'STINKFLY' || mario.state === 'WILDMUTT') {
                                 mario.state = 'SMALL';
                                 mario.width = 32;
                                 mario.height = 32;
-                                mario.y += 32;
+                                mario.y += (mario.height - 32);
                                 mario.vy = -5;
                                 entity.dead = true;
                             } else {
@@ -1216,16 +1223,22 @@ function gameLoop(timestamp) {
                     } else if (entity.type === 'wild_mutt_item') {
                         entity.dead = true;
                         ALIENS[5].unlocked = true;
-                        ALIENS[5].introMessage = 'I am Wild Mutt! My senses are sharp! Press F to PUNCH and see HIDDEN ENEMIES! 🐺';
+                        ALIENS[5].introMessage = 'I am Wild Mutt! My senses are sharp! Press F to POUNCE and see HIDDEN ENEMIES! 🐺';
                         mario.transformToWildMutt();
                         sfx.collectItem();
                         renderAlienGrid();
                         openOmnitrixPanel();
 
                     } else if (entity.type === 'gorillomba') {
-                        // Contact with Gorillomba — only Wild Mutt is safe
-                        if (mario.state !== 'WILDMUTT') {
-                            if (mario.state === 'FOURARMS' || mario.state === 'HEATBLAST' || mario.state === 'XLR8' || mario.state === 'STINKFLY' || mario.state === 'UPGRADE') {
+                        if (mario.pounceActive) {
+                            if (entity.takeDamage()) {
+                                sfx.bossHit();
+                                screenShake = 15;
+                                mario.vy = -10;
+                                mario.pounceActive = false;
+                            }
+                        } else if (mario.state !== 'WILDMUTT') {
+                            if (mario.state !== 'SMALL') {
                                 mario.revertToSmall();
                                 mario.vy = -8;
                             } else {
