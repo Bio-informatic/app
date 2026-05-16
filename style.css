@@ -290,3 +290,39 @@ canvas.level10-theme.fixed {
 #panel-hint-bar b {
     color: #39FF14;
 }
+
+/* ===== CONTROLS MODAL ===== */
+.modal-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.9);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 500;
+}
+
+.modal-content {
+    background: #0a0a0a;
+    border: 3px solid #ff0;
+    border-radius: 12px;
+    padding: 30px 40px;
+    text-align: center;
+    box-shadow: 0 0 30px #ffff0066;
+    max-width: 500px;
+}
+
+.modal-content h2 {
+    color: #ff0;
+    font-size: 20px;
+    margin-bottom: 20px;
+}
+
+.modal-content ul li {
+    margin-bottom: 10px;
+    font-size: 14px;
+}
+
+.modal-content b {
+    color: #0f0;
+}

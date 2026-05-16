@@ -59,13 +59,7 @@ function resizeCanvas() {
 resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
 
-// ─── Audio Sliders ─────────────────────────
-document.getElementById('bgm-volume').addEventListener('input', (e) => {
-    sfx.setMusicVolume(parseFloat(e.target.value));
-});
-document.getElementById('sfx-volume').addEventListener('input', (e) => {
-    sfx.setSfxVolume(parseFloat(e.target.value));
-});
+
 
 // ─── UI Elements ─────────────────────────────
 const modal = document.getElementById('level-complete-modal');
@@ -78,6 +72,8 @@ const omnitrixIntro = document.getElementById('omnitrix-intro');
 const btnOmnitrixOk = document.getElementById('btn-omnitrix-ok');
 const omnitrixPanel = document.getElementById('omnitrix-panel');
 const alienGrid = document.getElementById('alien-grid');
+const controlsModal = document.getElementById('controls-modal');
+const btnStartGame = document.getElementById('btn-start-game');
 
 // ─── Alien Roster Definition ─────────────────
 const ALIENS = [
@@ -169,6 +165,12 @@ function showOmnitrixIntro() {
 btnOmnitrixOk.addEventListener('click', () => {
     omnitrixIntro.style.display = 'none';
     gameState = 'PLAYING';
+});
+
+btnStartGame.addEventListener('click', () => {
+    controlsModal.style.display = 'none';
+    gameState = 'PLAYING';
+    sfx.collectItem(); // Small feedback sound
 });
 
 // ─── Alien Activation ────────────────────────
@@ -431,7 +433,16 @@ function loadLevel(index, carryOverState = null) {
 
 
     levelTitleTimer = performance.now();
-    gameState = 'PLAYING';
+    
+    // If first time starting or warped, maybe show controls? 
+    // For now, only show controls on the very first start (Level 1)
+    if (index === 1 && !mario.hasWatch) {
+        controlsModal.style.display = 'flex';
+        gameState = 'PAUSED';
+    } else {
+        gameState = 'PLAYING';
+    }
+
     modal.style.display = 'none';
     closeOmnitrixPanel();
     canvas.classList.toggle('level2-theme', index === 2);

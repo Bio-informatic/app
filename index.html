@@ -15,32 +15,35 @@
     <div id="game-container">
         <canvas id="gameCanvas"></canvas>
         <div id="ui-layer">
-            <p>Controls: Arrow Keys / WASD to Move, W / Space / ↑ to Jump | C for Watch | F for Power (Ground Pound / Fireball)</p>
-            <!-- TEMPORARY DEV LEVEL SWITCHER (REMOVE LATER) -->
-            <div id="dev-level-switcher" style="pointer-events: auto; position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.8); padding: 5px 10px; border-radius: 5px; color: #0f0; font-family: monospace; z-index: 100;">
-                <b>DEV: Switch Level</b><br>
-                <button onclick="window.devWarp(1)" style="margin: 2px;">L1</button>
-                <button onclick="window.devWarp(2)" style="margin: 2px;">L2</button>
-                <button onclick="window.devWarp(3)" style="margin: 2px;">L3</button>
-                <button onclick="window.devWarp(4)" style="margin: 2px;">L4</button>
-                <button onclick="window.devWarp(5)" style="margin: 2px;">L5</button>
-                <button onclick="window.devWarp(6)" style="margin: 2px;">L6</button>
-                <button onclick="window.devWarp(7)" style="margin: 2px;">L7</button>
-                <button onclick="window.devWarp(8)" style="margin: 2px;">L8</button>
-                <button onclick="window.devWarp(9)" style="margin: 2px;">L9</button>
-                <button onclick="window.devWarp(10)" style="margin: 2px;">L10</button>
-                <button onclick="window.devWarp(11)" style="margin: 2px;">L11</button>
-            </div>
-            <!-- /TEMPORARY DEV LEVEL SWITCHER -->
-            <div id="audio-controls" style="pointer-events: auto; position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.5); padding: 5px; border-radius: 5px; color: white;">
-                <label style="font-size: 12px; display:flex; align-items: center; margin-bottom:4px;">
-                    <span style="width: 40px;">BGM</span>
-                    <input type="range" id="bgm-volume" min="0" max="1" step="0.1" value="0.5" style="width: 80px;">
-                </label>
-                <label style="font-size: 12px; display:flex; align-items: center;">
-                    <span style="width: 40px;">SFX</span>
-                    <input type="range" id="sfx-volume" min="0" max="1" step="0.1" value="1.0" style="width: 80px;">
-                </label>
+        </div>
+
+        <!-- TEMPORARY DEV LEVEL SWITCHER -->
+        <div id="dev-level-switcher" style="pointer-events: auto; position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.8); padding: 5px 10px; border-radius: 5px; color: #0f0; font-family: monospace; z-index: 1000;">
+            <b>DEV: Switch Level</b><br>
+            <button onclick="window.devWarp(1)" style="margin: 2px;">L1</button>
+            <button onclick="window.devWarp(2)" style="margin: 2px;">L2</button>
+            <button onclick="window.devWarp(3)" style="margin: 2px;">L3</button>
+            <button onclick="window.devWarp(4)" style="margin: 2px;">L4</button>
+            <button onclick="window.devWarp(5)" style="margin: 2px;">L5</button>
+            <button onclick="window.devWarp(6)" style="margin: 2px;">L6</button>
+            <button onclick="window.devWarp(7)" style="margin: 2px;">L7</button>
+            <button onclick="window.devWarp(8)" style="margin: 2px;">L8</button>
+            <button onclick="window.devWarp(9)" style="margin: 2px;">L9</button>
+            <button onclick="window.devWarp(10)" style="margin: 2px;">L10</button>
+            <button onclick="window.devWarp(11)" style="margin: 2px;">L11</button>
+        </div>
+
+        <!-- Controls Instructions Modal -->
+        <div id="controls-modal" class="modal-overlay">
+            <div class="modal-content">
+                <h2>🎮 GAME CONTROLS</h2>
+                <ul style="text-align: left; list-style: none; padding: 0; line-height: 1.6;">
+                    <li><b>Move:</b> Arrow Keys / WASD</li>
+                    <li><b>Jump:</b> W / Space / ↑</li>
+                    <li><b>Omnitrix:</b> C (Toggle Watch)</li>
+                    <li><b>Power:</b> F key (Ground Pound, Fire, Dash, etc.)</li>
+                </ul>
+                <button id="btn-start-game" class="btn btn-primary">Start Game! ▶</button>
             </div>
         </div>
         <div id="level-complete-modal">
