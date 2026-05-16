@@ -38,6 +38,9 @@ import { MucusProjectile } from './src/entities/MucusProjectile.js';
 import { GreyMatterItem } from './src/entities/GreyMatterItem.js';
 import { OmnitrixVirus } from './src/entities/OmnitrixVirus.js';
 import { VilgaxSpider } from './src/entities/VilgaxSpider.js';
+import { GhostfreakItem } from './src/entities/GhostfreakItem.js';
+import { GhostGoomba } from './src/entities/GhostGoomba.js';
+import { EvilGhostfreak } from './src/entities/EvilGhostfreak.js';
 
 const sfx = new SoundManager();
 
@@ -87,7 +90,7 @@ const ALIENS = [
     { key: '7', name: 'Diamondhead', icon: '💎', unlocked: false, lives: 25 },
     { key: '8', name: 'Ripjaws', icon: '🦈', unlocked: false, lives: 25 },
     { key: '9', name: 'Grey Matter', icon: '🐸', unlocked: false, lives: 25 },
-    { key: '10', name: '???', icon: '👾', unlocked: false, lives: 25 },
+    { key: '10', name: 'Ghostfreak', icon: '👻', unlocked: false, lives: 25 },
 ];
 
 function getDefaultBoxEnemyType(levelIndex) {
@@ -99,6 +102,7 @@ function getDefaultBoxEnemyType(levelIndex) {
     if (levelIndex === 8) return 'whitewalker_goomba';
     if (levelIndex === 9) return 'jellyfish_goomba';
     if (levelIndex === 10) return 'omnitrix_virus';
+    if (levelIndex === 11) return 'ghost_goomba';
     return 'goomba';
 }
 
@@ -110,6 +114,7 @@ function createEnemyByType(type, x, y, entitiesArray = null, fromBox = false) {
     if (type === 'whitewalker_goomba') return new WhiteWalkerGoomba(x, y);
     if (type === 'jellyfish_goomba') return new JellyfishGoomba(x, y, fromBox);
     if (type === 'omnitrix_virus') return new OmnitrixVirus(x, y);
+    if (type === 'ghost_goomba') return new GhostGoomba(x, y);
     return new Goomba(x, y);
 }
 
@@ -204,6 +209,8 @@ function activateAlien(index) {
         mario.transformToRipjaws();
     } else if (alien.name === 'Grey Matter') {
         mario.transformToGreyMatter();
+    } else if (alien.name === 'Ghostfreak') {
+        mario.transformToGhostfreak();
     }
 }
 
@@ -261,6 +268,10 @@ let nightKingDefeated = false;
 let vilgaxSpider = null;
 export let vilgaxSpiderDefeated = false; // exported for Level_v2.js palette swap
 
+// Evil Ghostfreak boss reference (Level 11)
+let evilGhostfreak = null;
+let evilGhostfreakDefeated = false;
+
 function assignBlockHit() {
     mario.onBlockHit = (tileType, bx, by) => {
         if (tileType === 3) {
@@ -283,6 +294,7 @@ function assignBlockHit() {
                 else if (currentLevelIndex === 8) ItemClass = DiamondheadItem;
                 else if (currentLevelIndex === 9) ItemClass = RipjawsItem;
                 else if (currentLevelIndex === 10) ItemClass = GreyMatterItem;
+                else if (currentLevelIndex === 11) ItemClass = GhostfreakItem;
             }
 
             if (ItemClass) {
@@ -340,6 +352,8 @@ function loadLevel(index, carryOverState = null) {
     nightKingDefeated = false;
     vilgaxSpider = null;
     vilgaxSpiderDefeated = false;
+    evilGhostfreak = null;
+    evilGhostfreakDefeated = false;
 
     level.entities.forEach(entityData => {
         if (entityData.type === 'goomba') {
@@ -402,6 +416,13 @@ function loadLevel(index, carryOverState = null) {
         } else if (entityData.type === 'vilgax_spider') {
             vilgaxSpider = new VilgaxSpider(entityData.x, entityData.y, entities);
             entities.push(vilgaxSpider);
+        } else if (entityData.type === 'evil_ghostfreak') {
+            evilGhostfreak = new EvilGhostfreak(entityData.x, entityData.y, entities);
+            entities.push(evilGhostfreak);
+        } else if (entityData.type === 'ghost_goomba') {
+            entities.push(new GhostGoomba(entityData.x, entityData.y));
+        } else if (entityData.type === 'ghostfreak_item') {
+            entities.push(new GhostfreakItem(entityData.x, entityData.y));
         }
     });
 
@@ -419,6 +440,7 @@ function loadLevel(index, carryOverState = null) {
     canvas.classList.toggle('level8-theme', index === 8);
     canvas.classList.toggle('level9-theme', index === 9);
     canvas.classList.toggle('level10-theme', index === 10);
+    canvas.classList.toggle('level11-theme', index === 11);
     canvas.classList.remove('fixed');
 
     // Sound: start level music
@@ -669,6 +691,9 @@ function gameLoop(timestamp) {
             if (nightKing && !nightKing.dead) {
                 nightKing.update(deltaTime, level, mario.x + mario.width / 2, mario.y + mario.height / 2);
             }
+            if (evilGhostfreak && !evilGhostfreak.dead) {
+                evilGhostfreak.update(deltaTime, level, mario.x, mario.y);
+            }
             mario.update(deltaTime, level);
 
             // ── FourArms Ground Pound Charging ────
@@ -808,6 +833,16 @@ function gameLoop(timestamp) {
                     sfx.levelComplete();
                     sfx.stopMusic();
                     showLevelModal('LEVEL 9 COMPLETE!', 'The Great Octopus is defeated! Ripjaws rules the sea!', true);
+                } else if (currentLevelIndex === 10) {
+                    mario.victory = true;
+                    sfx.levelComplete();
+                    sfx.stopMusic();
+                    showLevelModal('LEVEL 10 COMPLETE!', 'Vilgax Spider defeated! The Omnitrix is repaired!', true);
+                } else if (currentLevelIndex === 11) {
+                    mario.victory = true;
+                    sfx.levelComplete();
+                    sfx.stopMusic();
+                    showLevelModal('LEVEL 11 COMPLETE!', 'Evil Ghostfreak is gone! You have mastered the Omnitrix!', false);
                 } else {
                     mario.victory = true;
                     showLevelModal('YOU WIN!', 'The universe is safe… for now.', false);
@@ -1320,6 +1355,83 @@ function gameLoop(timestamp) {
                                 }
                             }
                         }
+                    } else if (entity.type === 'ghostfreak_item') {
+                        entity.dead = true;
+                        ALIENS[9].unlocked = true;
+                        ALIENS[9].introMessage = 'I am Ghostfreak! Hold F to pass through walls, and hold F for 5 seconds to acquire enemy bodies! 👻';
+                        mario.transformToGhostfreak();
+                        sfx.collectItem();
+                        renderAlienGrid();
+                        openOmnitrixPanel();
+                    } else if (entity.type === 'ghost_goomba') {
+                        if (entity.acquired) return; // skip if already acquired
+                        if (mario.state === 'GHOSTFREAK' && mario.ghostfreakAcquireReady) {
+                            entity.acquired = true;
+                            sfx.bossHit();
+                            setTimeout(() => { entity.dead = true; }, 1000);
+                        } else if (mario.vy > 0 && mario.y + mario.height < entity.y + entity.height / 2 + 10) {
+                            entity.dead = true;
+                            sfx.stomp();
+                            mario.vy = -8;
+                        } else {
+                            if (mario.state !== 'SMALL') {
+                                mario.revertToSmall();
+                                mario.vy = -5;
+                            } else {
+                                sfx.death();
+                                sfx.stopMusic();
+                                gameState = 'GAMEOVER';
+                            }
+                        }
+                    } else if (entity.type === 'evil_ghostfreak') {
+                        if (entity.acquired) return; // skip if already acquired
+                        if (entity.invulnerableTimer > 0) return; // skip if invulnerable
+
+                        if (mario.state === 'GHOSTFREAK' && mario.ghostfreakAcquireReady) {
+                            entity.hitsTaken = (entity.hitsTaken || 0) + 1;
+                            sfx.bossHit();
+                            screenShake = 20;
+                            
+                            if (entity.hitsTaken >= 10) {
+                                entity.acquired = true;
+                                screenShake = 40;
+                                setTimeout(() => { entity.dead = true; }, 1500);
+                            } else {
+                                // Knockback boss
+                                entity.vx = (entity.x > mario.x) ? 5 : -5;
+                                entity.vy = -3;
+                                entity.invulnerableTimer = 60; // frames
+                                mario.ghostfreakFTimer = 0; // reset Mario's charge so he has to charge again
+                            }
+                        } else {
+                            // Boss hits Mario!
+                            if (mario.invulnerableTimer > 0) return;
+                            if (mario.state === 'GHOSTFREAK') {
+                                mario.bossHitsTaken = (mario.bossHitsTaken || 0) + 1;
+                                sfx.bump();
+                                screenShake = 20;
+                                if (mario.bossHitsTaken >= 10) {
+                                    sfx.death();
+                                    sfx.stopMusic();
+                                    gameState = 'GAMEOVER';
+                                } else {
+                                    // Knockback Mario
+                                    mario.vy = -5;
+                                    mario.vx = (mario.x < entity.x) ? -5 : 5;
+                                    mario.invulnerableTimer = 60;
+                                }
+                            } else {
+                                if (mario.state !== 'SMALL') {
+                                    mario.revertToSmall();
+                                    mario.vy = -8;
+                                    mario.vx = -5;
+                                } else {
+                                    sfx.death();
+                                    sfx.stopMusic();
+                                    gameState = 'GAMEOVER';
+                                }
+                            }
+                        }
                     }
                 }
             });
@@ -1478,6 +1590,18 @@ function gameLoop(timestamp) {
                         level.omnitrixFixed = true;
                         canvas.classList.add('fixed');
                         console.log('VILGAX SPIDER DEFEATED!');
+                        screenShake = 30;
+                        sfx.bossDefeated();
+                        const flagX = level.cols - 2;
+                        for (let fy = 4; fy < level.rows; fy++) {
+                            level.tiles[fy][flagX] = 5;
+                        }
+                        level.finishCols.set(flagX, { topRow: 4, bottomRow: level.rows - 1 });
+                    }
+                    if (entities[i] === evilGhostfreak && evilGhostfreak.dead) {
+                        evilGhostfreakDefeated = true;
+                        evilGhostfreak = null;
+                        console.log('EVIL GHOSTFREAK DEFEATED!');
                         screenShake = 30;
                         sfx.bossDefeated();
                         const flagX = level.cols - 2;

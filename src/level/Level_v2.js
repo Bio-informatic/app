@@ -11,7 +11,7 @@ export class Level {
         let map = [];
 
         // LEVEL GENERATION
-        if (levelIndex >= 1 && levelIndex <= 10) {
+        if (levelIndex >= 1 && levelIndex <= 11) {
             const ROWS = 20;
             const COLS = levelIndex >= 5 ? 200 : (levelIndex === 4 ? 250 : (levelIndex === 3 ? 200 : 150));
             const TS = this.tileSize;
@@ -65,6 +65,7 @@ export class Level {
             else if (levelIndex === 8) bossZoneStart = COLS - 50;
             else if (levelIndex === 9) bossZoneStart = COLS - 40;
             else if (levelIndex === 10) bossZoneStart = COLS - 50;
+            else if (levelIndex === 11) bossZoneStart = COLS - 50;
 
             // Store slow zone bounds for game.js
             this.slowZoneStart = levelIndex === 4 ? bossZoneStart * TS : -1;
@@ -157,7 +158,8 @@ export class Level {
                     const goombaY = hasGroundBricks ? baseTopY - 1 : GROUND_Y - 1;
                     if (goombaY > 2 && map[goombaY][curX] === skyChar) {
                         let goombaType = 'goomba';
-                        if (levelIndex === 10) goombaType = 'omnitrix_virus';
+                        if (levelIndex === 11) goombaType = 'ghost_goomba';
+                        else if (levelIndex === 10) goombaType = 'omnitrix_virus';
                         else if (levelIndex === 9) goombaType = 'jellyfish_goomba';
                         else if (levelIndex === 8) goombaType = 'whitewalker_goomba';
                         else if (levelIndex === 7) goombaType = 'goomba'; // vanishing goombas — managed in draw
@@ -504,6 +506,35 @@ export class Level {
                 });
             }
 
+            // ── Level 11 Boss Arena (Evil Ghostfreak) ───────────────────────
+            if (levelIndex === 11) {
+                for (let y = GROUND_Y; y < ROWS; y++) {
+                    for (let x = bossZoneStart; x < COLS; x++) {
+                        map[y][x] = groundChar;
+                    }
+                }
+                for (let y = GROUND_Y - 6; y < GROUND_Y; y++) {
+                    map[y][bossZoneStart] = brickChar;
+                    map[y][COLS - 1] = brickChar;
+                }
+                
+                // Tall walls in level 11
+                for (let x = 30; x < bossZoneStart - 10; x += 15) {
+                    const wallHeight = Math.floor(Math.random() * 4) + 5; // 5 to 8 blocks high
+                    for (let y = GROUND_Y - wallHeight; y < GROUND_Y; y++) {
+                        map[y][x] = brickChar;
+                        map[y][x+1] = brickChar;
+                    }
+                }
+
+                // Spawn Evil Ghostfreak
+                this.entities.push({
+                    x: (bossZoneStart + 15) * TS,
+                    y: (GROUND_Y - 5) * TS,
+                    type: 'evil_ghostfreak'
+                });
+            }
+
             // ── Cleanup Pass: Un-attach Mystery Boxes ───────────────────────
             for (let y = 1; y < ROWS - 1; y++) {
                 for (let x = 1; x < COLS - 1; x++) {
@@ -583,6 +614,20 @@ export class Level {
 
     // ── Theme palettes ─────────────────────────────────────────────
     getTheme() {
+        if (this.levelIndex === 11) {
+            return {
+                sky:            '#050505',   // Black
+                ground:         '#113311',   // Dark Green
+                groundStroke:   '#00FF00',   // Bright Green
+                brick:          '#222222',   // Dark Grey
+                brickStroke:    '#FFFFFF',   // White
+                mystery:        '#00FF00',   // Green
+                pipe:           '#FFFFFF',   // White
+                unstable:       '#333333',
+                unstableStroke: '#00FF00',
+                cloud:          'rgba(255, 255, 255, 0.1)'
+            };
+        }
         if (this.levelIndex === 10) {
             if (this.omnitrixFixed) {
                 // Fixed: Omnitrix Green

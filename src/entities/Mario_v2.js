@@ -94,6 +94,17 @@ export class Mario {
         this.height = 24;
     }
 
+    transformToGhostfreak() {
+        if (this.state === 'GHOSTFREAK') return;
+        this.state = 'GHOSTFREAK';
+        this.transforming = true;
+        this.transformTimer = performance.now();
+        this.alienTimer = performance.now();
+        if (this.height < 50) this.y -= (50 - this.height);
+        this.width = 40;
+        this.height = 50;
+    }
+
     transformToFourArms() {
         if (this.state === 'FOURARMS') return;
         this.state = 'FOURARMS';
@@ -128,6 +139,8 @@ export class Mario {
         this.punchActive = false;
         this.alienTimer = 0;
         this.alienTimerRemaining = 0;
+        this.ghostfreakFTimer = 0;
+        this.ghostfreakAcquireReady = false;
         
         // Stinkfly stats
         this.wingStamina = 6000;
@@ -199,7 +212,7 @@ export class Mario {
         }
 
         // Alien countdown timer — revert to SMALL after 15 seconds
-        if (this.alienTimer > 0 && (this.state === 'FOURARMS' || this.state === 'HEATBLAST' || this.state === 'XLR8' || this.state === 'STINKFLY' || this.state === 'UPGRADE' || this.state === 'WILDMUTT' || this.state === 'DIAMONDHEAD' || this.state === 'RIPJAWS')) {
+        if (this.alienTimer > 0 && (this.state === 'FOURARMS' || this.state === 'HEATBLAST' || this.state === 'XLR8' || this.state === 'STINKFLY' || this.state === 'UPGRADE' || this.state === 'WILDMUTT' || this.state === 'DIAMONDHEAD' || this.state === 'RIPJAWS' || this.state === 'GREYMATTER' || this.state === 'GHOSTFREAK')) {
             const elapsed = performance.now() - this.alienTimer;
             this.alienTimerRemaining = Math.max(0, Math.ceil((this.alienTimerDuration - elapsed) / 1000));
             if (elapsed >= this.alienTimerDuration) {
@@ -211,8 +224,9 @@ export class Mario {
         this.inWater = inWater;
         let activeGravity = inWater ? 0.2 : this.gravity;
 
-        // Apply Gravity (Stinkfly flies naturally, Ripjaws swims naturally in water)
-        if (this.state === 'STINKFLY' || (inWater && this.state === 'RIPJAWS')) {
+        // Apply Gravity (Stinkfly flies only in level 5, Ripjaws swims naturally in water)
+        const stinkflyCanFly = this.state === 'STINKFLY' && level.levelIndex === 5;
+        if (stinkflyCanFly || this.state === 'GHOSTFREAK' || (inWater && this.state === 'RIPJAWS')) {
             this.vy = 0; // zero gravity base
         } else {
             this.vy += activeGravity;
@@ -223,6 +237,7 @@ export class Mario {
         if (this.state === 'XLR8') moveSpeed = this.speed * 2.5;
         if (this.dashActive) moveSpeed = this.speed * 4;
         if (this.state === 'STINKFLY') moveSpeed = this.speed * 1.5;
+        if (this.state === 'GHOSTFREAK') moveSpeed = this.speed * 1.5;
         if (this.state === 'RIPJAWS' && inWater) moveSpeed = this.speed * 2.2; // Fast swimmer
 
         if (this.input.isDown('ArrowRight')) {
@@ -277,6 +292,22 @@ export class Mario {
             this.soundWaveActive = false;
         }
 
+        // --- Ghostfreak logic ---
+        if (this.state === 'GHOSTFREAK') {
+            if (this.input.isDown('F')) {
+                this.ghostfreakFTimer = (this.ghostfreakFTimer || 0) + (deltaTime || 16);
+                if (this.ghostfreakFTimer >= 5000) {
+                    this.ghostfreakAcquireReady = true;
+                }
+            } else {
+                this.ghostfreakFTimer = 0;
+                this.ghostfreakAcquireReady = false;
+            }
+        } else {
+            this.ghostfreakFTimer = 0;
+            this.ghostfreakAcquireReady = false;
+        }
+
         // Move X
         this.x += this.vx;
         this.handleHorizontalCollisions(level);
@@ -285,8 +316,9 @@ export class Mario {
         const jumpJustPressed = jumpPressed && !this._jumpWasDown;
         this._jumpWasDown = jumpPressed;
 
-        if (this.state === 'STINKFLY' || (inWater && this.state === 'RIPJAWS')) {
-            if (this.state === 'STINKFLY') this.wingStamina = this.maxWingStamina;
+        const stinkflyCanFlyJump = this.state === 'STINKFLY' && level.levelIndex === 5;
+        if (stinkflyCanFlyJump || this.state === 'GHOSTFREAK' || (inWater && this.state === 'RIPJAWS')) {
+            if (stinkflyCanFlyJump) this.wingStamina = this.maxWingStamina;
             
             if (jumpPressed) {
                 this.vy = -moveSpeed; // Fly/Swim up
@@ -389,6 +421,9 @@ export class Mario {
 
     // Non-solid tiles: 0 (air), 9 (lava), 10 (speed panel), 11 (electric fence)
     isSolid(tile) {
+        if (this.state === 'GHOSTFREAK' && this.input.isDown('F')) {
+            if (tile === 2 || tile === 13) return false;
+        }
         return tile !== 0 && tile !== 9 && tile !== 10 && tile !== 11;
     }
 
@@ -498,9 +533,187 @@ export class Mario {
             this.drawRipjaws(ctx);
         } else if (this.state === 'GREYMATTER') {
             this.drawGreyMatter(ctx);
+        } else if (this.state === 'GHOSTFREAK') {
+            this.drawGhostfreak(ctx);
         } else {
             this.drawMario(ctx);
         }
+    }
+
+    drawGhostfreak(ctx) {
+        ctx.save();
+        const floatY = Math.sin(performance.now() / 200) * 3;
+        
+        ctx.translate(this.x + this.width / 2, this.y + this.height / 2 + floatY);
+        
+        ctx.globalAlpha = (this.input.isDown('F') || this.ghostfreakAcquireReady) ? 0.5 : 1.0;
+        if (!this.facingRight) {
+            ctx.scale(-1, 1);
+        }
+        ctx.scale(0.8, 0.8);
+
+        const skinGrey = '#B5B3B6';
+        const blackLine = '#111111';
+
+        // Animated tail wag
+        const tailWag = Math.sin(performance.now() / 150) * 10;
+        
+        if (this.invulnerableTimer > 0 && Math.floor(performance.now() / 100) % 2 === 0) {
+            // blink
+        } else {
+            // Charging and Ready Aura Effects
+            if (this.ghostfreakAcquireReady) {
+                // Intense, pulsating green and black aura
+                const pulse = Math.abs(Math.sin(performance.now() / 200)) * 10;
+                const gradient = ctx.createRadialGradient(0, 0, 10, 0, 0, 50 + pulse);
+                gradient.addColorStop(0, 'rgba(0, 255, 0, 0.8)'); // Green core
+                gradient.addColorStop(0.5, 'rgba(0, 50, 0, 0.5)'); // Dark mid
+                gradient.addColorStop(1, 'rgba(0, 255, 0, 0)'); // Fades out
+                
+                ctx.beginPath();
+                ctx.arc(0, 0, 50 + pulse, 0, Math.PI * 2);
+                ctx.fillStyle = gradient;
+                ctx.fill();
+
+                // Crackling lightning tendrils
+                ctx.strokeStyle = '#00FF00';
+                ctx.lineWidth = 2;
+                for(let i=0; i<3; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, 0);
+                    const angle = (performance.now() / 100) + (i * Math.PI * 2 / 3);
+                    ctx.lineTo(Math.cos(angle) * (40 + pulse), Math.sin(angle) * (40 + pulse));
+                    ctx.stroke();
+                }
+            } else if (this.ghostfreakFTimer > 0) {
+                // Charging particles pulling inward
+                const chargePct = this.ghostfreakFTimer / 5000;
+                ctx.beginPath();
+                ctx.arc(0, 0, 45 - (chargePct * 15), 0, Math.PI * 2);
+                ctx.strokeStyle = `rgba(0, 255, 0, ${chargePct})`; // Green charging ring
+                ctx.lineWidth = 3;
+                ctx.setLineDash([5, 10]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+        }
+
+        // Left Arm (Back)
+        ctx.strokeStyle = skinGrey;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(0, -10);
+        ctx.lineTo(15, 5); // elbow
+        ctx.lineTo(25, 25); // wrist
+        ctx.stroke();
+        
+        // Left Claws
+        ctx.fillStyle = skinGrey;
+        ctx.beginPath();
+        ctx.moveTo(25, 25); ctx.lineTo(32, 40); ctx.lineTo(28, 30); ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(25, 25); ctx.lineTo(22, 42); ctx.lineTo(25, 30); ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(25, 25); ctx.lineTo(15, 35); ctx.lineTo(22, 28); ctx.fill();
+
+        // Arm crack lines
+        ctx.strokeStyle = blackLine;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(8, -2); ctx.lineTo(15, 5);
+        ctx.stroke();
+
+        // Main Body and Tail
+        ctx.fillStyle = skinGrey;
+        ctx.beginPath();
+        ctx.moveTo(-5, -25); // Top of head
+        ctx.quadraticCurveTo(10, -25, 12, -10); // Right head
+        ctx.quadraticCurveTo(15, 10, 10, 25); // Right body
+        ctx.quadraticCurveTo(5, 40, -10 + tailWag, 60); // Tail tapering right
+        ctx.quadraticCurveTo(-15 + tailWag, 65, -5 + tailWag * 1.5, 75); // Tail tip 1
+        ctx.quadraticCurveTo(-20 + tailWag * 1.2, 70, -20 + tailWag, 55); // Tail tapering left
+        ctx.quadraticCurveTo(-10, 25, -15, 0); // Left body
+        ctx.quadraticCurveTo(-15, -20, -5, -25); // Left head
+        ctx.fill();
+
+        // Body border/shading for depth
+        ctx.strokeStyle = '#8B898C';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Body cracks (Black lines)
+        ctx.strokeStyle = blackLine;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        // Eye track
+        ctx.moveTo(5, -20);
+        ctx.lineTo(7, -15);
+        ctx.lineTo(6, -8);
+        ctx.lineTo(2, 0);
+        ctx.lineTo(-10, 2);
+        // Chest crack
+        ctx.moveTo(2, 0);
+        ctx.lineTo(-2, 10);
+        ctx.lineTo(-12, 15);
+        // Lower crack
+        ctx.moveTo(-2, 10);
+        ctx.lineTo(5, 20);
+        ctx.lineTo(0, 35);
+        ctx.moveTo(5, 20);
+        ctx.lineTo(10, 25);
+        ctx.stroke();
+
+        // Chest Slit & Omnitrix Symbol
+        ctx.fillStyle = '#FFFFFF';
+        ctx.beginPath();
+        ctx.ellipse(-2, 5, 2, 6, Math.PI / 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.moveTo(-4, 2); ctx.lineTo(1, 1); ctx.lineTo(-1, 5); ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(-3, 8); ctx.lineTo(0, 9); ctx.lineTo(-1, 5); ctx.fill();
+        ctx.strokeStyle = blackLine;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Eye
+        ctx.fillStyle = '#000000'; // black track around eye
+        ctx.beginPath();
+        ctx.ellipse(7, -15, 3, 5, Math.PI/12, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#E000E0'; // purple pupil
+        ctx.beginPath();
+        ctx.arc(7, -15, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Right Arm (Front)
+        ctx.strokeStyle = skinGrey;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(-10, 0);
+        ctx.lineTo(-20, 15); // elbow
+        ctx.lineTo(-15, 35); // wrist
+        ctx.stroke();
+        
+        // Right Claws
+        ctx.fillStyle = skinGrey;
+        ctx.beginPath();
+        ctx.moveTo(-15, 35); ctx.lineTo(-8, 50); ctx.lineTo(-12, 40); ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(-15, 35); ctx.lineTo(-18, 52); ctx.lineTo(-16, 40); ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(-15, 35); ctx.lineTo(-25, 45); ctx.lineTo(-19, 38); ctx.fill();
+
+        // Right Arm crack lines
+        ctx.strokeStyle = blackLine;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(-15, 8); ctx.lineTo(-20, 15);
+        ctx.stroke();
+
+        ctx.restore();
     }
 
     drawGreyMatter(ctx) {
