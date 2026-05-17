@@ -476,8 +476,24 @@ btnRestart.addEventListener('click', () => {
 });
 
 function deathPenalty() {
-    // Each unlocked alien loses 1 life; lock if lives reach 0
-    ALIENS.forEach(alien => {
+    // 1. Lock and reset the specific alien for this level so they must look for the item again
+    if (currentLevelIndex === 1) {
+        mario.hasWatch = false;
+    } else if (currentLevelIndex >= 2) {
+        const alienIndex = currentLevelIndex - 2;
+        if (ALIENS[alienIndex]) {
+            ALIENS[alienIndex].unlocked = false;
+            ALIENS[alienIndex].lives = 25; // Reset lives for this alien
+            ALIENS[alienIndex].introMessage = null;
+        }
+    }
+
+    // 2. Each OTHER unlocked alien loses 1 life; lock if lives reach 0
+    ALIENS.forEach((alien, idx) => {
+        if (currentLevelIndex >= 2 && idx === currentLevelIndex - 2) {
+            // Already handled specifically
+            return;
+        }
         if (alien.unlocked) {
             alien.lives--;
             if (alien.lives <= 0) {
@@ -497,25 +513,14 @@ function showLevelModal(title, message, showNext) {
     modal.style.display = 'flex';
 }
 
-// ─── Input: C key, F key & 1–0 keys (one-shot keydown) ─────────
-window.addEventListener('keydown', (e) => {
-    // Toggle Omnitrix panel with C
-    if (e.code === 'KeyC' && mario && mario.hasWatch && gameState !== 'PAUSED') {
+function handleCKeyPress() {
+    if (mario && mario.hasWatch && gameState !== 'PAUSED') {
         omnitrixPanelOpen ? closeOmnitrixPanel() : openOmnitrixPanel();
-        e.preventDefault();
     }
+}
 
-    // M key — toggle mute
-    if (e.code === 'KeyM') {
-        const muted = sfx.toggleMute();
-        console.log(muted ? '🔇 Sound MUTED' : '🔊 Sound ON');
-    }
-
-    // F key — context-dependent:
-    if (e.code === 'KeyF' && mario && gameState === 'PLAYING') {
-        if (e.repeat) return; // Prevent performance issues from key repeat
-        e.preventDefault();
-
+function handleFKeyPress() {
+    if (mario && gameState === 'PLAYING') {
         // Vilgumbobo final hits execution check
         if (typeof vilgumbobo !== 'undefined' && vilgumbobo && vilgumbobo.stunned && !vilgumbobo.dead) {
             const dist = Math.hypot((mario.x + mario.width / 2) - (vilgumbobo.x + vilgumbobo.width / 2),
@@ -642,9 +647,31 @@ window.addEventListener('keydown', (e) => {
             }
         }
     }
+}
 
-    // Prevent default scrolling for arrow keys and space
-    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
+// ─── Input: C key, F key & 1–0 keys (one-shot keydown) ─────────
+window.addEventListener('keydown', (e) => {
+    // Toggle Omnitrix panel with C
+    if (e.code === 'KeyC') {
+        handleCKeyPress();
+        e.preventDefault();
+    }
+
+    // M key — toggle mute
+    if (e.code === 'KeyM') {
+        const muted = sfx.toggleMute();
+        console.log(muted ? '🔇 Sound MUTED' : '🔊 Sound ON');
+    }
+
+    // F key — context-dependent:
+    if (e.code === 'KeyF') {
+        if (e.repeat) return; // Prevent performance issues from key repeat
+        handleFKeyPress();
+        e.preventDefault();
+    }
+
+    // Prevent default scrolling for arrow keys, space, and W/S
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'KeyW', 'KeyS'].includes(e.code)) {
         e.preventDefault();
     }
 
@@ -660,6 +687,20 @@ window.addEventListener('keydown', (e) => {
             activateAlien(idx);
         }
     }
+});
+
+// ─── Mouse Input Mappings ─────────────────────
+window.addEventListener('mousedown', (e) => {
+    if (e.button === 0) { // Left click
+        handleFKeyPress();
+    } else if (e.button === 2) { // Right click
+        handleCKeyPress();
+    }
+});
+
+// Prevent context menu on right click to avoid browser default overlay
+window.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
 });
 
 // ─── Main Game Loop ───────────────────────────
@@ -910,6 +951,15 @@ function gameLoop(timestamp) {
                     }
                 } else {
                     entity.update(deltaTime, level);
+                    if (isGoombaType(entity.type) && !entity.dead) {
+                        if (mario.state === 'RIPJAWS' && mario.soundWaveActive) {
+                            const dist = Math.hypot(mario.x + mario.width/2 - (entity.x + entity.width/2), mario.y + mario.height/2 - (entity.y + entity.height/2));
+                            if (dist < 200) { // wide sonar range
+                                entity.dead = true;
+                                sfx.stomp();
+                            }
+                        }
+                    }
                 }
                 if (entity.type === 'slimeball' &&
                     entity.source === 'upgrade' &&
@@ -932,7 +982,7 @@ function gameLoop(timestamp) {
                                 entity.dead = true;
                                 sfx.bossHit();
                                 screenShake = Math.min((entity.power || 1) * 2, 10);
-                            } else if (target.type === 'goomba' || target.type === 'ooze_goomba' || target.type === 'lava_goomba' || target.type === 'whitewalker_goomba') {
+                            } else if (isGoombaType(target.type)) {
                                 target.dead = true;
                                 entity.dead = true;
                                 sfx.fireballHit();
@@ -964,7 +1014,7 @@ function gameLoop(timestamp) {
                                 target.takeDamage(1);
                                 entity.dead = true;
                                 sfx.bossHit();
-                            } else if (target.type === 'goomba' || target.type === 'ooze_goomba' || target.type === 'whitewalker_goomba') {
+                            } else if (isGoombaType(target.type)) {
                                 target.dead = true;
                                 entity.dead = true;
                                 sfx.stomp();
@@ -1000,7 +1050,7 @@ function gameLoop(timestamp) {
                                 target.takeDamage(1);
                                 entity.dead = true;
                                 sfx.bossHit();
-                            } else if (target.type === 'goomba' || target.type === 'ooze_goomba' || target.type === 'lava_goomba') {
+                            } else if (isGoombaType(target.type)) {
                                 target.dead = true;
                                 entity.dead = true;
                                 sfx.stomp();
@@ -1034,21 +1084,25 @@ function gameLoop(timestamp) {
                         showOmnitrixIntro();
 
                     } else if (entity.type === 'goomba') {
-                        if (mario.pounceActive) {
+                        if (mario.dashActive) {
+                            entity.dead = true;
+                            sfx.stomp();
+                            screenShake = 4;
+                        } else if (mario.pounceActive) {
                             entity.dead = true;
                             sfx.stomp();
                             mario.vy = -8;
                             mario.pounceActive = false;
+                        } else if (mario.state === 'GHOSTFREAK' && mario.ghostfreakAcquireReady) {
+                            entity.dead = true;
+                            sfx.bossHit();
                         } else if (mario.vy > 0 && mario.y + mario.height < entity.y + entity.height / 2 + 10) {
                             entity.dead = true;
                             sfx.stomp();
                             mario.vy = -8;
                         } else {
-                            if (mario.state === 'FOURARMS' || mario.state === 'HEATBLAST' || mario.state === 'XLR8' || mario.state === 'STINKFLY' || mario.state === 'WILDMUTT') {
-                                mario.state = 'SMALL';
-                                mario.width = 32;
-                                mario.height = 32;
-                                mario.y += (mario.height - 32);
+                            if (mario.state !== 'SMALL') {
+                                mario.revertToSmall();
                                 mario.vy = -5;
                                 entity.dead = true;
                             } else {
@@ -1138,12 +1192,24 @@ function gameLoop(timestamp) {
                         ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
                     } else if (entity.type === 'ooze_goomba') {
                         // Level 5 Enemies
-                        if (mario.vy > 0 && mario.y + mario.height < entity.y + entity.height / 2 + 10) {
+                        if (mario.dashActive) {
+                            entity.dead = true;
+                            sfx.stomp();
+                            screenShake = 4;
+                        } else if (mario.pounceActive) {
+                            entity.dead = true;
+                            sfx.stomp();
+                            mario.vy = -8;
+                            mario.pounceActive = false;
+                        } else if (mario.state === 'GHOSTFREAK' && mario.ghostfreakAcquireReady) {
+                            entity.dead = true;
+                            sfx.bossHit();
+                        } else if (mario.vy > 0 && mario.y + mario.height < entity.y + entity.height / 2 + 10) {
                             entity.dead = true;
                             sfx.stomp();
                             mario.vy = -8;
                         } else {
-                            if (mario.state === 'FOURARMS' || mario.state === 'HEATBLAST' || mario.state === 'XLR8' || mario.state === 'STINKFLY') {
+                            if (mario.state !== 'SMALL') {
                                 mario.revertToSmall();
                                 mario.vy = -5;
                             } else {
@@ -1154,14 +1220,26 @@ function gameLoop(timestamp) {
                         }
                     } else if (entity.type === 'electromba') {
                         // Level 6 Enemies
-                        if (mario.vy > 0 && mario.y + mario.height < entity.y + entity.height / 2 + 10) {
+                        if (mario.dashActive) {
+                            entity.dead = true;
+                            sfx.stomp();
+                            screenShake = 4;
+                        } else if (mario.pounceActive) {
+                            entity.dead = true;
+                            sfx.stomp();
+                            mario.vy = -8;
+                            mario.pounceActive = false;
+                        } else if (mario.state === 'GHOSTFREAK' && mario.ghostfreakAcquireReady) {
+                            entity.dead = true;
+                            sfx.bossHit();
+                        } else if (mario.vy > 0 && mario.y + mario.height < entity.y + entity.height / 2 + 10) {
                             entity.dead = true;
                             sfx.stomp();
                             mario.vy = -8;
                         } else if (mario.hasUpgradeElectricImmunity(currentLevelIndex) && entity.isHacked && entity.isHacked()) {
                             // Upgrade can safely phase through hacked electric enemies while immune
                         } else {
-                            if (mario.state === 'FOURARMS' || mario.state === 'HEATBLAST' || mario.state === 'XLR8' || mario.state === 'STINKFLY' || mario.state === 'UPGRADE') {
+                            if (mario.state !== 'SMALL') {
                                 mario.revertToSmall();
                                 mario.vy = -5;
                             } else {
@@ -1296,7 +1374,19 @@ function gameLoop(timestamp) {
                             }
                         }
                     } else if (entity.type === 'whitewalker_goomba') {
-                        if (mario.state === 'DIAMONDHEAD') {
+                        if (mario.dashActive) {
+                            entity.dead = true;
+                            sfx.stomp();
+                            screenShake = 4;
+                        } else if (mario.pounceActive) {
+                            entity.dead = true;
+                            sfx.stomp();
+                            mario.vy = -8;
+                            mario.pounceActive = false;
+                        } else if (mario.state === 'GHOSTFREAK' && mario.ghostfreakAcquireReady) {
+                            entity.dead = true;
+                            sfx.bossHit();
+                        } else if (mario.state === 'DIAMONDHEAD') {
                             // Immune! Shatter them on contact
                             entity.dead = true;
                             sfx.stomp();
@@ -1316,7 +1406,19 @@ function gameLoop(timestamp) {
                         }
                     } else if (entity.type === 'goomba' && currentLevelIndex === 7) {
                         // Level 7 goombas: Always active, but invisible unless Wild Mutt
-                        if (mario.vy > 0 && mario.y + mario.height < entity.y + entity.height / 2 + 10) {
+                        if (mario.dashActive) {
+                            entity.dead = true;
+                            sfx.stomp();
+                            screenShake = 4;
+                        } else if (mario.pounceActive) {
+                            entity.dead = true;
+                            sfx.stomp();
+                            mario.vy = -8;
+                            mario.pounceActive = false;
+                        } else if (mario.state === 'GHOSTFREAK' && mario.ghostfreakAcquireReady) {
+                            entity.dead = true;
+                            sfx.bossHit();
+                        } else if (mario.vy > 0 && mario.y + mario.height < entity.y + entity.height / 2 + 10) {
                             entity.dead = true;
                             sfx.stomp();
                             mario.vy = -8;
@@ -1338,7 +1440,34 @@ function gameLoop(timestamp) {
                         sfx.collectItem();
                         renderAlienGrid();
                         openOmnitrixPanel();
-                    } else if (entity.type === 'jellyfish_goomba' || entity.type === 'mucus_projectile') {
+                    } else if (entity.type === 'jellyfish_goomba') {
+                        if (mario.dashActive) {
+                            entity.dead = true;
+                            sfx.stomp();
+                            screenShake = 4;
+                        } else if (mario.pounceActive) {
+                            entity.dead = true;
+                            sfx.stomp();
+                            mario.vy = -8;
+                            mario.pounceActive = false;
+                        } else if (mario.state === 'GHOSTFREAK' && mario.ghostfreakAcquireReady) {
+                            entity.dead = true;
+                            sfx.bossHit();
+                        } else if (mario.vy > 0 && mario.y + mario.height < entity.y + entity.height / 2 + 10) {
+                            entity.dead = true;
+                            sfx.stomp();
+                            mario.vy = -8;
+                        } else {
+                            if (mario.state !== 'SMALL') {
+                                mario.revertToSmall();
+                                mario.vy = -5;
+                            } else {
+                                sfx.death();
+                                sfx.stopMusic();
+                                gameState = 'GAMEOVER';
+                            }
+                        }
+                    } else if (entity.type === 'mucus_projectile') {
                         sfx.death();
                         sfx.stopMusic();
                         gameState = 'GAMEOVER';
@@ -1407,7 +1536,16 @@ function gameLoop(timestamp) {
                         openOmnitrixPanel();
                     } else if (entity.type === 'ghost_goomba') {
                         if (entity.acquired) return; // skip if already acquired
-                        if (mario.state === 'GHOSTFREAK' && mario.ghostfreakAcquireReady) {
+                        if (mario.dashActive) {
+                            entity.dead = true;
+                            sfx.stomp();
+                            screenShake = 4;
+                        } else if (mario.pounceActive) {
+                            entity.dead = true;
+                            sfx.stomp();
+                            mario.vy = -8;
+                            mario.pounceActive = false;
+                        } else if (mario.state === 'GHOSTFREAK' && mario.ghostfreakAcquireReady) {
                             entity.acquired = true;
                             sfx.bossHit();
                             setTimeout(() => { entity.dead = true; }, 1000);
@@ -1484,13 +1622,19 @@ function gameLoop(timestamp) {
                 screenShake = 15;
                 sfx.stomp(); // Reuse stomp sound for wave
 
-                // Reprogram all unfixed viruses within a large radius
+                // Reprogram all unfixed viruses and destroy any Goombas within a large radius
                 entities.forEach(entity => {
                     if (entity.type === 'omnitrix_virus' && !entity.fixed) {
                         const dist = Math.hypot(mario.x - entity.x, mario.y - entity.y);
                         if (dist < 400) {
                             entity.fixed = true;
                             entity.followTarget = vilgumbobo;
+                        }
+                    } else if (isGoombaType(entity.type) && !entity.dead) {
+                        const dist = Math.hypot(mario.x + mario.width/2 - (entity.x + entity.width/2), mario.y + mario.height/2 - (entity.y + entity.height/2));
+                        if (dist < 400) {
+                            entity.dead = true;
+                            sfx.stomp();
                         }
                     }
                 });
@@ -1682,7 +1826,7 @@ function gameLoop(timestamp) {
 
                 entities.forEach(entity => {
                     if (entity.dead) return;
-                    if (entity.type === 'goomba') {
+                    if (isGoombaType(entity.type)) {
                         const ex = entity.x + entity.width / 2;
                         const ey = entity.y + entity.height / 2;
                         const dist = Math.sqrt((cx - ex) ** 2 + (cy - ey) ** 2);
@@ -2175,6 +2319,10 @@ function checkEntityCollision(rect1, rect2) {
         rect1.y < rect2.y + rect2.height &&
         rect1.y + rect1.height > rect2.y
     );
+}
+
+function isGoombaType(type) {
+    return ['goomba', 'lava_goomba', 'ooze_goomba', 'electromba', 'whitewalker_goomba', 'jellyfish_goomba', 'ghost_goomba'].includes(type);
 }
 
 // Start!
