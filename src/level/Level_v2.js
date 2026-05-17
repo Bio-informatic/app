@@ -417,7 +417,7 @@ export class Level {
                 });
             }
 
-            // ── Level 8 Boss Arena (Night King) ───────────────────
+            // ── Level 8 Boss Arena (Knightkomba) ───────────────────
             if (levelIndex === 8) {
                 // Flat snowy ground
                 for (let y = GROUND_Y; y < ROWS; y++) {
@@ -430,7 +430,7 @@ export class Level {
                     map[y][bossZoneStart] = brickChar;
                     map[y][COLS - 1] = brickChar;
                 }
-                // Place Night King
+                // Place Knightkomba
                 this.entities.push({
                     x: (bossZoneStart + 25) * TS,
                     y: (GROUND_Y - 4) * TS,
@@ -931,7 +931,7 @@ export class Level {
             }
             ctx.globalAlpha = 1.0;
             
-            // Night King global summon effect
+            // Knightkomba global summon effect
             if (this.winterGlowTimer > 0) {
                 const ratio = Math.min(1, this.winterGlowTimer / 1000);
                 

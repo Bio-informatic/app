@@ -317,11 +317,6 @@ function loadLevel(index, carryOverState = null) {
 
     if (carryOverState && carryOverState.hasWatch) {
         mario.hasWatch = true;
-        if (carryOverState.alienState === 'FOURARMS') {
-            mario.transformToFourArms();
-        } else if (carryOverState.alienState === 'HEATBLAST') {
-            mario.transformToHeatblast();
-        }
     }
 
     // Pick ONE random box for the special item
@@ -467,7 +462,7 @@ loadLevel(1);
 
 // ─── Modal Buttons ────────────────────────────
 btnNext.addEventListener('click', () => {
-    loadLevel(currentLevelIndex + 1, { hasWatch: mario.hasWatch, alienState: mario.state });
+    loadLevel(currentLevelIndex + 1, { hasWatch: mario.hasWatch });
 });
 
 btnRestart.addEventListener('click', () => {
@@ -879,7 +874,7 @@ function gameLoop(timestamp) {
                     mario.victory = true;
                     sfx.levelComplete();
                     sfx.stopMusic();
-                    showLevelModal('LEVEL 8 COMPLETE!', 'Winter is over! The Night King is shattered!', true);
+                    showLevelModal('LEVEL 8 COMPLETE!', 'Winter is over! Knightkomba is shattered!', true);
                 } else if (currentLevelIndex === 9) {
                     mario.victory = true;
                     sfx.levelComplete();
@@ -1350,7 +1345,7 @@ function gameLoop(timestamp) {
                             }
                         }
                     } else if (entity.type === 'knightkomba') {
-                        // Contact with Night King
+                        // Contact with Knightkomba
                         if (mario.hasDragonglass && mario.state === 'DIAMONDHEAD') {
                             entity.dead = true;
                             mario.hasDragonglass = false; // consumed
@@ -2142,7 +2137,7 @@ function gameLoop(timestamp) {
         ctx.fillText(`Level ${currentLevelIndex}${hudWatch}${hudAlien}${hudAction}${hudDoubleJump}`, 18, 30);
 
         // ── Alien Countdown Timer HUD ─────────
-        if (mario.alienTimer > 0 && (mario.state === 'FOURARMS' || mario.state === 'HEATBLAST' || mario.state === 'XLR8' || mario.state === 'STINKFLY' || mario.state === 'UPGRADE' || mario.state === 'WILDMUTT')) {
+        if (mario.alienTimer > 0 && mario.state !== 'SMALL') {
             const timerBarW = 160;
             const timerBarH = 10;
             const timerX = 8;

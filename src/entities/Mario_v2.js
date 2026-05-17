@@ -214,7 +214,7 @@ export class Mario {
         }
 
         // Alien countdown timer — revert to SMALL after 15 seconds
-        if (this.alienTimer > 0 && (this.state === 'FOURARMS' || this.state === 'HEATBLAST' || this.state === 'XLR8' || this.state === 'STINKFLY' || this.state === 'UPGRADE' || this.state === 'WILDMUTT' || this.state === 'DIAMONDHEAD' || this.state === 'RIPJAWS' || this.state === 'GREYMATTER' || this.state === 'GHOSTFREAK')) {
+        if (this.alienTimer > 0 && this.state !== 'SMALL') {
             const elapsed = performance.now() - this.alienTimer;
             this.alienTimerRemaining = Math.max(0, Math.ceil((this.alienTimerDuration - elapsed) / 1000));
             if (elapsed >= this.alienTimerDuration) {
