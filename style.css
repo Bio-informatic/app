@@ -291,6 +291,19 @@ canvas.level10-theme.fixed {
     color: #39FF14;
 }
 
+#omnitrix-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+#omnitrix-status {
+    font-size: 11px;
+    color: #9ffb8b;
+    text-align: center;
+    min-height: 16px;
+}
+
 /* ===== CONTROLS MODAL ===== */
 .modal-overlay {
     position: absolute;

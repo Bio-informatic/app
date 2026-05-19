@@ -72,6 +72,9 @@ const omnitrixIntro = document.getElementById('omnitrix-intro');
 const btnOmnitrixOk = document.getElementById('btn-omnitrix-ok');
 const omnitrixPanel = document.getElementById('omnitrix-panel');
 const alienGrid = document.getElementById('alien-grid');
+const omnitrixStatus = document.getElementById('omnitrix-status');
+const btnRandomTransform = document.getElementById('btn-random-transform');
+const btnBuyManual = document.getElementById('btn-buy-manual');
 const controlsModal = document.getElementById('controls-modal');
 const btnStartGame = document.getElementById('btn-start-game');
 
@@ -88,6 +91,7 @@ const ALIENS = [
     { key: '9', name: 'Grey Matter', icon: '🐸', unlocked: false, lives: 25 },
     { key: '10', name: 'Ghostfreak', icon: '👻', unlocked: false, lives: 25 },
 ];
+let currentLevelIndex = 1;
 
 function getDefaultBoxEnemyType(levelIndex) {
     if (levelIndex === 3) return 'lava_goomba';
@@ -114,13 +118,81 @@ function createEnemyByType(type, x, y, entitiesArray = null, fromBox = false) {
     return new Goomba(x, y);
 }
 
+let score = 0;
+const manualUnlockByLevel = {};
+const MANUAL_UNLOCK_COST = 3000;
+const SCORE_FOR_ENEMY_KILL = 100;
+const SCORE_FOR_BOSS_KILL = 2000;
+const SCORE_FOR_ITEM = 500;
+const SCORE_FOR_LEVEL_CLEAR = 1000;
+const SCORED_ENEMY_TYPES = new Set([
+    'goomba', 'lava_goomba', 'shield_drone', 'ooze_goomba', 'electromba',
+    'pipe_chomper', 'sludge_bat', 'whitewalker_goomba', 'jellyfish_goomba',
+    'omnitrix_virus', 'ghost_goomba'
+]);
+
+function addScore(points) {
+    score += points;
+}
+
+function hasManualControlForLevel(levelIndex) {
+    return !!manualUnlockByLevel[levelIndex];
+}
+
+function getIntendedAlienIndex(levelIndex) {
+    if (levelIndex < 2 || levelIndex > 11) return -1;
+    return levelIndex - 2;
+}
+
+function getRandomAlienIndex() {
+    const intendedIndex = getIntendedAlienIndex(currentLevelIndex);
+    const previousUnlocked = [];
+    for (let i = 0; i < ALIENS.length; i++) {
+        if (i < intendedIndex && ALIENS[i].unlocked && ALIENS[i].lives > 0) {
+            previousUnlocked.push(i);
+        }
+    }
+
+    const intendedUsable = intendedIndex >= 0 &&
+        ALIENS[intendedIndex] &&
+        ALIENS[intendedIndex].unlocked &&
+        ALIENS[intendedIndex].lives > 0;
+
+    if (intendedUsable && Math.random() < 0.3) return intendedIndex;
+    if (previousUnlocked.length > 0) return previousUnlocked[Math.floor(Math.random() * previousUnlocked.length)];
+    if (intendedUsable) return intendedIndex;
+    return -1;
+}
+
+function randomTransform() {
+    const idx = getRandomAlienIndex();
+    if (idx >= 0) activateAlien(idx);
+}
+
+function updateOmnitrixControls() {
+    if (!omnitrixStatus || !btnBuyManual || !btnRandomTransform) return;
+    const unlocked = hasManualControlForLevel(currentLevelIndex);
+    if (unlocked) {
+        omnitrixStatus.textContent = `Manual mode unlocked for Level ${currentLevelIndex}. Score: ${score}`;
+        btnBuyManual.style.display = 'none';
+        btnRandomTransform.style.display = 'none';
+    } else {
+        omnitrixStatus.textContent = `Random mode (30% level alien). Score: ${score}`;
+        btnBuyManual.style.display = 'block';
+        btnBuyManual.textContent = `Buy Manual Control (${MANUAL_UNLOCK_COST})`;
+        btnBuyManual.disabled = score < MANUAL_UNLOCK_COST;
+        btnRandomTransform.style.display = 'block';
+    }
+}
+
 // ─── Build the alien grid HTML ────────────────
 function renderAlienGrid() {
     alienGrid.innerHTML = '';
     let introMsg = '';
+    const manualUnlocked = hasManualControlForLevel(currentLevelIndex);
     ALIENS.forEach((alien, i) => {
         const slot = document.createElement('div');
-        const isUsable = alien.unlocked && alien.lives > 0;
+        const isUsable = alien.unlocked && alien.lives > 0 && manualUnlocked;
         slot.className = 'alien-slot ' + (isUsable ? 'unlocked' : 'locked');
         const livesDisplay = alien.unlocked ? `<span class="slot-lives">♥${alien.lives}</span>` : '';
         slot.innerHTML = `
@@ -137,7 +209,10 @@ function renderAlienGrid() {
         alienGrid.appendChild(slot);
     });
     const hintBar = document.getElementById('panel-hint-bar');
-    hintBar.innerHTML = `Press <b>1–0</b> to transform • <b>C</b> to close`;
+    hintBar.innerHTML = manualUnlocked
+        ? `Press <b>1–0</b> to transform • <b>C</b> to close`
+        : `Random mode active • Press <b>C</b> to close`;
+    updateOmnitrixControls();
 }
 renderAlienGrid();
 
@@ -148,6 +223,7 @@ function openOmnitrixPanel() {
     if (!mario.hasWatch) return;
     omnitrixPanelOpen = true;
     omnitrixPanel.style.display = 'flex';
+    renderAlienGrid();
     sfx.omnitrixOpen();
 }
 
@@ -212,10 +288,22 @@ function activateAlien(index) {
     }
 }
 
+btnRandomTransform.addEventListener('click', () => {
+    if (hasManualControlForLevel(currentLevelIndex)) return;
+    randomTransform();
+});
+
+btnBuyManual.addEventListener('click', () => {
+    if (hasManualControlForLevel(currentLevelIndex)) return;
+    if (score < MANUAL_UNLOCK_COST) return;
+    score -= MANUAL_UNLOCK_COST;
+    manualUnlockByLevel[currentLevelIndex] = true;
+    renderAlienGrid();
+});
+
 // ─── Core state ──────────────────────────────
 const input = new Input();
 let lastTime = 0;
-let currentLevelIndex = 1;
 let level, mario;
 const entities = [];
 let gameState = 'PLAYING';
@@ -502,8 +590,9 @@ function deathPenalty() {
 
 function showLevelModal(title, message, showNext) {
     gameState = 'WON';
+    addScore(SCORE_FOR_LEVEL_CLEAR);
     modalTitle.textContent = title;
-    modalMessage.textContent = message;
+    modalMessage.textContent = `${message} (+${SCORE_FOR_LEVEL_CLEAR} score)`;
     btnNext.style.display = showNext ? 'block' : 'none';
     modal.style.display = 'flex';
 }
@@ -672,6 +761,7 @@ window.addEventListener('keydown', (e) => {
 
     // Number keys 1–0 transform when panel is open
     if (omnitrixPanelOpen) {
+        if (!hasManualControlForLevel(currentLevelIndex)) return;
         let idx = -1;
         if (e.key >= '1' && e.key <= '9') {
             idx = parseInt(e.key, 10) - 1;
@@ -1058,6 +1148,7 @@ function gameLoop(timestamp) {
                 if (checkEntityCollision(mario, entity)) {
                     if (entity.type === 'heatblast_item') {
                         entity.dead = true;
+                        addScore(SCORE_FOR_ITEM);
                         ALIENS[1].unlocked = true;
                         ALIENS[1].introMessage = 'I am Heatblast! Press F to shoot fireballs! Keep pressing for MORE POWER! 🔥';
                         sfx.collectItem();
@@ -1066,6 +1157,7 @@ function gameLoop(timestamp) {
 
                     } else if (entity.type === 'fourarms_item') {
                         entity.dead = true;
+                        addScore(SCORE_FOR_ITEM);
                         ALIENS[0].unlocked = true;
                         ALIENS[0].introMessage = 'My name is Four Arms. If you need me, press "1".';
                         sfx.collectItem();
@@ -1074,6 +1166,7 @@ function gameLoop(timestamp) {
 
                     } else if (entity.type === 'omnitrix_item') {
                         entity.dead = true;
+                        addScore(SCORE_FOR_ITEM);
                         mario.hasWatch = true;
                         sfx.watchAcquired();
                         showOmnitrixIntro();
@@ -1148,6 +1241,7 @@ function gameLoop(timestamp) {
 
                     } else if (entity.type === 'xlr8_item') {
                         entity.dead = true;
+                        addScore(SCORE_FOR_ITEM);
                         ALIENS[2].unlocked = true;
                         ALIENS[2].introMessage = 'I am XLR8! Super speed! Press F for Speed Dash — nothing can stop me! ⚡';
                         sfx.collectItem();
@@ -1156,6 +1250,7 @@ function gameLoop(timestamp) {
 
                     } else if (entity.type === 'stinkfly_item') {
                         entity.dead = true;
+                        addScore(SCORE_FOR_ITEM);
                         ALIENS[3].unlocked = true;
                         ALIENS[3].introMessage = 'I am Stinkfly! Press and hold [Up] to hover! Press [F] to spit toxic slime! 🪰';
                         sfx.collectItem();
@@ -1164,6 +1259,7 @@ function gameLoop(timestamp) {
 
                     } else if (entity.type === 'upgrade_item') {
                         entity.dead = true;
+                        addScore(SCORE_FOR_ITEM);
                         ALIENS[4].unlocked = true;
                         ALIENS[4].introMessage = 'I am Upgrade! Press [F] near machines to merge and hack them! 💻';
                         sfx.collectItem();
@@ -1172,6 +1268,7 @@ function gameLoop(timestamp) {
 
                     } else if (entity.type === 'diamondhead_item') {
                         entity.dead = true;
+                        addScore(SCORE_FOR_ITEM);
                         ALIENS[6].unlocked = true;
                         ALIENS[6].introMessage = 'I am Diamondhead! Press F to shoot crystal shards! 💎';
                         mario.transformToDiamondhead();
@@ -1180,6 +1277,7 @@ function gameLoop(timestamp) {
                         openOmnitrixPanel();
                     } else if (entity.type === 'dragonglass_item') {
                         entity.dead = true;
+                        addScore(SCORE_FOR_ITEM);
                         mario.hasDragonglass = true;
                         sfx.collectItem();
                         // Flash screen
@@ -1306,6 +1404,7 @@ function gameLoop(timestamp) {
                         }
                     } else if (entity.type === 'wild_mutt_item') {
                         entity.dead = true;
+                        addScore(SCORE_FOR_ITEM);
                         ALIENS[5].unlocked = true;
                         ALIENS[5].introMessage = 'I am Wild Mutt! My senses are sharp! Press F to POUNCE and see HIDDEN ENEMIES! 🐺';
                         mario.transformToWildMutt();
@@ -1429,6 +1528,7 @@ function gameLoop(timestamp) {
                         }
                     } else if (entity.type === 'ripjaws_item') {
                         entity.dead = true;
+                        addScore(SCORE_FOR_ITEM);
                         ALIENS[7].unlocked = true;
                         ALIENS[7].introMessage = 'I am Ripjaws! I am the master of the sea! Press F to emit SONAR WAVES! 🦈';
                         mario.transformToRipjaws();
@@ -1484,6 +1584,7 @@ function gameLoop(timestamp) {
                         }
                     } else if (entity.type === 'grey_matter_item') {
                         entity.dead = true;
+                        addScore(SCORE_FOR_ITEM);
                         ALIENS[8].unlocked = true;
                         ALIENS[8].introMessage = 'I am Grey Matter! Small but highly intelligent! Hold F for 2 seconds to reprogram nearby viruses! 🐸';
                         mario.transformToGreyMatter();
@@ -1523,6 +1624,7 @@ function gameLoop(timestamp) {
                         }
                     } else if (entity.type === 'ghostfreak_item') {
                         entity.dead = true;
+                        addScore(SCORE_FOR_ITEM);
                         ALIENS[9].unlocked = true;
                         ALIENS[9].introMessage = 'I am Ghostfreak! Hold F to pass through walls, and hold F for 5 seconds to acquire enemy bodies! 👻';
                         mario.transformToGhostfreak();
@@ -1681,6 +1783,7 @@ function gameLoop(timestamp) {
                 if (entities[i].dead) {
                     // Check if Goombaba died
                     if (entities[i] === goombaba) {
+                        addScore(SCORE_FOR_BOSS_KILL);
                         bossDefeated = true;
                         goombaba = null;
                         screenShake = 20;
@@ -1696,6 +1799,7 @@ function gameLoop(timestamp) {
                     }
                     // Check if Turtumba died
                     if (entities[i] === turtumba) {
+                        addScore(SCORE_FOR_BOSS_KILL);
                         turtumbaDefeated = true;
                         turtumba = null;
                         screenShake = 25;
@@ -1708,6 +1812,7 @@ function gameLoop(timestamp) {
                         level.finishCols.set(flagX, { topRow: 4, bottomRow: level.rows - 1 });
                     }
                     if (entities[i] === bomba && bomba.dead) {
+                        addScore(SCORE_FOR_BOSS_KILL);
                         bombaDefeated = true;
                         bomba = null;
                         console.log('BOMBA DEFEATED!');
@@ -1718,6 +1823,7 @@ function gameLoop(timestamp) {
                         level.finishCols.set(flagX, { topRow: 4, bottomRow: level.rows - 1 });
                     }
                     if (entities[i] === gomrog && gomrog.dead) {
+                        addScore(SCORE_FOR_BOSS_KILL);
                         gomrogDefeated = true;
                         gomrog = null;
                         console.log('GOMROG DEFEATED!');
@@ -1730,6 +1836,7 @@ function gameLoop(timestamp) {
                         level.finishCols.set(flagX, { topRow: 4, bottomRow: level.rows - 1 });
                     }
                     if (entities[i] === gomboto && gomboto.dead) {
+                        addScore(SCORE_FOR_BOSS_KILL);
                         gombotoDefeated = true;
                         gomboto = null;
                         console.log('GOMBOTO DEFEATED!');
@@ -1742,6 +1849,7 @@ function gameLoop(timestamp) {
                         level.finishCols.set(flagX, { topRow: 4, bottomRow: level.rows - 1 });
                     }
                     if (entities[i] === gorillomba && gorillomba.dead) {
+                        addScore(SCORE_FOR_BOSS_KILL);
                         gorillombaDefeated = true;
                         gorillomba = null;
                         console.log('GORILLOMBA DEFEATED!');
@@ -1754,6 +1862,7 @@ function gameLoop(timestamp) {
                         level.finishCols.set(gFlagX, { topRow: 4, bottomRow: level.rows - 1 });
                     }
                     if (entities[i] === knightkomba && knightkomba.dead) {
+                        addScore(SCORE_FOR_BOSS_KILL);
                         knightkombaDefeated = true;
                         knightkomba = null;
                         console.log('KNIGHTKOMBA DEFEATED!');
@@ -1766,6 +1875,7 @@ function gameLoop(timestamp) {
                         level.finishCols.set(flagX, { topRow: 4, bottomRow: level.rows - 1 });
                     }
                     if (entities[i] === vilgumbobo && vilgumbobo.dead) {
+                        addScore(SCORE_FOR_BOSS_KILL);
                         vilgumboboDefeated = true;
                         vilgumbobo = null;
                         level.omnitrixFixed = true;
@@ -1780,6 +1890,7 @@ function gameLoop(timestamp) {
                         level.finishCols.set(flagX, { topRow: 4, bottomRow: level.rows - 1 });
                     }
                     if (entities[i] === freakosto && freakosto.dead) {
+                        addScore(SCORE_FOR_BOSS_KILL);
                         freakostoDefeated = true;
                         freakosto = null;
                         console.log('FREAKOSTO DEFEATED!');
@@ -1792,6 +1903,7 @@ function gameLoop(timestamp) {
                         level.finishCols.set(flagX, { topRow: 4, bottomRow: level.rows - 1 });
                     }
                     if (entities[i] === octumba && octumba.dead) {
+                        addScore(SCORE_FOR_BOSS_KILL);
                         octumbaDefeated = true;
                         octumba = null;
                         console.log('OCTUMBA DEFEATED!');
@@ -1802,6 +1914,9 @@ function gameLoop(timestamp) {
                             level.tiles[fy][flagX] = 5;
                         }
                         level.finishCols.set(flagX, { topRow: 4, bottomRow: level.rows - 1 });
+                    }
+                    if (SCORED_ENEMY_TYPES.has(entities[i].type)) {
+                        addScore(SCORE_FOR_ENEMY_KILL);
                     }
                     entities.splice(i, 1);
                 }
@@ -2109,7 +2224,7 @@ function gameLoop(timestamp) {
 
         // ── HUD ───────────────────────────────
         ctx.fillStyle = 'rgba(0,0,0,0.45)';
-        ctx.fillRect(8, 8, 340, 32);
+        ctx.fillRect(8, 8, 520, 32);
         ctx.fillStyle = 'white';
         ctx.font = 'bold 14px sans-serif';
         ctx.textAlign = 'left';
@@ -2134,7 +2249,8 @@ function gameLoop(timestamp) {
         else if (mario.state === 'XLR8') hudAction = dashReady ? ' [F]⚡DASH' : (mario.dashActive ? ' ⚡DASHING!' : ' [F]⏳');
         else if (mario.state === 'STINKFLY') hudAction = ' [F]💧Slime | [Up]Hover';
         const hudDoubleJump = mario.doubleJumpsRemaining > 0 ? ` ⬆⬆×${mario.doubleJumpsRemaining}` : '';
-        ctx.fillText(`Level ${currentLevelIndex}${hudWatch}${hudAlien}${hudAction}${hudDoubleJump}`, 18, 30);
+        const controlMode = hasManualControlForLevel(currentLevelIndex) ? 'MANUAL' : 'RANDOM';
+        ctx.fillText(`Level ${currentLevelIndex}${hudWatch}${hudAlien}${hudAction}${hudDoubleJump} | Score ${score} | ${controlMode}`, 18, 30);
 
         // ── Alien Countdown Timer HUD ─────────
         if (mario.alienTimer > 0 && mario.state !== 'SMALL') {
