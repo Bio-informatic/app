@@ -65,20 +65,17 @@
 
         <!-- Omnitrix Watch Panel (toggle with C) -->
         <div id="omnitrix-panel">
-            <div id="omnitrix-panel-header">
-                <span class="omnitrix-logo-small">⌚</span>
-                <span>OMNITRIX</span>
-                <span class="panel-hint">[C] to close</span>
-            </div>
             <div id="alien-grid">
-                <!-- 10 slots, filled by JS -->
+                <!-- 10 slots, filled by JS in a circle -->
             </div>
-            <div id="omnitrix-controls">
-                <div id="omnitrix-status"></div>
-                <button id="btn-random-transform" class="btn btn-primary">Random Transform</button>
-                <button id="btn-buy-manual" class="btn">Buy Manual Control</button>
+            <div id="omnitrix-controls-wrapper">
+                <div id="omnitrix-controls">
+                    <div id="omnitrix-status"></div>
+                    <button id="btn-random-transform" class="btn btn-primary">Random</button>
+                    <button id="btn-buy-manual" class="btn">Buy Manual</button>
+                    <div id="panel-hint-bar">Press <b>0–9</b> to transform</div>
+                </div>
             </div>
-            <div id="panel-hint-bar">Press <b>0–9</b> to transform • <b>C</b> to close</div>
         </div>
 
     </div>

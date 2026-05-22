@@ -186,32 +186,115 @@ function updateOmnitrixControls() {
 }
 
 // ─── Build the alien grid HTML ────────────────
+let alienIcons = {};
+
+function generateAlienIcons() {
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = 150;
+    tempCanvas.height = 150;
+    const tctx = tempCanvas.getContext('2d');
+
+    const dummyMario = new Mario(0, 0, { isDown: () => false });
+    
+    const states = [
+        { name: 'FOURARMS', key: '1' },
+        { name: 'HEATBLAST', key: '2' },
+        { name: 'XLR8', key: '3' },
+        { name: 'STINKFLY', key: '4' },
+        { name: 'UPGRADE', key: '5' },
+        { name: 'WILDMUTT', key: '6' },
+        { name: 'DIAMONDHEAD', key: '7' },
+        { name: 'RIPJAWS', key: '8' },
+        { name: 'GREYMATTER', key: '9' },
+        { name: 'GHOSTFREAK', key: '10' }
+    ];
+
+    states.forEach(s => {
+        tctx.clearRect(0, 0, 150, 150);
+        dummyMario.state = s.name;
+        dummyMario.grounded = true;
+        dummyMario.vx = 0;
+        dummyMario.vy = 0;
+        
+        if (s.name === 'FOURARMS' || s.name === 'HEATBLAST') {
+            dummyMario.width = 48; dummyMario.height = 64;
+        } else if (s.name === 'XLR8') {
+            dummyMario.width = 40; dummyMario.height = 56;
+        } else if (s.name === 'STINKFLY') {
+            dummyMario.width = 45; dummyMario.height = 50;
+        } else if (s.name === 'UPGRADE') {
+            dummyMario.width = 36; dummyMario.height = 50;
+        } else if (s.name === 'WILDMUTT') {
+            dummyMario.width = 52; dummyMario.height = 48;
+        } else if (s.name === 'DIAMONDHEAD') {
+            dummyMario.width = 44; dummyMario.height = 60;
+        } else if (s.name === 'RIPJAWS') {
+            dummyMario.width = 40; dummyMario.height = 55;
+        } else if (s.name === 'GREYMATTER') {
+            dummyMario.width = 16; dummyMario.height = 24;
+        } else if (s.name === 'GHOSTFREAK') {
+            dummyMario.width = 40; dummyMario.height = 50;
+        }
+
+        dummyMario.x = 75 - dummyMario.width / 2;
+        dummyMario.y = 75 - dummyMario.height / 2;
+        dummyMario.facingRight = true;
+        dummyMario.transforming = false;
+        
+        try {
+            dummyMario.draw(tctx);
+            alienIcons[s.name] = tempCanvas.toDataURL();
+        } catch (e) {
+            console.error("Failed to draw alien icon for " + s.name, e);
+        }
+    });
+}
+
 function renderAlienGrid() {
+    if (Object.keys(alienIcons).length === 0) {
+        generateAlienIcons();
+    }
+
     alienGrid.innerHTML = '';
-    let introMsg = '';
     const manualUnlocked = hasManualControlForLevel(currentLevelIndex);
+    const radius = 210; 
+    const centerX = 270; 
+    const centerY = 270;
+
     ALIENS.forEach((alien, i) => {
         const slot = document.createElement('div');
-        const isUsable = alien.unlocked && alien.lives > 0 && manualUnlocked;
-        slot.className = 'alien-slot ' + (isUsable ? 'unlocked' : 'locked');
-        const livesDisplay = alien.unlocked ? `<span class="slot-lives">♥${alien.lives}</span>` : '';
+        const isUnlocked = !!alien.unlocked; // Direct check
+        const isUsable = isUnlocked && alien.lives > 0 && manualUnlocked;
+        
+        slot.className = 'alien-slot ' + (isUnlocked ? 'unlocked' : 'locked');
+        
+        const angle = (i * (360 / ALIENS.length) - 90) * (Math.PI / 180);
+        const x = centerX + radius * Math.cos(angle) - 45; 
+        const y = centerY + radius * Math.sin(angle) - 45;
+        
+        slot.style.left = `${x}px`;
+        slot.style.top = `${y}px`;
+
+        const livesDisplay = isUnlocked ? `<span class="slot-lives">♥${alien.lives}</span>` : '';
+        const stateName = alien.name.toUpperCase().replace(' ', '');
+        const iconUrl = alienIcons[stateName];
+
         slot.innerHTML = `
-            <span class="slot-key">[${alien.key}]</span>
-            <span class="slot-icon">${alien.icon}</span>
-            <span class="slot-name">${alien.unlocked ? alien.name : '???'}</span>
+            <span class="slot-key">${alien.key}</span>
+            <div class="slot-icon">
+                ${isUnlocked && iconUrl ? `<img src="${iconUrl}" alt="${alien.name}">` : `<span style="font-size:32px; color:#39FF1433">?</span>`}
+            </div>
+            <span class="slot-name">${isUnlocked ? alien.name : 'REDACTED'}</span>
             ${livesDisplay}
         `;
         if (isUsable) {
-            slot.title = `Press ${alien.key} to transform into ${alien.name} (${alien.lives} uses left)`;
-            slot.addEventListener('click', () => activateAlien(i));
-            if (alien.introMessage) introMsg = alien.introMessage;
+            slot.title = `TRANSFORM: ${alien.key} • ${alien.name} (${alien.lives} left)`;
+            slot.onclick = () => activateAlien(i);
         }
+
         alienGrid.appendChild(slot);
     });
-    const hintBar = document.getElementById('panel-hint-bar');
-    hintBar.innerHTML = manualUnlocked
-        ? `Press <b>1–0</b> to transform • <b>C</b> to close`
-        : `Random mode active • Press <b>C</b> to close`;
+    
     updateOmnitrixControls();
 }
 renderAlienGrid();
