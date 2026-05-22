@@ -133,6 +133,8 @@ export class Mario {
     revertToSmall() {
         if (this.state === 'SMALL') return;
         this.state = 'SMALL';
+        this.transforming = true;
+        this.transformTimer = performance.now();
         this.y += (this.height - 32);
         this.width = 32;
         this.height = 32;
@@ -508,21 +510,7 @@ export class Mario {
 
     draw(ctx) {
         if (this.transforming) {
-            for (let i = 0; i < 20; i++) {
-                const rx = this.x + Math.random() * this.width;
-                const ry = this.y + Math.random() * this.height;
-                let colors;
-                if (this.state === 'HEATBLAST') colors = ['#FF4400', '#FFCC00', '#8B0000', '#FFD700'];
-                else if (this.state === 'XLR8') colors = ['#00FFFF', '#0A0A2E', '#000', '#00AAFF'];
-                else colors = ['#C80000', '#FFF', '#000', '#00FF00'];
-                ctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
-                ctx.fillRect(rx, ry, 4, 4);
-            }
-            let strokeColor = '#C80000';
-            if (this.state === 'HEATBLAST') strokeColor = '#FF4400';
-            else if (this.state === 'XLR8') strokeColor = '#00FFFF';
-            ctx.strokeStyle = strokeColor;
-            ctx.strokeRect(this.x, this.y, this.width, this.height);
+            this.drawTransformation(ctx);
             return;
         }
 
@@ -549,6 +537,75 @@ export class Mario {
         } else {
             this.drawMario(ctx);
         }
+    }
+
+    drawTransformation(ctx) {
+        const now = performance.now();
+        const elapsed = now - this.transformTimer;
+        const duration = 1000;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        ctx.save();
+        const cx = this.x + this.width / 2;
+        const cy = this.y + this.height / 2;
+
+        // 1. Signature Green Flash
+        const flashRadius = progress < 0.5 
+            ? progress * 400 
+            : (1 - progress) * 400;
+        
+        const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, flashRadius);
+        gradient.addColorStop(0, '#FFFFFF');
+        gradient.addColorStop(0.3, '#39FF14');
+        gradient.addColorStop(1, 'rgba(0, 255, 0, 0)');
+        
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(cx, cy, flashRadius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 2. Silhouette Blending
+        ctx.globalAlpha = progress < 0.5 ? progress * 2 : (1 - progress) * 2;
+        ctx.save();
+        // Draw a "shadow" of the target form
+        ctx.filter = 'brightness(0) drop-shadow(0 0 10px #39FF14)';
+        if (this.state === 'HEATBLAST') this.drawHeatblast(ctx);
+        else if (this.state === 'FOURARMS') this.drawFourArms(ctx);
+        else if (this.state === 'XLR8') this.drawXLR8(ctx);
+        else if (this.state === 'STINKFLY') this.drawStinkfly(ctx);
+        else if (this.state === 'UPGRADE') this.drawUpgrade(ctx);
+        else if (this.state === 'WILDMUTT') this.drawWildMutt(ctx);
+        else if (this.state === 'DIAMONDHEAD') this.drawDiamondhead(ctx);
+        else if (this.state === 'RIPJAWS') this.drawRipjaws(ctx);
+        else if (this.state === 'GREYMATTER') this.drawGreyMatter(ctx);
+        else if (this.state === 'GHOSTFREAK') this.drawGhostfreak(ctx);
+        else this.drawMario(ctx);
+        ctx.restore();
+
+        // 3. Shockwaves
+        ctx.globalAlpha = 1 - progress;
+        ctx.strokeStyle = '#39FF14';
+        ctx.lineWidth = 4;
+        for (let i = 0; i < 3; i++) {
+            const waveProgress = (progress + i * 0.3) % 1;
+            const r = waveProgress * 150;
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
+        // 4. Pixel Particles
+        ctx.globalAlpha = 1.0;
+        for (let i = 0; i < 15; i++) {
+            const angle = (i / 15) * Math.PI * 2 + (progress * 5);
+            const dist = 30 + progress * 100;
+            const px = cx + Math.cos(angle) * dist;
+            const py = cy + Math.sin(angle) * dist;
+            ctx.fillStyle = i % 2 === 0 ? '#39FF14' : '#FFF';
+            ctx.fillRect(px, py, 4, 4);
+        }
+
+        ctx.restore();
     }
 
     drawGhostfreak(ctx) {

@@ -348,6 +348,7 @@ function activateAlien(index) {
     renderAlienGrid();
 
     sfx.transform();
+    screenShake = 15;
     if (alien.name === 'Four Arms') {
         mario.transformToFourArms();
     } else if (alien.name === 'Heatblast') {
@@ -874,7 +875,8 @@ window.addEventListener('contextmenu', (e) => {
 // ─── Main Game Loop ───────────────────────────
 function gameLoop(timestamp) {
     try {
-        const deltaTime = Math.min(timestamp - lastTime, 50);
+        let deltaTime = Math.min(timestamp - lastTime, 50);
+        if (mario.transforming) deltaTime *= 0.3; // Cinematic slow-mo during transformation
         lastTime = timestamp;
 
         ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
