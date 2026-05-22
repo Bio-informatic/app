@@ -430,6 +430,12 @@ let gombotoDefeated = false;
 let gorillomba = null;
 let gorillombaDefeated = false;
 
+// ─── Level Timer Logic ───
+let levelTimeRemaining = 300; // 5 minutes
+let levelStartScore = 0;      // Backup to reset score for that level
+let levelRestartFlashActive = false;
+let levelRestartFlashTimer = 0;
+
 // Knightkomba boss reference
 let knightkomba = null;
 let knightkombaDefeated = false;
@@ -483,6 +489,11 @@ function assignBlockHit() {
 function loadLevel(index, carryOverState = null) {
     currentLevelIndex = index;
     level = new Level(index);
+    
+    // Timer Init
+    levelTimeRemaining = 300;
+    levelStartScore = score;
+    levelRestartFlashActive = false;
 
     const startY = (level.rows - 7) * level.tileSize;
     mario = new Mario(100, startY, input);
@@ -878,6 +889,25 @@ function gameLoop(timestamp) {
         let deltaTime = Math.min(timestamp - lastTime, 50);
         if (mario.transforming) deltaTime *= 0.3; // Cinematic slow-mo during transformation
         lastTime = timestamp;
+
+        // --- Level Timer Logic ---
+        if (gameState === 'PLAYING' && !levelRestartFlashActive) {
+            levelTimeRemaining -= deltaTime / 1000;
+            if (levelTimeRemaining <= 0) {
+                levelTimeRemaining = 0;
+                levelRestartFlashActive = true;
+                levelRestartFlashTimer = performance.now();
+                sfx.stopMusic();
+                // Play a failure sound if available, else death
+                if (sfx.death) sfx.death(); 
+            }
+        }
+        
+        // Handle Auto-Restart after 2s of red flash
+        if (levelRestartFlashActive && performance.now() - levelRestartFlashTimer > 2000) {
+            score = levelStartScore;
+            loadLevel(currentLevelIndex, { hasWatch: mario.hasWatch });
+        }
 
         ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
@@ -2500,6 +2530,64 @@ function gameLoop(timestamp) {
         }
 
         requestAnimationFrame(gameLoop);
+
+        // --- Level Timer HUD (Bar) ---
+        if (gameState === 'PLAYING' || levelRestartFlashActive) {
+            ctx.save();
+            ctx.resetTransform();
+            
+            const barW = 180;
+            const barH = 10;
+            const barX = 18;
+            const barY = 56; // Beneath the main top-left HUD (32 + 24)
+
+            // Bar Background Sheet
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fillRect(barX - 10, barY - 18, barW + 20, barH + 28);
+
+            // Label
+            ctx.fillStyle = '#FFD700';
+            ctx.font = 'bold 11px sans-serif';
+            ctx.fillText('MISSION TIME', barX, barY - 5);
+            
+            // Bar Track
+            ctx.fillStyle = '#222';
+            ctx.fillRect(barX, barY, barW, barH);
+            
+            // Bar Progress
+            const ratio = Math.max(0, levelTimeRemaining) / 300;
+            const isCritical = levelTimeRemaining < 60;
+            
+            if (isCritical) {
+                const pulse = 0.5 + Math.abs(Math.sin(performance.now() / 150)) * 0.5;
+                ctx.fillStyle = `rgba(255, 0, 0, ${pulse})`;
+            } else {
+                ctx.fillStyle = '#00FF44'; // Neon Green
+            }
+            
+            ctx.fillRect(barX, barY, barW * ratio, barH);
+            
+            // Border
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(barX, barY, barW, barH);
+
+            // --- Level Timeout Flash ---
+            if (levelRestartFlashActive) {
+                const pulse = Math.abs(Math.sin((performance.now() - levelRestartFlashTimer) / 150));
+                ctx.fillStyle = `rgba(255, 0, 0, ${pulse * 0.5})`;
+                ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+                
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = 'bold 50px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.shadowBlur = 20;
+                ctx.fillText('LEVEL TIME EXCEEDED!', GAME_WIDTH / 2, GAME_HEIGHT / 2);
+                ctx.font = '24px sans-serif';
+                ctx.fillText('Restarting Level & Resetting Local Score...', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 50);
+            }
+            ctx.restore();
+        }
     } catch (e) {
         console.error(e);
         ctx.resetTransform();
