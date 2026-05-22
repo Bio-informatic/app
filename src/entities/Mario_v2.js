@@ -74,12 +74,61 @@ export class Mario {
         this.hackingWaveTriggered = false;
     }
 
+    startAlienTimer() {
+        this.alienTimer = performance.now();
+        // Random duration between 15 and 25 seconds (15000ms to 25000ms)
+        this.alienTimerDuration = 15000 + Math.random() * 10000;
+        this.transforming = true;
+        this.transformTimer = this.alienTimer;
+    }
+
+    getOmnitrixColor() {
+        if (this.state === 'SMALL' || this.alienTimer <= 0) return '#39FF14';
+        const elapsed = performance.now() - this.alienTimer;
+        const remaining = (this.alienTimerDuration - elapsed) / 1000;
+        if (remaining <= 4) {
+            const flash = Math.floor(performance.now() / 250) % 2 === 0;
+            return flash ? '#FF2222' : '#39FF14';
+        }
+        return '#39FF14';
+    }
+
+    applyOmnitrixGlow(ctx, ox = 0, oy = 0) {
+        const color = this.getOmnitrixColor();
+        ctx.fillStyle = color;
+        const isRed = (color === '#FF2222');
+        
+        if (isRed) {
+            const now = performance.now();
+            // Large transparent halo backing
+            ctx.save();
+            const pulse = 0.45 + Math.sin(now / 100) * 0.25;
+            const radius = 28 + Math.sin(now / 100) * 8;
+            const grad = ctx.createRadialGradient(ox, oy, 2, ox, oy, radius);
+            grad.addColorStop(0, `rgba(255, 0, 0, ${pulse})`);
+            grad.addColorStop(0.7, `rgba(255, 0, 0, ${pulse * 0.3})`);
+            grad.addColorStop(1, 'rgba(255, 0, 0, 0)');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(ox, oy, radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+
+            // Core symbol glow
+            ctx.shadowBlur = 25 + Math.sin(now / 50) * 15;
+            ctx.shadowColor = '#FF0000';
+            ctx.fillStyle = color;
+        } else {
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#39FF14';
+        }
+        return color;
+    }
+
     transformToRipjaws() {
         if (this.state === 'RIPJAWS') return;
         this.state = 'RIPJAWS';
-        this.transforming = true;
-        this.transformTimer = performance.now();
-        this.alienTimer = performance.now();
+        this.startAlienTimer();
         if (this.height < 55) this.y -= (55 - this.height);
         this.width = 40;
         this.height = 55;
@@ -88,9 +137,7 @@ export class Mario {
     transformToGreyMatter() {
         if (this.state === 'GREYMATTER') return;
         this.state = 'GREYMATTER';
-        this.transforming = true;
-        this.transformTimer = performance.now();
-        this.alienTimer = performance.now();
+        this.startAlienTimer();
         this.y += (this.height - 24);
         this.width = 16;
         this.height = 24;
@@ -99,9 +146,7 @@ export class Mario {
     transformToGhostfreak() {
         if (this.state === 'GHOSTFREAK') return;
         this.state = 'GHOSTFREAK';
-        this.transforming = true;
-        this.transformTimer = performance.now();
-        this.alienTimer = performance.now();
+        this.startAlienTimer();
         if (this.height < 50) this.y -= (50 - this.height);
         this.width = 40;
         this.height = 50;
@@ -110,9 +155,7 @@ export class Mario {
     transformToFourArms() {
         if (this.state === 'FOURARMS') return;
         this.state = 'FOURARMS';
-        this.transforming = true;
-        this.transformTimer = performance.now();
-        this.alienTimer = performance.now();
+        this.startAlienTimer();
         this.y -= 16;
         this.width = 48;
         this.height = 64;
@@ -121,9 +164,7 @@ export class Mario {
     transformToHeatblast() {
         if (this.state === 'HEATBLAST') return;
         this.state = 'HEATBLAST';
-        this.transforming = true;
-        this.transformTimer = performance.now();
-        this.alienTimer = performance.now();
+        this.startAlienTimer();
         // Heatblast is similar size to Four Arms
         if (this.height < 64) this.y -= (64 - this.height);
         this.width = 48;
@@ -155,9 +196,7 @@ export class Mario {
     transformToXLR8() {
         if (this.state === 'XLR8') return;
         this.state = 'XLR8';
-        this.transforming = true;
-        this.transformTimer = performance.now();
-        this.alienTimer = performance.now();
+        this.startAlienTimer();
         if (this.height < 56) this.y -= (56 - this.height);
         this.width = 40;
         this.height = 56;
@@ -166,9 +205,7 @@ export class Mario {
     transformToStinkfly() {
         if (this.state === 'STINKFLY') return;
         this.state = 'STINKFLY';
-        this.transforming = true;
-        this.transformTimer = performance.now();
-        this.alienTimer = performance.now();
+        this.startAlienTimer();
         if (this.height < 50) this.y -= (50 - this.height);
         this.width = 45;
         this.height = 50;
@@ -178,9 +215,7 @@ export class Mario {
     transformToUpgrade() {
         if (this.state === 'UPGRADE') return;
         this.state = 'UPGRADE';
-        this.transforming = true;
-        this.transformTimer = performance.now();
-        this.alienTimer = performance.now();
+        this.startAlienTimer();
         if (this.height < 50) this.y -= (50 - this.height);
         this.width = 36;
         this.height = 50;
@@ -189,9 +224,7 @@ export class Mario {
     transformToWildMutt() {
         if (this.state === 'WILDMUTT') return;
         this.state = 'WILDMUTT';
-        this.transforming = true;
-        this.transformTimer = performance.now();
-        this.alienTimer = performance.now();
+        this.startAlienTimer();
         if (this.height < 48) this.y -= (48 - this.height);
         this.width = 52;
         this.height = 48;
@@ -200,9 +233,7 @@ export class Mario {
     transformToDiamondhead() {
         if (this.state === 'DIAMONDHEAD') return;
         this.state = 'DIAMONDHEAD';
-        this.transforming = true;
-        this.transformTimer = performance.now();
-        this.alienTimer = performance.now();
+        this.startAlienTimer();
         if (this.height < 60) this.y -= (60 - this.height);
         this.width = 44;
         this.height = 60;
@@ -732,7 +763,7 @@ export class Mario {
         ctx.stroke();
 
         // Chest Slit & Omnitrix Symbol
-        ctx.fillStyle = '#FFFFFF';
+        this.applyOmnitrixGlow(ctx, -2, 5);
         ctx.beginPath();
         ctx.ellipse(-2, 5, 2, 6, Math.PI / 8, 0, Math.PI * 2);
         ctx.fill();
@@ -744,6 +775,7 @@ export class Mario {
         ctx.strokeStyle = blackLine;
         ctx.lineWidth = 1;
         ctx.stroke();
+        ctx.shadowBlur = 0;
 
         // Eye
         ctx.fillStyle = '#000000'; // black track around eye
@@ -819,13 +851,15 @@ export class Mario {
         ctx.scale(scaleFactor, scaleFactor);
 
         // White backpack element (draw before torso so it's behind)
-        ctx.fillStyle = '#D3D3D3';
+        // Omnitrix on back
+        this.applyOmnitrixGlow(ctx, -4, -18);
         ctx.beginPath();
-        ctx.arc(-4, -18, 6, 0, Math.PI * 2);
+        ctx.arc(-4, -18, 2.5, 0, Math.PI * 2);
         ctx.fill();
         ctx.lineWidth = 1;
         ctx.strokeStyle = '#000';
         ctx.stroke();
+        ctx.shadowBlur = 0;
 
         // Webbed Feet (Grey)
         ctx.fillStyle = '#848B8A';
@@ -974,8 +1008,9 @@ export class Mario {
         // Chest/Omnitrix
         ctx.fillStyle = '#000000';
         ctx.fillRect(-4, -18, 8, 8);
-        ctx.fillStyle = '#39FF14';
+        this.applyOmnitrixGlow(ctx, 0, -14);
         ctx.beginPath(); ctx.arc(0, -14, 2, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
 
         // Head
         ctx.fillStyle = '#00FFFF'; // Bright cyan crystal head
@@ -1083,9 +1118,13 @@ export class Mario {
 
         ctx.fillStyle = '#000';
         ctx.beginPath(); ctx.arc(0, -18, 3, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#39FF14';
+        
+        // Halo around hourglass (-18 is the local Y of the watch)
+        this.applyOmnitrixGlow(ctx, 0, -18);
+        
         ctx.beginPath(); ctx.moveTo(-2, -18); ctx.lineTo(2, -20); ctx.lineTo(2, -16); ctx.fill();
         ctx.beginPath(); ctx.moveTo(-2, -18); ctx.lineTo(2, -16); ctx.lineTo(2, -20); ctx.fill();
+        ctx.shadowBlur = 0;
 
         ctx.fillStyle = '#C80000';
         ctx.fillRect(-3, -27, 6, 5);
@@ -1152,8 +1191,12 @@ export class Mario {
         // Omnitrix on chest
         ctx.fillStyle = '#000';
         ctx.beginPath(); ctx.arc(0, -16, 3, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#39FF14';
+        
+        // Halo around chest watch (-16 is the local Y)
+        this.applyOmnitrixGlow(ctx, 0, -16);
+        
         ctx.beginPath(); ctx.moveTo(-2, -16); ctx.lineTo(2, -18); ctx.lineTo(2, -14); ctx.fill();
+        ctx.shadowBlur = 0;
 
         // Head — dark red
         ctx.fillStyle = '#7A0000';
@@ -1297,10 +1340,11 @@ export class Mario {
         ctx.stroke();
 
         // === OMNITRIX ===
-        ctx.fillStyle = '#39FF14'; // Bright green
+        this.applyOmnitrixGlow(ctx, 4, -18);
         ctx.beginPath();
         ctx.arc(4, -18, 2, 0, Math.PI * 2);
         ctx.fill();
+        ctx.shadowBlur = 0;
         ctx.fillStyle = '#111';
         ctx.fillRect(3, -19, 2, 2);
 
@@ -1456,10 +1500,11 @@ export class Mario {
         // Omnitrix symbol
         ctx.fillStyle = '#000';
         ctx.fillRect(bX + 15, bY + 18, 10, 10);
-        ctx.fillStyle = '#39FF14';
+        this.applyOmnitrixGlow(ctx, bX + 20, bY + 23); // Centered halo
         ctx.fillRect(bX + 17, bY + 20, 6, 6);
+        ctx.shadowBlur = 0;
         ctx.fillStyle = '#000';
-        ctx.fillRect(bX + 19, bY + 20, 2, 6); // simple hourglass shape impression
+        ctx.fillRect(bX + 19, bY + 20, 2, 6); 
 
         // Legs (Spindly, bent)
         ctx.fillStyle = '#111';
@@ -1574,7 +1619,7 @@ export class Mario {
         ctx.fillStyle = '#000';
         ctx.beginPath(); ctx.arc(0, 0, 5, 0, Math.PI * 2); ctx.fill();
         
-        ctx.fillStyle = circuitColor;
+        this.applyOmnitrixGlow(ctx, 0, 0);
         // Hourglass shape
         ctx.beginPath();
         ctx.moveTo(-3, -3); ctx.lineTo(3, 3);
@@ -1582,6 +1627,7 @@ export class Mario {
         ctx.lineTo(-3, 3); ctx.lineTo(3, -3);
         ctx.arc(0, 0, 4, (5*Math.PI)/4, (7*Math.PI)/4);
         ctx.fill();
+        ctx.shadowBlur = 0;
 
         ctx.restore();
     }
@@ -1836,17 +1882,18 @@ export class Mario {
             ctx.fill();
         }
 
-        // ── 11. OMNITRIX (green hourglass on collar/neck-base) ───────
+        // ── 11. OMNITRIX (green flashing hourglass on collar/neck-base) ─
         ctx.fillStyle = '#111';
         ctx.beginPath();
         ctx.ellipse(20, -28 + b, 7, 9, 0.3, 0, Math.PI * 2);
         ctx.fill();
         ctx.fillStyle = '#000';
         ctx.beginPath(); ctx.arc(20, -29 + b, 5, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#39FF14';
+        this.applyOmnitrixGlow(ctx, 20, -28 + b);
         ctx.beginPath();
         ctx.moveTo(17, -33 + b); ctx.lineTo(23, -28 + b); ctx.lineTo(17, -28 + b); ctx.lineTo(23, -33 + b);
         ctx.fill();
+        ctx.shadowBlur = 0;
 
         // ── 12. PUNCH SWIPE EFFECT ────────────────────────────────────
         if (this.punchActive) {
@@ -1950,8 +1997,9 @@ export class Mario {
         ctx.fillRect(-8, 30, 16, 4);
         ctx.fillStyle = '#000';
         ctx.beginPath(); ctx.arc(0, 32, 4, 0, Math.PI*2); ctx.fill();
-        ctx.fillStyle = '#39FF14';
+        this.applyOmnitrixGlow(ctx, 0, 32);
         ctx.beginPath(); ctx.moveTo(-3,30); ctx.lineTo(3,34); ctx.lineTo(-3,34); ctx.lineTo(3,30); ctx.fill();
+        ctx.shadowBlur = 0;
 
         // Arms
         ctx.fillStyle = skinColor;

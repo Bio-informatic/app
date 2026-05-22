@@ -2337,7 +2337,8 @@ function gameLoop(timestamp) {
         const controlMode = hasManualControlForLevel(currentLevelIndex) ? 'MANUAL' : 'RANDOM';
         ctx.fillText(`Level ${currentLevelIndex}${hudWatch}${hudAlien}${hudAction}${hudDoubleJump} | Score ${score} | ${controlMode}`, 18, 30);
 
-        // ── Alien Countdown Timer HUD ─────────
+        // ── Alien Countdown Timer HUD ───────── (HIDDEN)
+        /*
         if (mario.alienTimer > 0 && mario.state !== 'SMALL') {
             const timerBarW = 160;
             const timerBarH = 10;
@@ -2369,6 +2370,7 @@ function gameLoop(timestamp) {
             ctx.font = 'bold 11px sans-serif';
             ctx.fillText(`🔄 ${mario.alienTimerRemaining}s`, timerX + timerBarW + 10, timerY + 13);
         }
+        */
 
         // ── Stinkfly Wing Stamina HUD ─────────
         if (mario.state === 'STINKFLY') {
