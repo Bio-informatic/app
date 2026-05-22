@@ -8,7 +8,7 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>Super Mario Clone</title>
-    <link rel="stylesheet" href="style.css?v=20260408b">
+    <link rel="stylesheet" href="style.css?v=20260522b">
 </head>
 
 <body>
@@ -73,13 +73,22 @@
                     <div id="omnitrix-status"></div>
                     <button id="btn-random-transform" class="btn btn-primary">Random</button>
                     <button id="btn-buy-manual" class="btn">Buy Manual</button>
+                    <button id="btn-open-shop" class="btn">Shop</button>
                     <div id="panel-hint-bar">Press <b>0–9</b> to transform</div>
                 </div>
+            </div>
+            <div id="omnitrix-shop-screen">
+                <h3 id="omnitrix-shop-title">Watch Shop</h3>
+                <div id="omnitrix-shop-message">Spend score to boost this level.</div>
+                <button id="btn-shop-jump" class="btn">+1 Jump (200)</button>
+                <button id="btn-shop-time" class="btn">+1 Min Time (2000)</button>
+                <button id="btn-shop-continuous-manual" class="btn">Continuous Manual (25000)</button>
+                <button id="btn-close-shop" class="btn btn-primary">Back</button>
             </div>
         </div>
 
     </div>
-    <script type="module" src="game.js?v=20260408"></script>
+    <script type="module" src="game.js?v=20260522b"></script>
 </body>
 
 </html>

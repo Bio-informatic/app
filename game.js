@@ -75,6 +75,14 @@ const alienGrid = document.getElementById('alien-grid');
 const omnitrixStatus = document.getElementById('omnitrix-status');
 const btnRandomTransform = document.getElementById('btn-random-transform');
 const btnBuyManual = document.getElementById('btn-buy-manual');
+const btnOpenShop = document.getElementById('btn-open-shop');
+const omnitrixControlsWrapper = document.getElementById('omnitrix-controls-wrapper');
+const omnitrixShopScreen = document.getElementById('omnitrix-shop-screen');
+const omnitrixShopMessage = document.getElementById('omnitrix-shop-message');
+const btnShopJump = document.getElementById('btn-shop-jump');
+const btnShopTime = document.getElementById('btn-shop-time');
+const btnShopContinuousManual = document.getElementById('btn-shop-continuous-manual');
+const btnCloseShop = document.getElementById('btn-close-shop');
 const controlsModal = document.getElementById('controls-modal');
 const btnStartGame = document.getElementById('btn-start-game');
 
@@ -119,8 +127,13 @@ function createEnemyByType(type, x, y, entitiesArray = null, fromBox = false) {
 }
 
 let score = 0;
-const manualUnlockByLevel = {};
+const manualUsesByLevel = {};
+const continuousManualByLevel = {};
 const MANUAL_UNLOCK_COST = 3000;
+const SHOP_EXTRA_JUMP_COST = 200;
+const SHOP_EXTRA_TIME_COST = 2000;
+const SHOP_CONTINUOUS_MANUAL_COST = 25000;
+const LEVEL_TIME_LIMIT_SECONDS = 180;
 const SCORE_FOR_ENEMY_KILL = 100;
 const SCORE_FOR_BOSS_KILL = 2000;
 const SCORE_FOR_ITEM = 500;
@@ -135,8 +148,37 @@ function addScore(points) {
     score += points;
 }
 
+function getManualUsesForLevel(levelIndex) {
+    return manualUsesByLevel[levelIndex] || 0;
+}
+
+function hasContinuousManualForLevel(levelIndex) {
+    return !!continuousManualByLevel[levelIndex];
+}
+
 function hasManualControlForLevel(levelIndex) {
-    return !!manualUnlockByLevel[levelIndex];
+    return hasContinuousManualForLevel(levelIndex) || getManualUsesForLevel(levelIndex) > 0;
+}
+
+function addManualUseForLevel(levelIndex, amount = 1) {
+    manualUsesByLevel[levelIndex] = getManualUsesForLevel(levelIndex) + amount;
+}
+
+function consumeManualUseForLevel(levelIndex) {
+    if (hasContinuousManualForLevel(levelIndex)) return;
+    const remaining = getManualUsesForLevel(levelIndex);
+    if (remaining <= 0) return;
+    const next = remaining - 1;
+    if (next > 0) {
+        manualUsesByLevel[levelIndex] = next;
+    } else {
+        delete manualUsesByLevel[levelIndex];
+    }
+}
+
+function activateContinuousManualForLevel(levelIndex) {
+    continuousManualByLevel[levelIndex] = true;
+    delete manualUsesByLevel[levelIndex];
 }
 
 function getIntendedAlienIndex(levelIndex) {
@@ -166,23 +208,53 @@ function getRandomAlienIndex() {
 
 function randomTransform() {
     const idx = getRandomAlienIndex();
-    if (idx >= 0) activateAlien(idx);
+    if (idx >= 0) activateAlien(idx, { manualSelection: false });
+}
+
+function setOmnitrixShopMessage(message, isError = false) {
+    if (!omnitrixShopMessage) return;
+    omnitrixShopMessage.textContent = message;
+    omnitrixShopMessage.style.color = isError ? '#FF6666' : '#9BFFAA';
+}
+
+function updateShopButtons() {
+    if (!btnShopJump || !btnShopTime || !btnShopContinuousManual) return;
+    const continuousManual = hasContinuousManualForLevel(currentLevelIndex);
+
+    btnShopJump.textContent = `+1 Jump (${SHOP_EXTRA_JUMP_COST})`;
+    btnShopTime.textContent = `+1 Min Time (${SHOP_EXTRA_TIME_COST})`;
+    btnShopContinuousManual.textContent = continuousManual
+        ? 'Manual∞ Active'
+        : `Continuous Manual (${SHOP_CONTINUOUS_MANUAL_COST})`;
+
+    btnShopJump.disabled = score < SHOP_EXTRA_JUMP_COST;
+    btnShopTime.disabled = score < SHOP_EXTRA_TIME_COST;
+    btnShopContinuousManual.disabled = continuousManual || score < SHOP_CONTINUOUS_MANUAL_COST;
 }
 
 function updateOmnitrixControls() {
-    if (!omnitrixStatus || !btnBuyManual || !btnRandomTransform) return;
-    const unlocked = hasManualControlForLevel(currentLevelIndex);
-    if (unlocked) {
-        omnitrixStatus.textContent = `Manual mode unlocked for Level ${currentLevelIndex}. Score: ${score}`;
-        btnBuyManual.style.display = 'none';
-        btnRandomTransform.style.display = 'none';
-    } else {
-        omnitrixStatus.textContent = `Random mode (30% level alien). Score: ${score}`;
-        btnBuyManual.style.display = 'block';
-        btnBuyManual.textContent = `Buy Manual Control (${MANUAL_UNLOCK_COST})`;
+    if (!omnitrixStatus || !btnBuyManual || !btnRandomTransform || !btnOpenShop) return;
+    const manualUses = getManualUsesForLevel(currentLevelIndex);
+    const continuousManual = hasContinuousManualForLevel(currentLevelIndex);
+
+    if (continuousManual) {
+        omnitrixStatus.textContent = `Manual∞ | Score ${score}`;
+        btnBuyManual.textContent = 'Manual∞ Active';
+        btnBuyManual.disabled = true;
+    } else if (manualUses > 0) {
+        omnitrixStatus.textContent = `Manual x${manualUses} | Score ${score}`;
+        btnBuyManual.textContent = `+1 Manual (${MANUAL_UNLOCK_COST})`;
         btnBuyManual.disabled = score < MANUAL_UNLOCK_COST;
-        btnRandomTransform.style.display = 'block';
+    } else {
+        omnitrixStatus.textContent = `Random Mode | Score ${score}`;
+        btnBuyManual.textContent = `1 Manual (${MANUAL_UNLOCK_COST})`;
+        btnBuyManual.disabled = score < MANUAL_UNLOCK_COST;
     }
+
+    btnBuyManual.style.display = 'block';
+    btnRandomTransform.style.display = 'block';
+    btnOpenShop.style.display = 'block';
+    updateShopButtons();
 }
 
 // ─── Build the alien grid HTML ────────────────
@@ -289,7 +361,7 @@ function renderAlienGrid() {
         `;
         if (isUsable) {
             slot.title = `TRANSFORM: ${alien.key} • ${alien.name} (${alien.lives} left)`;
-            slot.onclick = () => activateAlien(i);
+            slot.onclick = () => activateAlien(i, { manualSelection: true });
         }
 
         alienGrid.appendChild(slot);
@@ -301,9 +373,32 @@ renderAlienGrid();
 
 // ─── Omnitrix Panel State ─────────────────────
 let omnitrixPanelOpen = false;
+let omnitrixShopOpen = false;
+
+function showOmnitrixAlienScreen() {
+    omnitrixShopOpen = false;
+    if (alienGrid) alienGrid.style.display = 'block';
+    if (omnitrixControlsWrapper) omnitrixControlsWrapper.style.display = 'flex';
+    if (omnitrixShopScreen) omnitrixShopScreen.style.display = 'none';
+}
+
+function openOmnitrixShop() {
+    if (!omnitrixShopScreen) return;
+    omnitrixShopOpen = true;
+    if (alienGrid) alienGrid.style.display = 'none';
+    if (omnitrixControlsWrapper) omnitrixControlsWrapper.style.display = 'none';
+    omnitrixShopScreen.style.display = 'flex';
+    setOmnitrixShopMessage('Spend score to boost this level.');
+    updateShopButtons();
+}
+
+function closeOmnitrixShop() {
+    showOmnitrixAlienScreen();
+}
 
 function openOmnitrixPanel() {
     if (!mario.hasWatch) return;
+    showOmnitrixAlienScreen();
     omnitrixPanelOpen = true;
     omnitrixPanel.style.display = 'flex';
     renderAlienGrid();
@@ -311,6 +406,7 @@ function openOmnitrixPanel() {
 }
 
 function closeOmnitrixPanel() {
+    showOmnitrixAlienScreen();
     omnitrixPanelOpen = false;
     omnitrixPanel.style.display = 'none';
     sfx.omnitrixClose();
@@ -333,9 +429,15 @@ btnStartGame.addEventListener('click', () => {
 });
 
 // ─── Alien Activation ────────────────────────
-function activateAlien(index) {
+function activateAlien(index, options = {}) {
+    const { manualSelection = false } = options;
     const alien = ALIENS[index];
     if (!alien.unlocked || alien.lives <= 0) return;
+    if (manualSelection && !hasManualControlForLevel(currentLevelIndex)) return;
+
+    if (manualSelection) {
+        consumeManualUseForLevel(currentLevelIndex);
+    }
 
     // Decrement lives
     alien.lives--;
@@ -373,15 +475,59 @@ function activateAlien(index) {
 }
 
 btnRandomTransform.addEventListener('click', () => {
-    if (hasManualControlForLevel(currentLevelIndex)) return;
     randomTransform();
 });
 
 btnBuyManual.addEventListener('click', () => {
-    if (hasManualControlForLevel(currentLevelIndex)) return;
+    if (hasContinuousManualForLevel(currentLevelIndex)) return;
     if (score < MANUAL_UNLOCK_COST) return;
     score -= MANUAL_UNLOCK_COST;
-    manualUnlockByLevel[currentLevelIndex] = true;
+    addManualUseForLevel(currentLevelIndex, 1);
+    renderAlienGrid();
+});
+
+btnOpenShop.addEventListener('click', () => {
+    openOmnitrixShop();
+});
+
+btnCloseShop.addEventListener('click', () => {
+    closeOmnitrixShop();
+});
+
+btnShopJump.addEventListener('click', () => {
+    if (score < SHOP_EXTRA_JUMP_COST) {
+        setOmnitrixShopMessage('Not enough score for extra jump.', true);
+        return;
+    }
+    score -= SHOP_EXTRA_JUMP_COST;
+    mario.doubleJumpsRemaining += 1;
+    setOmnitrixShopMessage('Purchased: +1 extra jump.');
+    updateOmnitrixControls();
+});
+
+btnShopTime.addEventListener('click', () => {
+    if (score < SHOP_EXTRA_TIME_COST) {
+        setOmnitrixShopMessage('Not enough score for extra time.', true);
+        return;
+    }
+    score -= SHOP_EXTRA_TIME_COST;
+    levelTimeRemaining += 60;
+    setOmnitrixShopMessage('Purchased: +1 minute level time.');
+    updateOmnitrixControls();
+});
+
+btnShopContinuousManual.addEventListener('click', () => {
+    if (hasContinuousManualForLevel(currentLevelIndex)) {
+        setOmnitrixShopMessage('Continuous manual is already active.');
+        return;
+    }
+    if (score < SHOP_CONTINUOUS_MANUAL_COST) {
+        setOmnitrixShopMessage('Not enough score for continuous manual.', true);
+        return;
+    }
+    score -= SHOP_CONTINUOUS_MANUAL_COST;
+    activateContinuousManualForLevel(currentLevelIndex);
+    setOmnitrixShopMessage('Purchased: continuous manual active this level.');
     renderAlienGrid();
 });
 
@@ -431,7 +577,7 @@ let gorillomba = null;
 let gorillombaDefeated = false;
 
 // ─── Level Timer Logic ───
-let levelTimeRemaining = 300; // 5 minutes
+let levelTimeRemaining = LEVEL_TIME_LIMIT_SECONDS; // 3 minutes
 let levelStartScore = 0;      // Backup to reset score for that level
 let levelRestartFlashActive = false;
 let levelRestartFlashTimer = 0;
@@ -491,7 +637,7 @@ function loadLevel(index, carryOverState = null) {
     level = new Level(index);
     
     // Timer Init
-    levelTimeRemaining = 300;
+    levelTimeRemaining = LEVEL_TIME_LIMIT_SECONDS;
     levelStartScore = score;
     levelRestartFlashActive = false;
 
@@ -856,6 +1002,7 @@ window.addEventListener('keydown', (e) => {
 
     // Number keys 1–0 transform when panel is open
     if (omnitrixPanelOpen) {
+        if (omnitrixShopOpen) return;
         if (!hasManualControlForLevel(currentLevelIndex)) return;
         let idx = -1;
         if (e.key >= '1' && e.key <= '9') {
@@ -864,7 +1011,7 @@ window.addEventListener('keydown', (e) => {
             idx = 9;
         }
         if (idx >= 0 && idx < ALIENS.length) {
-            activateAlien(idx);
+            activateAlien(idx, { manualSelection: true });
         }
     }
 });
@@ -2364,7 +2511,13 @@ function gameLoop(timestamp) {
         else if (mario.state === 'XLR8') hudAction = dashReady ? ' [F]⚡DASH' : (mario.dashActive ? ' ⚡DASHING!' : ' [F]⏳');
         else if (mario.state === 'STINKFLY') hudAction = ' [F]💧Slime | [Up]Hover';
         const hudDoubleJump = mario.doubleJumpsRemaining > 0 ? ` ⬆⬆×${mario.doubleJumpsRemaining}` : '';
-        const controlMode = hasManualControlForLevel(currentLevelIndex) ? 'MANUAL' : 'RANDOM';
+        let controlMode = 'RANDOM';
+        if (hasContinuousManualForLevel(currentLevelIndex)) {
+            controlMode = 'MANUAL∞';
+        } else {
+            const manualUses = getManualUsesForLevel(currentLevelIndex);
+            if (manualUses > 0) controlMode = `MANUAL x${manualUses}`;
+        }
         ctx.fillText(`Level ${currentLevelIndex}${hudWatch}${hudAlien}${hudAction}${hudDoubleJump} | Score ${score} | ${controlMode}`, 18, 30);
 
         // ── Alien Countdown Timer HUD ───────── (HIDDEN)
@@ -2555,7 +2708,7 @@ function gameLoop(timestamp) {
             ctx.fillRect(barX, barY, barW, barH);
             
             // Bar Progress
-            const ratio = Math.max(0, levelTimeRemaining) / 300;
+            const ratio = Math.min(1, Math.max(0, levelTimeRemaining) / LEVEL_TIME_LIMIT_SECONDS);
             const isCritical = levelTimeRemaining < 60;
             
             if (isCritical) {
