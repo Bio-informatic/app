@@ -58,6 +58,7 @@ export class Octumba {
 
         const cx = this.x + 75;
         const cy = this.y + 75;
+        const pulse = 0.6 + 0.4 * Math.sin(this.timer / 190);
 
         // Draw tentacles
         ctx.strokeStyle = '#601010'; // dark red
@@ -79,8 +80,20 @@ export class Octumba {
             ctx.stroke();
         }
 
+        // Abyss aura
+        const aura = ctx.createRadialGradient(cx, cy, 20, cx, cy, 130);
+        aura.addColorStop(0, `rgba(120, 20, 20, ${0.2 + pulse * 0.15})`);
+        aura.addColorStop(1, 'rgba(20, 0, 0, 0)');
+        ctx.fillStyle = aura;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 130, 0, Math.PI * 2);
+        ctx.fill();
+
         // Head/Mantle
-        ctx.fillStyle = '#801A1A';
+        const mantle = ctx.createLinearGradient(cx, cy - 70, cx, cy + 30);
+        mantle.addColorStop(0, '#A02020');
+        mantle.addColorStop(1, '#5A1010');
+        ctx.fillStyle = mantle;
         ctx.beginPath();
         ctx.ellipse(cx, cy - 20, 60, 50, 0, 0, Math.PI*2);
         ctx.fill();

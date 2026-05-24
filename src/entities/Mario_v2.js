@@ -74,6 +74,20 @@ export class Mario {
         this.hackingWaveTriggered = false;
     }
 
+    _applyFormSize(targetWidth, targetHeight) {
+        const prevWidth = this.width;
+        const prevHeight = this.height;
+        const prevCenterX = this.x + prevWidth / 2;
+        const prevFootY = this.y + prevHeight;
+
+        this.width = targetWidth;
+        this.height = targetHeight;
+
+        // Keep feet planted on the same ground pixel and keep body centered.
+        this.x = prevCenterX - this.width / 2;
+        this.y = prevFootY - this.height;
+    }
+
     startAlienTimer() {
         this.alienTimer = performance.now();
         // Random duration between 15 and 25 seconds (15000ms to 25000ms)
@@ -129,46 +143,35 @@ export class Mario {
         if (this.state === 'RIPJAWS') return;
         this.state = 'RIPJAWS';
         this.startAlienTimer();
-        if (this.height < 55) this.y -= (55 - this.height);
-        this.width = 40;
-        this.height = 55;
+        this._applyFormSize(42, 58);
     }
 
     transformToGreyMatter() {
         if (this.state === 'GREYMATTER') return;
         this.state = 'GREYMATTER';
         this.startAlienTimer();
-        this.y += (this.height - 24);
-        this.width = 16;
-        this.height = 24;
+        this._applyFormSize(20, 28);
     }
 
     transformToGhostfreak() {
         if (this.state === 'GHOSTFREAK') return;
         this.state = 'GHOSTFREAK';
         this.startAlienTimer();
-        if (this.height < 50) this.y -= (50 - this.height);
-        this.width = 40;
-        this.height = 50;
+        this._applyFormSize(42, 54);
     }
 
     transformToFourArms() {
         if (this.state === 'FOURARMS') return;
         this.state = 'FOURARMS';
         this.startAlienTimer();
-        this.y -= 16;
-        this.width = 48;
-        this.height = 64;
+        this._applyFormSize(50, 66);
     }
 
     transformToHeatblast() {
         if (this.state === 'HEATBLAST') return;
         this.state = 'HEATBLAST';
         this.startAlienTimer();
-        // Heatblast is similar size to Four Arms
-        if (this.height < 64) this.y -= (64 - this.height);
-        this.width = 48;
-        this.height = 64;
+        this._applyFormSize(48, 64);
     }
 
     revertToSmall() {
@@ -176,9 +179,7 @@ export class Mario {
         this.state = 'SMALL';
         this.transforming = true;
         this.transformTimer = performance.now();
-        this.y += (this.height - 32);
-        this.width = 32;
-        this.height = 32;
+        this._applyFormSize(32, 32);
         this.groundPounding = false;
         this.dashActive = false;
         this.punchActive = false;
@@ -197,18 +198,14 @@ export class Mario {
         if (this.state === 'XLR8') return;
         this.state = 'XLR8';
         this.startAlienTimer();
-        if (this.height < 56) this.y -= (56 - this.height);
-        this.width = 40;
-        this.height = 56;
+        this._applyFormSize(42, 58);
     }
 
     transformToStinkfly() {
         if (this.state === 'STINKFLY') return;
         this.state = 'STINKFLY';
         this.startAlienTimer();
-        if (this.height < 50) this.y -= (50 - this.height);
-        this.width = 45;
-        this.height = 50;
+        this._applyFormSize(46, 52);
         this.wingStamina = this.maxWingStamina;
     }
 
@@ -216,27 +213,21 @@ export class Mario {
         if (this.state === 'UPGRADE') return;
         this.state = 'UPGRADE';
         this.startAlienTimer();
-        if (this.height < 50) this.y -= (50 - this.height);
-        this.width = 36;
-        this.height = 50;
+        this._applyFormSize(38, 52);
     }
 
     transformToWildMutt() {
         if (this.state === 'WILDMUTT') return;
         this.state = 'WILDMUTT';
         this.startAlienTimer();
-        if (this.height < 48) this.y -= (48 - this.height);
-        this.width = 52;
-        this.height = 48;
+        this._applyFormSize(54, 50);
     }
 
     transformToDiamondhead() {
         if (this.state === 'DIAMONDHEAD') return;
         this.state = 'DIAMONDHEAD';
         this.startAlienTimer();
-        if (this.height < 60) this.y -= (60 - this.height);
-        this.width = 44;
-        this.height = 60;
+        this._applyFormSize(46, 62);
     }
 
     update(deltaTime, level) {
@@ -463,6 +454,32 @@ export class Mario {
             this.upgradeElectricImmunity;
     }
 
+    _getCollisionProfile() {
+        const profiles = {
+            SMALL:      { sideInset: 4, topInset: 2, bottomInset: 0, headInset: 4, feetInset: 5 },
+            FOURARMS:   { sideInset: 3, topInset: 3, bottomInset: 0, headInset: 5, feetInset: 7 },
+            HEATBLAST:  { sideInset: 4, topInset: 3, bottomInset: 0, headInset: 6, feetInset: 7 },
+            XLR8:       { sideInset: 6, topInset: 2, bottomInset: 0, headInset: 7, feetInset: 8 },
+            STINKFLY:   { sideInset: 5, topInset: 3, bottomInset: 0, headInset: 6, feetInset: 8 },
+            UPGRADE:    { sideInset: 4, topInset: 2, bottomInset: 0, headInset: 6, feetInset: 6 },
+            WILDMUTT:   { sideInset: 4, topInset: 6, bottomInset: 0, headInset: 6, feetInset: 8 },
+            DIAMONDHEAD:{ sideInset: 4, topInset: 2, bottomInset: 0, headInset: 6, feetInset: 7 },
+            RIPJAWS:    { sideInset: 5, topInset: 3, bottomInset: 0, headInset: 6, feetInset: 7 },
+            GREYMATTER: { sideInset: 3, topInset: 2, bottomInset: 0, headInset: 4, feetInset: 4 },
+            GHOSTFREAK: { sideInset: 5, topInset: 2, bottomInset: 0, headInset: 6, feetInset: 6 }
+        };
+        return profiles[this.state] || profiles.SMALL;
+    }
+
+    _getCollisionRect() {
+        const p = this._getCollisionProfile();
+        const left = this.x + p.sideInset;
+        const top = this.y + p.topInset;
+        const right = this.x + this.width - p.sideInset;
+        const bottom = this.y + this.height - p.bottomInset;
+        return { left, top, right, bottom, p };
+    }
+
     // Non-solid tiles: 0 (air), 9 (lava), 10 (speed panel), 11 (electric fence)
     isSolid(tile) {
         if (this.state === 'GHOSTFREAK' && this.input.isDown('F')) {
@@ -472,40 +489,63 @@ export class Mario {
     }
 
     handleHorizontalCollisions(level) {
-        const gridTop = Math.floor(this.y / level.tileSize);
-        const gridBottom = Math.floor((this.y + this.height - 0.1) / level.tileSize);
+        const ts = level.tileSize;
+        const { left, top, right, bottom } = this._getCollisionRect();
+        const ySamples = [top + 2, (top + bottom) * 0.5, bottom - 2];
 
         if (this.vx > 0) {
-            const gridRight = Math.floor((this.x + this.width) / level.tileSize);
-            if (level.tiles[gridTop] && this.isSolid(level.tiles[gridTop][gridRight]) ||
-                level.tiles[gridBottom] && this.isSolid(level.tiles[gridBottom][gridRight])) {
-                this.x = gridRight * level.tileSize - this.width;
+            const gridRight = Math.floor((right + 0.1) / ts);
+            let hit = false;
+            for (let i = 0; i < ySamples.length; i++) {
+                const gy = Math.floor(ySamples[i] / ts);
+                if (level.tiles[gy] && this.isSolid(level.tiles[gy][gridRight])) {
+                    hit = true;
+                    break;
+                }
+            }
+            if (hit) {
+                const sideInset = this._getCollisionProfile().sideInset;
+                this.x = gridRight * ts - (this.width - sideInset);
                 this.vx = 0;
             }
         } else if (this.vx < 0) {
-            const gridLeft = Math.floor(this.x / level.tileSize);
-            if (level.tiles[gridTop] && this.isSolid(level.tiles[gridTop][gridLeft]) ||
-                level.tiles[gridBottom] && this.isSolid(level.tiles[gridBottom][gridLeft])) {
-                this.x = (gridLeft + 1) * level.tileSize;
+            const gridLeft = Math.floor((left - 0.1) / ts);
+            let hit = false;
+            for (let i = 0; i < ySamples.length; i++) {
+                const gy = Math.floor(ySamples[i] / ts);
+                if (level.tiles[gy] && this.isSolid(level.tiles[gy][gridLeft])) {
+                    hit = true;
+                    break;
+                }
+            }
+            if (hit) {
+                const sideInset = this._getCollisionProfile().sideInset;
+                this.x = (gridLeft + 1) * ts - sideInset;
                 this.vx = 0;
             }
         }
     }
 
     handleVerticalCollisions(level) {
-        const gridLeft = Math.floor(this.x / level.tileSize);
-        const gridRight = Math.floor((this.x + this.width - 0.1) / level.tileSize);
+        const ts = level.tileSize;
+        const { left, top, right, bottom, p } = this._getCollisionRect();
+        const downXSamples = [left + p.feetInset, (left + right) * 0.5, right - p.feetInset];
+        const upXSamples = [left + p.headInset, (left + right) * 0.5, right - p.headInset];
 
         if (this.vy > 0) {
-            const gridBottom = Math.floor((this.y + this.height) / level.tileSize);
-            let leftTile = level.tiles[gridBottom] ? level.tiles[gridBottom][gridLeft] : 0;
-            let rightTile = level.tiles[gridBottom] ? level.tiles[gridBottom][gridRight] : 0;
-            // Non-solid tiles can be passed through
-            if (!this.isSolid(leftTile)) leftTile = 0;
-            if (!this.isSolid(rightTile)) rightTile = 0;
+            const gridBottom = Math.floor((bottom + 0.1) / ts);
+            let hitGround = false;
+            for (let i = 0; i < downXSamples.length; i++) {
+                const gx = Math.floor(downXSamples[i] / ts);
+                const tile = level.tiles[gridBottom] ? level.tiles[gridBottom][gx] : 0;
+                if (this.isSolid(tile)) {
+                    hitGround = true;
+                    break;
+                }
+            }
 
-            if (leftTile !== 0 || rightTile !== 0) {
-                this.y = gridBottom * level.tileSize - this.height;
+            if (hitGround) {
+                this.y = gridBottom * ts - this.height + p.bottomInset;
                 this.vy = 0;
                 this.grounded = true;
                 this.canDoubleJump = false;
@@ -519,20 +559,26 @@ export class Mario {
                 this.grounded = false;
             }
         } else if (this.vy < 0) {
-            const gridTop = Math.floor(this.y / level.tileSize);
+            const gridTop = Math.floor((top - 0.1) / ts);
             let hitTile = 0;
+            let hitX = -1;
             if (level.tiles[gridTop]) {
-                if (this.isSolid(level.tiles[gridTop][gridLeft])) hitTile = level.tiles[gridTop][gridLeft];
-                else if (this.isSolid(level.tiles[gridTop][gridRight])) hitTile = level.tiles[gridTop][gridRight];
+                for (let i = 0; i < upXSamples.length; i++) {
+                    const gx = Math.floor(upXSamples[i] / ts);
+                    if (this.isSolid(level.tiles[gridTop][gx])) {
+                        hitTile = level.tiles[gridTop][gx];
+                        hitX = gx;
+                        break;
+                    }
+                }
             }
 
             if (hitTile !== 0) {
-                this.y = (gridTop + 1) * level.tileSize;
+                this.y = (gridTop + 1) * ts - p.topInset;
                 this.vy = 0;
 
                 if (hitTile === 3 && this.onBlockHit) {
-                    const hitX = (level.tiles[gridTop][gridLeft] === 3) ? gridLeft : gridRight;
-                    this.onBlockHit(3, hitX * level.tileSize, gridTop * level.tileSize);
+                    this.onBlockHit(3, hitX * ts, gridTop * ts);
                 }
             }
             this.grounded = false;
@@ -546,28 +592,72 @@ export class Mario {
         }
 
         if (this.state === 'HEATBLAST') {
-            this.drawHeatblast(ctx);
+            this._drawAlienWithFx(ctx, () => this.drawHeatblast(ctx), 'HEATBLAST');
         } else if (this.state === 'FOURARMS') {
-            this.drawFourArms(ctx);
+            this._drawAlienWithFx(ctx, () => this.drawFourArms(ctx), 'FOURARMS');
         } else if (this.state === 'XLR8') {
-            this.drawXLR8(ctx);
+            this._drawAlienWithFx(ctx, () => this.drawXLR8(ctx), 'XLR8');
         } else if (this.state === 'STINKFLY') {
-            this.drawStinkfly(ctx);
+            this._drawAlienWithFx(ctx, () => this.drawStinkfly(ctx), 'STINKFLY');
         } else if (this.state === 'UPGRADE') {
-            this.drawUpgrade(ctx);
+            this._drawAlienWithFx(ctx, () => this.drawUpgrade(ctx), 'UPGRADE');
         } else if (this.state === 'WILDMUTT') {
-            this.drawWildMutt(ctx);
+            this._drawAlienWithFx(ctx, () => this.drawWildMutt(ctx), 'WILDMUTT');
         } else if (this.state === 'DIAMONDHEAD') {
-            this.drawDiamondhead(ctx);
+            this._drawAlienWithFx(ctx, () => this.drawDiamondhead(ctx), 'DIAMONDHEAD');
         } else if (this.state === 'RIPJAWS') {
-            this.drawRipjaws(ctx);
+            this._drawAlienWithFx(ctx, () => this.drawRipjaws(ctx), 'RIPJAWS');
         } else if (this.state === 'GREYMATTER') {
-            this.drawGreyMatter(ctx);
+            this._drawAlienWithFx(ctx, () => this.drawGreyMatter(ctx), 'GREYMATTER');
         } else if (this.state === 'GHOSTFREAK') {
-            this.drawGhostfreak(ctx);
+            this._drawAlienWithFx(ctx, () => this.drawGhostfreak(ctx), 'GHOSTFREAK');
         } else {
             this.drawMario(ctx);
         }
+    }
+
+    _getAlienFxProfile(state, now) {
+        const profiles = {
+            FOURARMS: { aura: 'rgba(255,110,60,0.20)', glow: '#ff6a3a', bobAmp: 1.4, bobSpeed: 200, tiltAmp: 0.02, tiltSpeed: 350, scalePulse: 0.02, scaleSpeed: 300 },
+            HEATBLAST: { aura: 'rgba(255,120,0,0.24)', glow: '#ff6c00', bobAmp: 1.6, bobSpeed: 170, tiltAmp: 0.018, tiltSpeed: 320, scalePulse: 0.025, scaleSpeed: 250 },
+            XLR8: { aura: 'rgba(0,220,255,0.20)', glow: '#00e6ff', bobAmp: 1.0, bobSpeed: 230, tiltAmp: 0.035, tiltSpeed: 190, scalePulse: 0.018, scaleSpeed: 220 },
+            STINKFLY: { aura: 'rgba(170,255,70,0.19)', glow: '#9aff3f', bobAmp: 2.3, bobSpeed: 140, tiltAmp: 0.03, tiltSpeed: 210, scalePulse: 0.02, scaleSpeed: 180 },
+            UPGRADE: { aura: 'rgba(57,255,20,0.20)', glow: '#39ff14', bobAmp: 1.2, bobSpeed: 200, tiltAmp: 0.02, tiltSpeed: 260, scalePulse: 0.02, scaleSpeed: 210 },
+            WILDMUTT: { aura: 'rgba(255,180,80,0.16)', glow: '#ffbe50', bobAmp: 1.3, bobSpeed: 175, tiltAmp: 0.02, tiltSpeed: 300, scalePulse: 0.015, scaleSpeed: 230 },
+            DIAMONDHEAD: { aura: 'rgba(0,255,255,0.18)', glow: '#47ffff', bobAmp: 1.1, bobSpeed: 260, tiltAmp: 0.015, tiltSpeed: 300, scalePulse: 0.015, scaleSpeed: 260 },
+            RIPJAWS: { aura: 'rgba(0,170,255,0.18)', glow: '#00a8ff', bobAmp: 1.8, bobSpeed: 170, tiltAmp: 0.02, tiltSpeed: 230, scalePulse: 0.02, scaleSpeed: 200 },
+            GREYMATTER: { aura: 'rgba(170,255,40,0.18)', glow: '#abff28', bobAmp: 1.0, bobSpeed: 190, tiltAmp: 0.03, tiltSpeed: 220, scalePulse: 0.018, scaleSpeed: 240 },
+            GHOSTFREAK: { aura: 'rgba(200,140,255,0.16)', glow: '#cc8cff', bobAmp: 2.6, bobSpeed: 120, tiltAmp: 0.028, tiltSpeed: 200, scalePulse: 0.022, scaleSpeed: 180 }
+        };
+        return profiles[state] || { aura: 'rgba(57,255,20,0.15)', glow: '#39ff14', bobAmp: 1.0, bobSpeed: 200, tiltAmp: 0.015, tiltSpeed: 260, scalePulse: 0.015, scaleSpeed: 250 };
+    }
+
+    _drawAlienWithFx(ctx, drawFn, state) {
+        const now = performance.now();
+        const p = this._getAlienFxProfile(state, now);
+        const cx = this.x + this.width / 2;
+        const cy = this.y + this.height / 2;
+        const bob = Math.sin(now / p.bobSpeed + this.x * 0.02) * p.bobAmp;
+        const tilt = Math.sin(now / p.tiltSpeed + this.y * 0.01) * p.tiltAmp;
+        const pulse = 1 + Math.sin(now / p.scaleSpeed) * p.scalePulse;
+
+        ctx.save();
+        ctx.globalAlpha = 0.85;
+        ctx.fillStyle = p.aura;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy + bob, this.width * 0.78, this.height * 0.72, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        ctx.save();
+        ctx.shadowBlur = 12 + Math.sin(now / 180) * 4;
+        ctx.shadowColor = p.glow;
+        ctx.translate(cx, cy + bob);
+        ctx.rotate(tilt);
+        ctx.scale(pulse, pulse);
+        ctx.translate(-cx, -cy);
+        drawFn();
+        ctx.restore();
     }
 
     drawTransformation(ctx) {

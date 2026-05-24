@@ -88,11 +88,21 @@ export class Goombaba {
         if (this.dead) return;
 
         const t = performance.now();
+        const auraPulse = 0.5 + 0.5 * Math.sin(t / 220);
 
         // Hurt flash
         if (this.hurtFlash > 0 && this.hurtFlash % 2 === 0) {
             ctx.globalAlpha = 0.5;
         }
+
+        // Volcanic aura
+        ctx.save();
+        ctx.globalAlpha = 0.12 + auraPulse * 0.14;
+        ctx.fillStyle = '#FF4A00';
+        ctx.beginPath();
+        ctx.ellipse(this.x + this.width / 2, this.y + this.height / 2, this.width * 0.7, this.height * 0.65, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
 
         // Body — giant dark red
         ctx.fillStyle = '#660000';
@@ -154,6 +164,18 @@ export class Goombaba {
             ctx.fillStyle = i % 2 === 0 ? '#FF4400' : '#FFAA00';
             ctx.fillRect(fx, fy, 6, 8);
         }
+
+        // Heat shimmer rings
+        ctx.save();
+        ctx.strokeStyle = `rgba(255, 160, 20, ${0.22 + auraPulse * 0.15})`;
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 2; i++) {
+            const r = 46 + i * 13 + Math.sin(t / 260 + i) * 3;
+            ctx.beginPath();
+            ctx.ellipse(this.x + this.width / 2, this.y + this.height / 2, r, r * 0.78, 0, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+        ctx.restore();
 
         ctx.globalAlpha = 1.0;
 

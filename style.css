@@ -209,6 +209,20 @@ canvas.level10-theme.fixed {
     pointer-events: none;
 }
 
+#omnitrix-panel.locked {
+    background: radial-gradient(circle, #2a0e0e 0%, #120000 100%);
+    border-color: #ff3a3a;
+    box-shadow: 0 0 50px rgba(255, 58, 58, 0.45), inset 0 0 30px rgba(255, 58, 58, 0.25);
+}
+
+#omnitrix-panel.locked::before {
+    border-color: rgba(255, 58, 58, 0.7);
+}
+
+#omnitrix-panel.locked::after {
+    border-color: rgba(255, 58, 58, 0.25);
+}
+
 @keyframes rotate-watch-rim {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }

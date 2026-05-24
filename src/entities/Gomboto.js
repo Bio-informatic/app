@@ -71,8 +71,12 @@ export class Gomboto {
         const baseColor = hacked ? '#080808' : '#111';
         const accentColor = hacked ? '#00FF44' : '#00FFCC';
         const eyeColor = hacked ? '#00FF44' : '#FF0000';
+        const now = performance.now();
+        const hover = Math.sin(now / 200) * 2.2;
+        const scan = (Math.sin(now / 260) + 1) * 0.5;
 
         ctx.save();
+        ctx.translate(0, hover);
         if (hacked) {
             ctx.shadowBlur = 10;
             ctx.shadowColor = '#00FF44';
@@ -89,6 +93,8 @@ export class Gomboto {
         // --- Eye / Center Core ---
         ctx.fillStyle = eyeColor;
         ctx.fillRect(this.x + 20, this.y + 20, 40, 10);
+        ctx.fillStyle = `rgba(255,255,255,${0.2 + scan * 0.3})`;
+        ctx.fillRect(this.x + 20 + scan * 30, this.y + 20, 10, 10);
 
         // --- Antennas ---
         ctx.beginPath();
@@ -103,6 +109,8 @@ export class Gomboto {
             // Health Bar
             ctx.fillStyle = '#F00';
             ctx.fillRect(this.x, this.y - 15, this.width * (this.hp / 10), 5);
+            ctx.strokeStyle = `rgba(0,255,204,${0.15 + scan * 0.25})`;
+            ctx.strokeRect(this.x - 4, this.y - 4, this.width + 8, this.height + 8);
         } else {
             // Hacking text and circuit-like glow
             ctx.shadowBlur = 0;

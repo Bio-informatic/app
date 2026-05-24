@@ -66,12 +66,14 @@ export class Turtumba {
 
         ctx.save();
         ctx.translate(cx, cy);
+        const walkSway = Math.sin(now / 170) * 1.6;
+        const shellPulse = 0.8 + 0.2 * Math.sin(now / 260);
 
         // === TURTLE SHELL (main body) ===
         // Outer shell — dark green dome
         ctx.fillStyle = isFlashing ? '#FFFFFF' : '#1A5C1A';
         ctx.beginPath();
-        ctx.ellipse(0, 2, 22, 18, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, 2, 22 + shellPulse, 18 + shellPulse * 0.4, 0, 0, Math.PI * 2);
         ctx.fill();
         // Shell pattern — hexagonal segments
         ctx.strokeStyle = '#0A3A0A';
@@ -112,10 +114,10 @@ export class Turtumba {
         // === HEAD — poking out from shell ===
         ctx.fillStyle = isFlashing ? '#FFFFFF' : '#3AAA3A';
         // Neck
-        ctx.fillRect(18, -4, 8, 8);
+        ctx.fillRect(18, -4 + walkSway * 0.35, 8, 8);
         // Head
         ctx.beginPath();
-        ctx.ellipse(28, 0, 6, 7, 0, 0, Math.PI * 2);
+        ctx.ellipse(28, walkSway * 0.45, 6, 7, 0, 0, Math.PI * 2);
         ctx.fill();
         // Eye
         ctx.fillStyle = '#FF0000';
@@ -130,10 +132,10 @@ export class Turtumba {
         // === LEGS — stubby and slow ===
         ctx.fillStyle = isFlashing ? '#FFFFFF' : '#3AAA3A';
         // Front legs
-        ctx.fillRect(10, 16, 5, 6);
-        ctx.fillRect(-6, 16, 5, 6);
+        ctx.fillRect(10, 16 + walkSway * 0.6, 5, 6);
+        ctx.fillRect(-6, 16 - walkSway * 0.6, 5, 6);
         // Back legs
-        ctx.fillRect(-16, 14, 5, 6);
+        ctx.fillRect(-16, 14 + walkSway * 0.4, 5, 6);
 
         // === CLOCK SYMBOL on shell — represents time slowing ===
         ctx.fillStyle = '#000';

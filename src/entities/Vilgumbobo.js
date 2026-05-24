@@ -100,6 +100,7 @@ export class Vilgumbobo {
         const now = performance.now();
         const cx = this.x + this.width / 2;
         const cy = this.y + this.height / 2;
+        const corePulse = 0.65 + 0.35 * Math.sin(now / 200);
 
         ctx.save();
         
@@ -145,6 +146,12 @@ export class Vilgumbobo {
         ctx.strokeStyle = '#F00';
         ctx.lineWidth = 2;
         ctx.stroke();
+
+        // Core energy pulse
+        ctx.fillStyle = `rgba(255, 50, 0, ${0.2 + corePulse * 0.35})`;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, 24 + corePulse * 6, 16 + corePulse * 5, 0, 0, Math.PI * 2);
+        ctx.fill();
 
         // Authentic Physical Vilgax Head & Shoulders attached to the Spider Torso
         const hY = cy - 40 + (this.stunned ? 20 : Math.sin(now / 300) * 3); // Bob slightly with breathing, drop if stunned
@@ -233,6 +240,10 @@ export class Vilgumbobo {
         ctx.fillRect(this.x, this.y - 30, this.width, 10);
         ctx.fillStyle = '#F00';
         ctx.fillRect(this.x, this.y - 30, this.width * (this.hp / 100), 10);
+        if (!this.stunned) {
+            ctx.strokeStyle = `rgba(255, 40, 0, ${0.2 + corePulse * 0.3})`;
+            ctx.strokeRect(this.x - 6, this.y - 8, this.width + 12, this.height + 14);
+        }
 
         ctx.restore();
     }

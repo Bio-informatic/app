@@ -103,6 +103,11 @@ export class Knightkomba {
     }
 
     draw(ctx) {
+        const now = performance.now();
+        const hover = Math.sin(now / 230) * 2;
+        const capeWave = Math.sin(now / 180) * 4;
+        ctx.save();
+        ctx.translate(0, hover);
         // Icy skin
         ctx.fillStyle = '#6BA1B8';
         ctx.fillRect(this.x, this.y, this.width, this.height);
@@ -137,8 +142,8 @@ export class Knightkomba {
         ctx.beginPath();
         ctx.moveTo(this.x - 5, this.y + 90);
         ctx.lineTo(this.x + this.width + 5, this.y + 90);
-        ctx.lineTo(this.x + this.width + 15, this.y + this.height);
-        ctx.lineTo(this.x - 15, this.y + this.height);
+        ctx.lineTo(this.x + this.width + 15 + capeWave, this.y + this.height);
+        ctx.lineTo(this.x - 15 + capeWave, this.y + this.height);
         ctx.fill();
 
         // Facial features
@@ -183,5 +188,6 @@ export class Knightkomba {
             ctx.lineTo(this.x + 8 + i * 10, this.y);
             ctx.fill();
         }
+        ctx.restore();
     }
 }

@@ -91,6 +91,9 @@ export class Gomrog {
         if (this.damageFlicker > 0 && Math.floor(performance.now() / 50) % 2 === 0) {
             ctx.globalAlpha = 0.5;
         }
+        const now = performance.now();
+        const breathe = Math.sin(now / 240) * 2.5;
+        const glowPulse = 0.4 + 0.6 * Math.sin(now / 310);
 
         const cx = this.x + this.width / 2;
         const cy = this.y + this.height / 2;
@@ -98,6 +101,7 @@ export class Gomrog {
         const mouthY = this.mouthOffsetY;
 
         ctx.save();
+        ctx.translate(0, breathe);
         
         // --- 1. Ancient floating brick base ---
         ctx.fillStyle = '#4B5320'; // Mossy ancient stone
@@ -147,6 +151,13 @@ export class Gomrog {
         ctx.beginPath();
         ctx.ellipse(2, 2, 68, 44, 0, 0, Math.PI * 2);
         ctx.fill();
+
+        // Slime glow contour
+        ctx.strokeStyle = `rgba(40, 255, 180, ${0.2 + 0.15 * glowPulse})`;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.ellipse(2, 2, 72, 47, 0, 0, Math.PI * 2);
+        ctx.stroke();
 
         ctx.fillStyle = '#6D7B50';
         ctx.fillRect(-34, -40, 18, 16);

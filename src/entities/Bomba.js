@@ -101,51 +101,79 @@ export class Bomba {
 
     draw(ctx) {
         if (!this.dead) {
+            const t = performance.now();
+            const hover = Math.sin(t / 260) * 2.5;
+            const pulse = 0.65 + 0.35 * Math.sin(t / 180);
+            const panelScan = (Math.sin(t / 320) + 1) * 0.5;
+
             // Draw Armor
-            ctx.fillStyle = '#444';
-            ctx.fillRect(this.x, this.y, this.width, this.height);
+            const armorGrad = ctx.createLinearGradient(this.x, this.y, this.x + this.width, this.y + this.height);
+            armorGrad.addColorStop(0, '#555');
+            armorGrad.addColorStop(0.5, '#3b3b3b');
+            armorGrad.addColorStop(1, '#2a2a2a');
+            ctx.fillStyle = armorGrad;
+            ctx.fillRect(this.x, this.y + hover, this.width, this.height);
             ctx.strokeStyle = '#222';
             ctx.lineWidth = 4;
-            ctx.strokeRect(this.x, this.y, this.width, this.height);
+            ctx.strokeRect(this.x, this.y + hover, this.width, this.height);
+
+            // Rivets / panel seams
+            ctx.fillStyle = '#1d1d1d';
+            for (let i = 0; i < 6; i++) {
+                const rx = this.x + 16 + i * 24;
+                ctx.fillRect(rx, this.y + hover + 10, 6, 6);
+                ctx.fillRect(rx, this.y + hover + this.height - 16, 6, 6);
+            }
+            ctx.strokeStyle = '#2b2b2b';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(this.x + 16, this.y + hover + 16, this.width - 32, this.height - 32);
             
             // Inner compartment
             ctx.fillStyle = '#000';
-            ctx.fillRect(this.x + 40, this.y + 80, 80, 80);
+            ctx.fillRect(this.x + 40, this.y + hover + 80, 80, 80);
+            ctx.fillStyle = `rgba(0, 255, 220, ${0.1 + 0.2 * panelScan})`;
+            ctx.fillRect(this.x + 44, this.y + hover + 84, 72, 72);
             
             if (!this.goombaDead) {
                 // Draw tiny Goomba
                 ctx.fillStyle = '#8B4513';
-                ctx.fillRect(this.goombaX, this.goombaY, this.goombaWidth, this.goombaHeight);
+                ctx.fillRect(this.goombaX, this.goombaY + hover, this.goombaWidth, this.goombaHeight);
                 // Eyes
                 ctx.fillStyle = '#000';
-                ctx.fillRect(this.goombaX + 8, this.goombaY + 10, 6, 12);
-                ctx.fillRect(this.goombaX + 26, this.goombaY + 10, 6, 12);
+                ctx.fillRect(this.goombaX + 8, this.goombaY + hover + 10, 6, 12);
+                ctx.fillRect(this.goombaX + 26, this.goombaY + hover + 10, 6, 12);
             }
             
             if (this.hasShooter) {
                 // Draw Shooter
+                const turretY = this.y - 30 + hover + Math.sin(t / 180) * 2;
                 ctx.fillStyle = '#FF4400';
-                ctx.fillRect(this.x + this.width/2 - 20, this.y - 30, 40, 40);
+                ctx.fillRect(this.x + this.width/2 - 20, turretY, 40, 40);
                 ctx.strokeStyle = '#FFBB00';
-                ctx.strokeRect(this.x + this.width/2 - 20, this.y - 30, 40, 40);
+                ctx.strokeRect(this.x + this.width/2 - 20, turretY, 40, 40);
+                ctx.fillStyle = `rgba(255, 200, 0, ${pulse})`;
+                ctx.fillRect(this.x + this.width / 2 - 6, turretY + 8, 12, 24);
             }
             
             if (this.windowOpen) {
                 // Draw open window indicator on side
                 ctx.fillStyle = '#AADDFF';
-                ctx.fillRect(this.x - 5, this.y + 100, 10, 40);
+                ctx.fillRect(this.x - 5, this.y + hover + 100, 10, 40);
             } else {
                 ctx.fillStyle = '#222';
-                ctx.fillRect(this.x - 5, this.y + 100, 10, 40);
+                ctx.fillRect(this.x - 5, this.y + hover + 100, 10, 40);
             }
         }
         
         for (const b of this.bombs) {
+            const bt = performance.now() / 100;
             ctx.fillStyle = '#000';
             ctx.beginPath();
             ctx.arc(b.x + b.width/2, b.y + b.height/2, b.width/2, 0, Math.PI*2);
             ctx.fill();
-            ctx.fillStyle = '#F00';
+            ctx.strokeStyle = '#3a3a3a';
+            ctx.stroke();
+            ctx.fillStyle = `rgba(255, 40, 40, ${0.5 + 0.5 * Math.sin(bt + b.x * 0.05)})`;
             ctx.fillRect(b.x + b.width/2 - 2, b.y - 4, 4, 8);
         }
     }

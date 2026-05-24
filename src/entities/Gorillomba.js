@@ -148,6 +148,9 @@ export class Gorillomba {
 
         const cx = this.x + this.width / 2;
         const cy = this.y + this.height / 2;
+        const t = performance.now();
+        const armSwing = Math.sin(t / 140) * 5;
+        const chestPulse = 0.9 + 0.1 * Math.sin(t / 190);
         ctx.save();
         ctx.translate(cx, cy);
 
@@ -163,7 +166,7 @@ export class Gorillomba {
 
         // Body — hot orange/yellow core
         ctx.fillStyle = '#FF6600';
-        ctx.fillRect(-38, -30, 76, 60); // torso
+        ctx.fillRect(-38, -30, 76, 60 * chestPulse); // torso
 
         // Legs
         ctx.fillStyle = '#FF4400';
@@ -172,8 +175,8 @@ export class Gorillomba {
 
         // Arms (massive)
         ctx.fillStyle = '#FF4400';
-        ctx.fillRect(-55, -20, 20, 50); // left arm
-        ctx.fillRect(35, -20, 20, 50);  // right arm
+        ctx.fillRect(-55, -20 + armSwing, 20, 50); // left arm
+        ctx.fillRect(35, -20 - armSwing, 20, 50);  // right arm
         // Knuckles
         ctx.fillStyle = '#FFAA00';
         ctx.fillRect(-55, 25, 20, 8);
@@ -226,6 +229,8 @@ export class Gorillomba {
         ctx.globalAlpha = 0.06 + pulse * 0.06;
         ctx.fillStyle = '#888888';
         ctx.fillRect(this.x, this.y, this.width, this.height);
+        ctx.strokeStyle = `rgba(220,220,220,${0.08 + pulse * 0.12})`;
+        ctx.strokeRect(this.x + 3, this.y + 3, this.width - 6, this.height - 6);
         ctx.globalAlpha = 1.0;
     }
 

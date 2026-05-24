@@ -49,6 +49,7 @@ const ctx = canvas.getContext('2d');
 
 let GAME_WIDTH = window.innerWidth;
 let GAME_HEIGHT = window.innerHeight;
+var level, mario;
 
 function resizeCanvas() {
     GAME_WIDTH = window.innerWidth;
@@ -207,6 +208,7 @@ function getRandomAlienIndex() {
 }
 
 function randomTransform() {
+    if (isTransformationLocked()) return;
     const idx = getRandomAlienIndex();
     if (idx >= 0) activateAlien(idx, { manualSelection: false });
 }
@@ -220,6 +222,7 @@ function setOmnitrixShopMessage(message, isError = false) {
 function updateShopButtons() {
     if (!btnShopJump || !btnShopTime || !btnShopContinuousManual) return;
     const continuousManual = hasContinuousManualForLevel(currentLevelIndex);
+    const transformLocked = isTransformationLocked();
 
     btnShopJump.textContent = `+1 Jump (${SHOP_EXTRA_JUMP_COST})`;
     btnShopTime.textContent = `+1 Min Time (${SHOP_EXTRA_TIME_COST})`;
@@ -236,8 +239,11 @@ function updateOmnitrixControls() {
     if (!omnitrixStatus || !btnBuyManual || !btnRandomTransform || !btnOpenShop) return;
     const manualUses = getManualUsesForLevel(currentLevelIndex);
     const continuousManual = hasContinuousManualForLevel(currentLevelIndex);
+    const transformLocked = isTransformationLocked();
 
-    if (continuousManual) {
+    if (transformLocked) {
+        omnitrixStatus.textContent = 'Transformation locked until timer ends';
+    } else if (continuousManual) {
         omnitrixStatus.textContent = `Manual∞ | Score ${score}`;
         btnBuyManual.textContent = 'Manual∞ Active';
         btnBuyManual.disabled = true;
@@ -254,6 +260,7 @@ function updateOmnitrixControls() {
     btnBuyManual.style.display = 'block';
     btnRandomTransform.style.display = 'block';
     btnOpenShop.style.display = 'block';
+    btnRandomTransform.disabled = transformLocked;
     updateShopButtons();
 }
 
@@ -329,6 +336,7 @@ function renderAlienGrid() {
 
     alienGrid.innerHTML = '';
     const manualUnlocked = hasManualControlForLevel(currentLevelIndex);
+    const transformLocked = isTransformationLocked();
     const radius = 210; 
     const centerX = 270; 
     const centerY = 270;
@@ -336,7 +344,7 @@ function renderAlienGrid() {
     ALIENS.forEach((alien, i) => {
         const slot = document.createElement('div');
         const isUnlocked = !!alien.unlocked; // Direct check
-        const isUsable = isUnlocked && alien.lives > 0 && manualUnlocked;
+        const isUsable = isUnlocked && alien.lives > 0 && manualUnlocked && !transformLocked;
         
         slot.className = 'alien-slot ' + (isUnlocked ? 'unlocked' : 'locked');
         
@@ -362,6 +370,8 @@ function renderAlienGrid() {
         if (isUsable) {
             slot.title = `TRANSFORM: ${alien.key} • ${alien.name} (${alien.lives} left)`;
             slot.onclick = () => activateAlien(i, { manualSelection: true });
+        } else if (transformLocked) {
+            slot.title = 'Locked: wait for current transformation timer to finish.';
         }
 
         alienGrid.appendChild(slot);
@@ -374,6 +384,13 @@ renderAlienGrid();
 // ─── Omnitrix Panel State ─────────────────────
 let omnitrixPanelOpen = false;
 let omnitrixShopOpen = false;
+let lastOmnitrixLockedState = false;
+
+function isTransformationLocked() {
+    if (!mario) return false;
+    const alienCountdownRunning = mario.state !== 'SMALL' && mario.alienTimer > 0;
+    return !!(mario.transforming || alienCountdownRunning);
+}
 
 function showOmnitrixAlienScreen() {
     omnitrixShopOpen = false;
@@ -400,6 +417,7 @@ function openOmnitrixPanel() {
     if (!mario.hasWatch) return;
     showOmnitrixAlienScreen();
     omnitrixPanelOpen = true;
+    omnitrixPanel.classList.toggle('locked', isTransformationLocked());
     omnitrixPanel.style.display = 'flex';
     renderAlienGrid();
     sfx.omnitrixOpen();
@@ -432,6 +450,7 @@ btnStartGame.addEventListener('click', () => {
 function activateAlien(index, options = {}) {
     const { manualSelection = false } = options;
     const alien = ALIENS[index];
+    if (isTransformationLocked()) return;
     if (!alien.unlocked || alien.lives <= 0) return;
     if (manualSelection && !hasManualControlForLevel(currentLevelIndex)) return;
 
@@ -534,7 +553,6 @@ btnShopContinuousManual.addEventListener('click', () => {
 // ─── Core state ──────────────────────────────
 const input = new Input();
 let lastTime = 0;
-let level, mario;
 const entities = [];
 let gameState = 'PLAYING';
 
@@ -1094,6 +1112,14 @@ function gameLoop(timestamp) {
                 octumba.update(deltaTime, level, mario.x, mario.y);
             }
             mario.update(deltaTime, level);
+            const currentOmnitrixLockState = isTransformationLocked();
+            if (currentOmnitrixLockState !== lastOmnitrixLockedState) {
+                lastOmnitrixLockedState = currentOmnitrixLockState;
+                if (omnitrixPanelOpen) {
+                    omnitrixPanel.classList.toggle('locked', currentOmnitrixLockState);
+                    renderAlienGrid();
+                }
+            }
 
             // ── FourArms Ground Pound Charging ────
             if (mario.state === 'FOURARMS') {
@@ -1415,7 +1441,6 @@ function gameLoop(timestamp) {
                         ALIENS[1].introMessage = 'I am Heatblast! Press F to shoot fireballs! Keep pressing for MORE POWER! 🔥';
                         sfx.collectItem();
                         renderAlienGrid();
-                        openOmnitrixPanel();
 
                     } else if (entity.type === 'fourarms_item') {
                         entity.dead = true;
@@ -1424,7 +1449,6 @@ function gameLoop(timestamp) {
                         ALIENS[0].introMessage = 'My name is Four Arms. If you need me, press "1".';
                         sfx.collectItem();
                         renderAlienGrid();
-                        openOmnitrixPanel();
 
                     } else if (entity.type === 'omnitrix_item') {
                         entity.dead = true;
@@ -1508,7 +1532,6 @@ function gameLoop(timestamp) {
                         ALIENS[2].introMessage = 'I am XLR8! Super speed! Press F for Speed Dash — nothing can stop me! ⚡';
                         sfx.collectItem();
                         renderAlienGrid();
-                        openOmnitrixPanel();
 
                     } else if (entity.type === 'stinkfly_item') {
                         entity.dead = true;
@@ -1517,7 +1540,6 @@ function gameLoop(timestamp) {
                         ALIENS[3].introMessage = 'I am Stinkfly! Press and hold [Up] to hover! Press [F] to spit toxic slime! 🪰';
                         sfx.collectItem();
                         renderAlienGrid();
-                        openOmnitrixPanel();
 
                     } else if (entity.type === 'upgrade_item') {
                         entity.dead = true;
@@ -1526,7 +1548,6 @@ function gameLoop(timestamp) {
                         ALIENS[4].introMessage = 'I am Upgrade! Press [F] near machines to merge and hack them! 💻';
                         sfx.collectItem();
                         renderAlienGrid();
-                        openOmnitrixPanel();
 
                     } else if (entity.type === 'diamondhead_item') {
                         entity.dead = true;
@@ -1536,7 +1557,6 @@ function gameLoop(timestamp) {
                         mario.transformToDiamondhead();
                         sfx.collectItem();
                         renderAlienGrid();
-                        openOmnitrixPanel();
                     } else if (entity.type === 'dragonglass_item') {
                         entity.dead = true;
                         addScore(SCORE_FOR_ITEM);
@@ -1672,7 +1692,6 @@ function gameLoop(timestamp) {
                         mario.transformToWildMutt();
                         sfx.collectItem();
                         renderAlienGrid();
-                        openOmnitrixPanel();
 
                     } else if (entity.type === 'gorillomba') {
                         if (mario.pounceActive) {
@@ -1796,7 +1815,6 @@ function gameLoop(timestamp) {
                         mario.transformToRipjaws();
                         sfx.collectItem();
                         renderAlienGrid();
-                        openOmnitrixPanel();
                     } else if (entity.type === 'jellyfish_goomba') {
                         if (mario.dashActive) {
                             entity.dead = true;
@@ -1852,7 +1870,6 @@ function gameLoop(timestamp) {
                         mario.transformToGreyMatter();
                         sfx.collectItem();
                         renderAlienGrid();
-                        openOmnitrixPanel();
                     } else if (entity.type === 'omnitrix_virus' && !entity.fixed) {
                         // Contact with unfixed viruses is always harmful now, you must use Hacking Wave!
                         if (mario.state !== 'SMALL') {
@@ -1892,7 +1909,6 @@ function gameLoop(timestamp) {
                         mario.transformToGhostfreak();
                         sfx.collectItem();
                         renderAlienGrid();
-                        openOmnitrixPanel();
                     } else if (entity.type === 'ghost_goomba') {
                         if (entity.acquired) return; // skip if already acquired
                         if (mario.dashActive) {
@@ -2788,3 +2804,6 @@ window.devWarp = function (levelNum) {
     currentLevelIndex = levelNum;
     loadLevel(currentLevelIndex, { hasWatch: true });
 };
+
+
+
