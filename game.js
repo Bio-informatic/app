@@ -360,12 +360,14 @@ function renderAlienGrid() {
         const iconUrl = alienIcons[stateName];
 
         slot.innerHTML = `
-            <span class="slot-key">${alien.key}</span>
-            <div class="slot-icon">
-                ${isUnlocked && iconUrl ? `<img src="${iconUrl}" alt="${alien.name}">` : `<span style="font-size:32px; color:#39FF1433">?</span>`}
+            <div class="alien-slot-inner">
+                <span class="slot-key">${alien.key}</span>
+                <div class="slot-icon">
+                    ${isUnlocked && iconUrl ? `<img src="${iconUrl}" alt="${alien.name}">` : `<span style="font-size:32px; color:#39FF1433">?</span>`}
+                </div>
+                <span class="slot-name">${isUnlocked ? alien.name : 'REDACTED'}</span>
+                ${livesDisplay}
             </div>
-            <span class="slot-name">${isUnlocked ? alien.name : 'REDACTED'}</span>
-            ${livesDisplay}
         `;
         if (isUsable) {
             slot.title = `TRANSFORM: ${alien.key} • ${alien.name} (${alien.lives} left)`;
@@ -419,6 +421,7 @@ function openOmnitrixPanel() {
     omnitrixPanelOpen = true;
     omnitrixPanel.classList.toggle('locked', isTransformationLocked());
     omnitrixPanel.style.display = 'flex';
+    if (alienGrid) alienGrid.classList.add('rotating-clockwise');
     renderAlienGrid();
     sfx.omnitrixOpen();
 }
@@ -426,6 +429,7 @@ function openOmnitrixPanel() {
 function closeOmnitrixPanel() {
     showOmnitrixAlienScreen();
     omnitrixPanelOpen = false;
+    if (alienGrid) alienGrid.classList.remove('rotating-clockwise');
     omnitrixPanel.style.display = 'none';
     sfx.omnitrixClose();
 }
