@@ -127,7 +127,9 @@ export class Level {
                 // Brick Rule 2: Floating bricks, 1 to 3 blocks above ground OR ground bricks
                 let floatingY = -1;
                 if (hasFloatingBricks) {
-                    const space = Math.floor(Math.random() * 3) + 1;
+                    // Enforce a minimum vertical gap of 2 blocks between structures
+                    // Previously allowed 1-3; now 2-3 blocks high gap
+                    const space = Math.floor(Math.random() * 2) + 2;
                     floatingY = baseTopY - space - 1;
                     if (floatingY > 1) {
                         for (let px = 0; px < width; px++) {
