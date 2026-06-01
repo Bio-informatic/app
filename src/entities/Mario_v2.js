@@ -1190,57 +1190,420 @@ export class Mario {
 
         ctx.save();
         ctx.translate(centerX, bottomY);
-        ctx.scale(2, 2);
-
-        ctx.fillStyle = '#000000';
-        ctx.fillRect(-5, -8, 10, 8);
-
-        ctx.fillStyle = '#C80000';
-        ctx.fillRect(-6, -22, 12, 14);
-
-        ctx.fillStyle = '#FFFFFF';
-        ctx.beginPath();
-        ctx.moveTo(-6, -22); ctx.lineTo(6, -22); ctx.lineTo(0, -12);
-        ctx.fill();
-
-        ctx.fillStyle = '#000000';
-        ctx.fillRect(-2, -22, 4, 14);
-
-        ctx.fillStyle = '#000';
-        ctx.beginPath(); ctx.arc(0, -18, 3, 0, Math.PI * 2); ctx.fill();
         
-        // Halo around hourglass (-18 is the local Y of the watch)
-        this.applyOmnitrixGlow(ctx, 0, -18);
+        // Flip horizontally if facing left
+        if (!this.facingRight) {
+            ctx.scale(-1, 1);
+        }
         
-        ctx.beginPath(); ctx.moveTo(-2, -18); ctx.lineTo(2, -20); ctx.lineTo(2, -16); ctx.fill();
-        ctx.beginPath(); ctx.moveTo(-2, -18); ctx.lineTo(2, -16); ctx.lineTo(2, -20); ctx.fill();
-        ctx.shadowBlur = 0;
+        ctx.scale(2, 2); // Maintain 2x scale for consistency with original layout
 
-        ctx.fillStyle = '#C80000';
-        ctx.fillRect(-3, -27, 6, 5);
-        ctx.fillStyle = '#FFFF00';
-        ctx.fillRect(-2, -26, 1, 1); ctx.fillRect(1, -26, 1, 1);
-        ctx.fillRect(-2, -24, 1, 1); ctx.fillRect(1, -24, 1, 1);
+        // --- PREMIUM 3D GRADIENTS & PALETTE ---
+        const skinRed = '#8b1d28';
+        const skinShadow = '#5a101c';
+        const skinHighlight = '#c0392b';
+        
+        const metalDark = '#1e293b';
+        const metalLight = '#64748b';
+        const metalHighlight = '#94a3b8';
+        
+        const armorWhite = '#f8fafc';
+        const armorShadow = '#cbd5e1';
+        
+        const energyOrange = '#ff6b00';
+        const energyGlow = '#ff8f00';
+        const energyCore = '#ffbb00';
 
+        // Stance modifier
         let raiseHands = this.input.isDown('R');
         let armYOffset = 0;
-        if (this.victory) { raiseHands = true; armYOffset = Math.sin(performance.now() / 150) * 3; }
+        if (this.victory) { 
+            raiseHands = true; 
+            armYOffset = Math.sin(performance.now() / 150) * 3; 
+        }
 
-        ctx.fillStyle = '#C80000';
+        // --- 1. LEGS, ARMORED BOOTS & KNEES ---
+        // Left Armored Boot
+        ctx.fillStyle = metalDark;
+        ctx.fillRect(-10, -3, 5, 3);
+        ctx.fillStyle = metalLight;
+        ctx.fillRect(-9, -3, 3, 1); // toe plate highlight
+        ctx.fillStyle = skinShadow;
+        ctx.fillRect(-10, -1, 3, 1); // stout exposed toes
+
+        // Right Armored Boot
+        ctx.fillStyle = metalDark;
+        ctx.fillRect(5, -3, 5, 3);
+        ctx.fillStyle = metalLight;
+        ctx.fillRect(6, -3, 3, 1); // toe plate highlight
+        ctx.fillStyle = skinShadow;
+        ctx.fillRect(7, -1, 3, 1); // stout exposed toes
+
+        // Tactical Dark Pants / Legs
+        ctx.fillStyle = '#0f172a'; // deep tactical blue/black
+        // Left leg
+        ctx.beginPath();
+        ctx.moveTo(-4, -10);
+        ctx.lineTo(-8, -3);
+        ctx.lineTo(-5, -3);
+        ctx.lineTo(-1, -8);
+        ctx.closePath();
+        ctx.fill();
+
+        // Right leg
+        ctx.beginPath();
+        ctx.moveTo(4, -10);
+        ctx.lineTo(8, -3);
+        ctx.lineTo(5, -3);
+        ctx.lineTo(1, -8);
+        ctx.closePath();
+        ctx.fill();
+
+        // Armored Knee Plates (Hexagonal layout)
+        ctx.fillStyle = armorWhite;
+        ctx.strokeStyle = metalLight;
+        ctx.lineWidth = 0.5;
+        // Left knee
+        ctx.beginPath();
+        ctx.moveTo(-7.5, -6.5); ctx.lineTo(-5.5, -7.5); ctx.lineTo(-4.5, -6.5);
+        ctx.lineTo(-4.5, -5); ctx.lineTo(-5.5, -4); ctx.lineTo(-7.5, -5);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+        // Right knee
+        ctx.beginPath();
+        ctx.moveTo(4.5, -6.5); ctx.lineTo(5.5, -7.5); ctx.lineTo(7.5, -6.5);
+        ctx.lineTo(7.5, -5); ctx.lineTo(5.5, -4); ctx.lineTo(4.5, -5);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+
+        // Pelvic Plate / Tech Belt
+        ctx.fillStyle = metalDark;
+        ctx.fillRect(-4.5, -11, 9, 3.5);
+        ctx.fillStyle = energyOrange;
+        ctx.fillRect(-1.5, -10.5, 3, 1); // glowing buckle indicator
+
+        // --- 2. BIOMECHANICAL RED TORSO ---
+        ctx.fillStyle = skinShadow;
+        ctx.fillRect(-6.5, -20, 13, 9);
+        ctx.fillStyle = skinRed;
+        ctx.fillRect(-5.5, -20, 11, 9);
+        
+        // Cybernetic rib markings
+        ctx.fillStyle = metalDark;
+        ctx.fillRect(-6, -17, 1.5, 1);
+        ctx.fillRect(4.5, -17, 1.5, 1);
+        ctx.fillRect(-5.5, -15, 1.2, 1);
+        ctx.fillRect(4.3, -15, 1.2, 1);
+
+        // --- 3. SEGMENTED TACTICAL CHEST PLATING (Avoiding Copyright) ---
+        // Left Breast Plate
+        ctx.fillStyle = armorWhite;
+        ctx.beginPath();
+        ctx.moveTo(-6.5, -22);
+        ctx.lineTo(-0.8, -22);
+        ctx.lineTo(-0.8, -12.5);
+        ctx.lineTo(-5.5, -12.5);
+        ctx.closePath();
+        ctx.fill();
+        // Left breast shadow
+        ctx.fillStyle = armorShadow;
+        ctx.beginPath();
+        ctx.moveTo(-5.5, -12.5); ctx.lineTo(-0.8, -12.5); ctx.lineTo(-0.8, -13.5); ctx.lineTo(-4.5, -13.5); ctx.closePath(); ctx.fill();
+
+        // Right Breast Plate
+        ctx.fillStyle = armorWhite;
+        ctx.beginPath();
+        ctx.moveTo(6.5, -22);
+        ctx.lineTo(0.8, -22);
+        ctx.lineTo(0.8, -12.5);
+        ctx.lineTo(5.5, -12.5);
+        ctx.closePath();
+        ctx.fill();
+        // Right breast shadow
+        ctx.fillStyle = armorShadow;
+        ctx.beginPath();
+        ctx.moveTo(5.5, -12.5); ctx.lineTo(0.8, -12.5); ctx.lineTo(0.8, -13.5); ctx.lineTo(4.5, -13.5); ctx.closePath(); ctx.fill();
+
+        // Central Dark Tech Track / Channel
+        ctx.fillStyle = metalDark;
+        ctx.fillRect(-0.8, -22, 1.6, 11);
+
+        // Armored Neck Collar
+        ctx.fillStyle = metalDark;
+        ctx.beginPath();
+        ctx.moveTo(-3.5, -23); ctx.lineTo(3.5, -23); ctx.lineTo(2, -21.5); ctx.lineTo(-2, -21.5);
+        ctx.closePath(); ctx.fill();
+
+        // Tech conduits (Orange power lanes along chest)
+        ctx.fillStyle = energyOrange;
+        ctx.fillRect(-4.5, -20.5, 1, 6);
+        ctx.fillRect(3.5, -20.5, 1, 6);
+
+        // --- 4. ORIGINAL HEXAGONAL ENERGY CORE (Chest Emblem) ---
+        const coreY = -18;
+        // Outer Hexagonal Frame
+        ctx.fillStyle = metalDark;
+        ctx.strokeStyle = metalHighlight;
+        ctx.lineWidth = 0.6;
+        ctx.beginPath();
+        ctx.moveTo(-3, coreY); ctx.lineTo(-1.5, coreY - 2.6); ctx.lineTo(1.5, coreY - 2.6);
+        ctx.lineTo(3, coreY); ctx.lineTo(1.5, coreY + 2.6); ctx.lineTo(-1.5, coreY + 2.6);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+
+        // Inner Hexagonal Core Glow
+        ctx.fillStyle = energyCore;
+        this.applyOmnitrixGlow(ctx, 0, coreY); // Re-use custom glow function
+        ctx.beginPath();
+        ctx.moveTo(-2, coreY); ctx.lineTo(-1, coreY - 1.7); ctx.lineTo(1, coreY - 1.7);
+        ctx.lineTo(2, coreY); ctx.lineTo(1, coreY + 1.7); ctx.lineTo(-1, coreY + 1.7);
+        ctx.closePath(); ctx.fill();
+
+        // Vertical split line to represent dual-cell battery
+        ctx.strokeStyle = metalDark;
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        ctx.moveTo(0, coreY - 1.7); ctx.lineTo(0, coreY + 1.7);
+        ctx.stroke();
+        ctx.shadowBlur = 0; // reset
+
+        // --- 5. BIOMECHANICAL GLADIATOR HEAD ---
+        // Base Red Head Dome
+        ctx.fillStyle = skinShadow;
+        ctx.beginPath();
+        ctx.arc(0, -25, 4.3, Math.PI, 0);
+        ctx.lineTo(4.1, -22);
+        ctx.lineTo(-4.1, -22);
+        ctx.closePath();
+        ctx.fill();
+        
+        ctx.fillStyle = skinRed;
+        ctx.beginPath();
+        ctx.arc(0, -25.2, 3.8, Math.PI, 0);
+        ctx.lineTo(3.6, -22.3);
+        ctx.lineTo(-3.6, -22.3);
+        ctx.closePath();
+        ctx.fill();
+
+        // Cybernetic Metal Neural Ridge (Instead of a plain stripe)
+        ctx.fillStyle = metalDark;
+        ctx.fillRect(-0.7, -29.2, 1.4, 7);
+        ctx.fillStyle = energyOrange;
+        ctx.fillRect(-0.3, -28.5, 0.6, 1); // tiny neural node indicators
+        ctx.fillRect(-0.3, -26.0, 0.6, 1);
+
+        // Segmented Chin / Jaw Protection Plates
+        ctx.fillStyle = metalDark;
+        ctx.fillRect(-3, -22.8, 6, 0.8);
+        ctx.fillRect(-2, -22, 4, 0.6);
+
+        // Four Cybernetic Ocular Implants (Symmetrically stacked)
+        // Draw metallic rim then bright glowing center
+        const drawCyberEye = (x, y) => {
+            ctx.fillStyle = metalDark;
+            ctx.beginPath();
+            ctx.arc(x, y, 0.7, 0, Math.PI*2);
+            ctx.fill();
+            ctx.fillStyle = energyCore;
+            ctx.shadowColor = energyGlow;
+            ctx.shadowBlur = 2;
+            ctx.beginPath();
+            ctx.arc(x, y, 0.45, 0, Math.PI*2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        };
+
+        drawCyberEye(-2.3, -26.2); // Upper Left
+        drawCyberEye(-1.8, -24.3); // Lower Left
+        drawCyberEye(2.3, -26.2);  // Upper Right
+        drawCyberEye(1.8, -24.3);  // Lower Right
+
+        // --- 6. QUAD POWER ARMS WITH TACTICAL GAUNTLETS ---
         if (raiseHands) {
-            const yBaseUpper = -28 + armYOffset; const yBaseLower = -16 + armYOffset;
-            const yBaseGloves1 = -31 + armYOffset; const yBaseGloves2 = -19 + armYOffset;
-            ctx.fillRect(-12, yBaseUpper, 4, 10); ctx.fillRect(8, yBaseUpper, 4, 10);
-            ctx.fillRect(-12, yBaseLower, 4, 10); ctx.fillRect(8, yBaseLower, 4, 10);
-            ctx.fillStyle = '#000';
-            ctx.fillRect(-13, yBaseGloves1, 6, 3); ctx.fillRect(7, yBaseGloves1, 6, 3);
-            ctx.fillRect(-13, yBaseGloves2, 6, 3); ctx.fillRect(7, yBaseGloves2, 6, 3);
+            // == VICTORY / DEFENSE STATE (RAISED POSITIONS) ==
+            const yBaseUpper = -23 + armYOffset;
+            const yBaseLower = -17 + armYOffset;
+
+            // --- Upper Arms (Raised) ---
+            ctx.fillStyle = skinShadow;
+            ctx.beginPath();
+            ctx.moveTo(-6, -22); ctx.lineTo(-12, yBaseUpper - 10); ctx.lineTo(-8, yBaseUpper - 10); ctx.lineTo(-4, -20);
+            ctx.closePath(); ctx.fill();
+            
+            ctx.fillStyle = skinRed;
+            ctx.beginPath();
+            ctx.moveTo(-5.5, -21.5); ctx.lineTo(-11, yBaseUpper - 9.5); ctx.lineTo(-7.5, yBaseUpper - 9.5); ctx.lineTo(-4, -20.5);
+            ctx.closePath(); ctx.fill();
+
+            // Right Upper Arm
+            ctx.fillStyle = skinShadow;
+            ctx.beginPath();
+            ctx.moveTo(6, -22); ctx.lineTo(12, yBaseUpper - 10); ctx.lineTo(8, yBaseUpper - 10); ctx.lineTo(4, -20);
+            ctx.closePath(); ctx.fill();
+            
+            ctx.fillStyle = skinRed;
+            ctx.beginPath();
+            ctx.moveTo(5.5, -21.5); ctx.lineTo(11, yBaseUpper - 9.5); ctx.lineTo(7.5, yBaseUpper - 9.5); ctx.lineTo(4, -20.5);
+            ctx.closePath(); ctx.fill();
+
+            // White Segmented Armor Shoulder Plates (Raised)
+            ctx.fillStyle = armorWhite;
+            ctx.beginPath();
+            ctx.moveTo(-6, -22); ctx.lineTo(-9, yBaseUpper - 5); ctx.lineTo(-5, -20);
+            ctx.closePath(); ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(6, -22); ctx.lineTo(9, yBaseUpper - 5); ctx.lineTo(5, -20);
+            ctx.closePath(); ctx.fill();
+
+            // Dark trim/collar borders on shoulders
+            ctx.fillStyle = metalDark;
+            ctx.beginPath();
+            ctx.moveTo(-8.5, yBaseUpper - 5.5); ctx.lineTo(-9.5, yBaseUpper - 4); ctx.lineTo(-5.5, -19.5); ctx.lineTo(-5, -21);
+            ctx.closePath(); ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(8.5, yBaseUpper - 5.5); ctx.lineTo(9.5, yBaseUpper - 4); ctx.lineTo(5.5, -19.5); ctx.lineTo(5, -21);
+            ctx.closePath(); ctx.fill();
+
+            // Segmented Biomechanical Wrist Gauntlets (Raised upper)
+            ctx.fillStyle = metalDark;
+            ctx.fillRect(-13, yBaseUpper - 12, 6, 2.8);
+            ctx.fillRect(7, yBaseUpper - 12, 6, 2.8);
+            // Glowing gauntlet energy strip
+            ctx.fillStyle = energyOrange;
+            ctx.fillRect(-11, yBaseUpper - 11.5, 2, 0.8);
+            ctx.fillRect(9, yBaseUpper - 11.5, 2, 0.8);
+
+            // Red Clenched Fists (Raised upper)
+            ctx.fillStyle = skinHighlight;
+            ctx.fillRect(-12.5, yBaseUpper - 14, 5, 2.2);
+            ctx.fillRect(7.5, yBaseUpper - 14, 5, 2.2);
+
+            // --- Lower Arms (Raised) ---
+            ctx.fillStyle = skinShadow;
+            ctx.beginPath();
+            ctx.moveTo(-5.5, -16); ctx.lineTo(-11.5, yBaseLower - 5); ctx.lineTo(-8.5, yBaseLower - 5); ctx.lineTo(-3.5, -15);
+            ctx.closePath(); ctx.fill();
+            
+            ctx.fillStyle = skinRed;
+            ctx.beginPath();
+            ctx.moveTo(-5.0, -15.8); ctx.lineTo(-10.5, yBaseLower - 4.8); ctx.lineTo(-8.0, yBaseLower - 4.8); ctx.lineTo(-3.5, -14.8);
+            ctx.closePath(); ctx.fill();
+
+            // Right Lower Arm
+            ctx.fillStyle = skinShadow;
+            ctx.beginPath();
+            ctx.moveTo(5.5, -16); ctx.lineTo(11.5, yBaseLower - 5); ctx.lineTo(8.5, yBaseLower - 5); ctx.lineTo(3.5, -15);
+            ctx.closePath(); ctx.fill();
+            
+            ctx.fillStyle = skinRed;
+            ctx.beginPath();
+            ctx.moveTo(5.0, -15.8); ctx.lineTo(10.5, yBaseLower - 4.8); ctx.lineTo(8.0, yBaseLower - 4.8); ctx.lineTo(3.5, -14.8);
+            ctx.closePath(); ctx.fill();
+
+            // Segmented Biomechanical Wrist Gauntlets (Raised lower)
+            ctx.fillStyle = metalDark;
+            ctx.fillRect(-12, yBaseLower - 7.5, 5, 2.8);
+            ctx.fillRect(7, yBaseLower - 7.5, 5, 2.8);
+            // Glowing energy indicators
+            ctx.fillStyle = energyOrange;
+            ctx.fillRect(-10.5, -7.0, 1.5, 0.8);
+            ctx.fillRect(9, -7.0, 1.5, 0.8);
+
+            // Red Clenched Fists (Raised lower)
+            ctx.fillStyle = skinRed;
+            ctx.fillRect(-11.5, yBaseLower - 9.5, 4, 2.2);
+            ctx.fillRect(7.5, yBaseLower - 9.5, 4, 2.2);
+
         } else {
-            ctx.fillRect(-10, -22, 4, 10); ctx.fillRect(6, -22, 4, 10);
-            ctx.fillRect(-10, -10, 4, 10); ctx.fillRect(6, -10, 4, 10);
-            ctx.fillStyle = '#000';
-            ctx.fillRect(-11, -12, 6, 3); ctx.fillRect(5, -12, 6, 3);
-            ctx.fillRect(-11, 0, 6, 3); ctx.fillRect(5, 0, 6, 3);
+            // == STANDBY / NORMAL GLADIATOR POSITIONS ==
+            // --- Upper Arms ---
+            // Left Upper Bicep
+            ctx.fillStyle = skinShadow;
+            ctx.beginPath();
+            ctx.moveTo(-6, -22); ctx.bezierCurveTo(-14, -22, -15, -16, -12, -12); ctx.lineTo(-9, -13); ctx.bezierCurveTo(-11, -17, -10, -20, -5, -20);
+            ctx.closePath(); ctx.fill();
+
+            ctx.fillStyle = skinRed;
+            ctx.beginPath();
+            ctx.moveTo(-5.5, -21.5); ctx.bezierCurveTo(-13, -21.5, -14, -16.2, -11.5, -12.5); ctx.lineTo(-9, -13.2); ctx.bezierCurveTo(-10.5, -16.8, -9.5, -19.8, -4.5, -19.8);
+            ctx.closePath(); ctx.fill();
+
+            // Right Upper Bicep
+            ctx.fillStyle = skinShadow;
+            ctx.beginPath();
+            ctx.moveTo(6, -22); ctx.bezierCurveTo(14, -22, 15, -16, 12, -12); ctx.lineTo(9, -13); ctx.bezierCurveTo(11, -17, 10, -20, 5, -20);
+            ctx.closePath(); ctx.fill();
+
+            ctx.fillStyle = skinRed;
+            ctx.beginPath();
+            ctx.moveTo(5.5, -21.5); ctx.bezierCurveTo(13, -21.5, 14, -16.2, 11.5, -12.5); ctx.lineTo(9, -13.2); ctx.bezierCurveTo(10.5, -16.8, 9.5, -19.8, 4.5, -19.8);
+            ctx.closePath(); ctx.fill();
+
+            // White Segmented Armor Shoulder Plates
+            ctx.fillStyle = armorWhite;
+            ctx.beginPath();
+            ctx.moveTo(-6, -22); ctx.lineTo(-10.5, -20.5); ctx.lineTo(-9, -17.5); ctx.lineTo(-5.2, -20.2);
+            ctx.closePath(); ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(6, -22); ctx.lineTo(10.5, -20.5); ctx.lineTo(9, -17.5); ctx.lineTo(5.2, -20.2);
+            ctx.closePath(); ctx.fill();
+
+            // Dark trims on shoulders
+            ctx.fillStyle = metalDark;
+            ctx.beginPath();
+            ctx.moveTo(-10.5, -20.5); ctx.lineTo(-11.2, -19.5); ctx.lineTo(-9.8, -16.5); ctx.lineTo(-9, -17.5);
+            ctx.closePath(); ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(10.5, -20.5); ctx.lineTo(11.2, -19.5); ctx.lineTo(9.8, -16.5); ctx.lineTo(9, -17.5);
+            ctx.closePath(); ctx.fill();
+
+            // Biomechanical Gauntlets (Standby upper)
+            ctx.fillStyle = metalDark;
+            ctx.fillRect(-13.5, -12, 5, 2.8);
+            ctx.fillRect(8.5, -12, 5, 2.8);
+            // Glowing lines on gauntlets
+            ctx.fillStyle = energyOrange;
+            ctx.fillRect(-12.5, -11, 3, 0.8);
+            ctx.fillRect(9.5, -11, 3, 0.8);
+
+            // Red Clenched Fists (Standby upper)
+            ctx.fillStyle = skinRed;
+            ctx.fillRect(-13, -9.5, 4, 3);
+            ctx.fillRect(9, -9.5, 4, 3);
+
+            // --- Lower Arms ---
+            // Left Lower Arm
+            ctx.fillStyle = skinShadow;
+            ctx.beginPath();
+            ctx.moveTo(-5.5, -16); ctx.bezierCurveTo(-11, -16, -11, -10, -8, -6); ctx.lineTo(-5.5, -7); ctx.bezierCurveTo(-8, -10, -7, -13, -3.5, -13);
+            ctx.closePath(); ctx.fill();
+
+            ctx.fillStyle = skinRed;
+            ctx.beginPath();
+            ctx.moveTo(-5.2, -15.6); ctx.bezierCurveTo(-10.2, -15.6, -10.2, -10.2, -7.5, -6.4); ctx.lineTo(-5.5, -7.2); ctx.bezierCurveTo(-7.5, -10.2, -6.5, -12.8, -3.2, -12.8);
+            ctx.closePath(); ctx.fill();
+
+            // Right Lower Arm
+            ctx.fillStyle = skinShadow;
+            ctx.beginPath();
+            ctx.moveTo(5.5, -16); ctx.bezierCurveTo(11, -16, 11, -10, 8, -6); ctx.lineTo(5.5, -7); ctx.bezierCurveTo(8, -10, 7, -13, 3.5, -13);
+            ctx.closePath(); ctx.fill();
+
+            ctx.fillStyle = skinRed;
+            ctx.beginPath();
+            ctx.moveTo(5.2, -15.6); ctx.bezierCurveTo(10.2, -15.6, 10.2, -10.2, 7.5, -6.4); ctx.lineTo(5.5, -7.2); ctx.bezierCurveTo(7.5, -10.2, 7.5, -12.8, 3.2, -12.8);
+            ctx.closePath(); ctx.fill();
+
+            // Biomechanical Gauntlets (Standby lower)
+            ctx.fillStyle = metalDark;
+            ctx.fillRect(-9, -6, 4.5, 2.8);
+            ctx.fillRect(4.5, -6, 4.5, 2.8);
+            // Gauntlet glowing slots
+            ctx.fillStyle = energyOrange;
+            ctx.fillRect(-8, -5, 2.5, 0.8);
+            ctx.fillRect(5.5, -5, 2.5, 0.8);
+
+            // Red Clenched Fists (Standby lower)
+            ctx.fillStyle = skinRed;
+            ctx.fillRect(-8.5, -3.5, 3.5, 2.8);
+            ctx.fillRect(5, -3.5, 3.5, 2.8);
         }
 
         ctx.restore();
