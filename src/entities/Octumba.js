@@ -17,6 +17,8 @@ export class Octumba {
         
         this.timer = 0;
         this.shootCooldown = 2000;
+        this.vx = 0;
+        this.vy = 0;
     }
 
     update(deltaTime, level, playerX, playerY) {
@@ -35,9 +37,34 @@ export class Octumba {
             return;
         }
 
+        const dist = Math.hypot(this.x + 75 - playerX, this.y + 75 - playerY);
+        const playerInSea = level && level.waterStartX !== undefined && playerX >= level.waterStartX;
+        if (playerInSea) {
+            const targetX = playerX - this.width / 2;
+            const targetY = playerY - this.height / 2;
+            const dx = targetX - this.x;
+            const dy = targetY - this.y;
+            const chaseDistance = Math.max(1, Math.hypot(dx, dy));
+            const speed = dist < 900 ? 0.105 : 0.055;
+            this.vx += (dx / chaseDistance) * speed * deltaTime;
+            this.vy += (dy / chaseDistance) * speed * deltaTime;
+            const maxSpeed = 2.4;
+            const velocityLength = Math.max(1, Math.hypot(this.vx, this.vy));
+            if (velocityLength > maxSpeed) {
+                this.vx = (this.vx / velocityLength) * maxSpeed;
+                this.vy = (this.vy / velocityLength) * maxSpeed;
+            }
+            this.x += this.vx;
+            this.y += this.vy;
+            this.x = Math.max(level.waterStartX + 20, Math.min(level.width - this.width - 40, this.x));
+            this.y = Math.max(30, Math.min(level.height - this.height - 45, this.y));
+        } else {
+            this.vx *= 0.92;
+            this.vy *= 0.92;
+        }
+
         this.shootCooldown -= deltaTime;
         // Shoot mucus only when player is nearby (within 800px)
-        const dist = Math.hypot(this.x + 75 - playerX, this.y + 75 - playerY);
         if (this.shootCooldown <= 0 && dist < 800) {
             this.shootCooldown = 1500 + Math.random() * 1000;
             if (this.entities) {

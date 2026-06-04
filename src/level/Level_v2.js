@@ -24,6 +24,7 @@ export class Level {
             const lavaChar = 'L';
             const wireChar = 'W'; // tile 12
             const eBlockChar = 'E'; // tile 13
+            const treeBrickChar = 'T'; // tile 14
 
             const MAX_GAP_TILES = 5;
             const GROUND_Y = ROWS - 6;
@@ -417,6 +418,20 @@ export class Level {
                     y: (GROUND_Y - 4) * TS,
                     type: 'wild_mutt_item'
                 });
+
+                for (let x = 24; x < bossZoneStart - 12; x += 18) {
+                    const trunkHeight = 3 + (x % 3);
+                    const topY = GROUND_Y - trunkHeight;
+                    for (let y = topY; y < GROUND_Y; y++) {
+                        if (map[y][x] === skyChar) map[y][x] = treeBrickChar;
+                    }
+                    for (let lx = -2; lx <= 2; lx++) {
+                        if (map[topY - 1] && map[topY - 1][x + lx] === skyChar) map[topY - 1][x + lx] = treeBrickChar;
+                    }
+                    for (let lx = -1; lx <= 1; lx++) {
+                        if (map[topY - 2] && map[topY - 2][x + lx] === skyChar) map[topY - 2][x + lx] = treeBrickChar;
+                    }
+                }
             }
 
             // ── Level 8 Boss Arena (Knightkomba) ───────────────────
@@ -541,7 +556,7 @@ export class Level {
             for (let y = 1; y < ROWS - 1; y++) {
                 for (let x = 1; x < COLS - 1; x++) {
                     if (map[y][x] === mysteryChar) {
-                        const badBlocks = ['2', '4', 'E', mysteryChar];
+                        const badBlocks = ['2', '4', 'E', treeBrickChar, mysteryChar];
                         let fail = false;
                         // Avoid bricks top/bottom
                         if (badBlocks.includes(map[y - 1][x])) fail = true;
@@ -586,6 +601,7 @@ export class Level {
                 // In Level 6 & 10, E is electronic block
                 else if (char === 'E' && (levelIndex === 6 || levelIndex === 10)) this.tiles[y][x] = 13;
                 else if (char === 'W') this.tiles[y][x] = 12; // Wire hole
+                else if (char === 'T') this.tiles[y][x] = 14; // Tree brick
                 else if (char === 'F') {
                     this.tiles[y][x] = 5;
                     if (!this.finishCols.has(x)) {
@@ -791,7 +807,7 @@ export class Level {
     }
 
     // ── Draw ────────────────────────────────────────────────────────
-    draw(ctx) {
+    draw(ctx, mario = null, camX = 0) {
         const t = this.getTheme();
         const ts = this.tileSize;
         const now = performance.now();
@@ -818,14 +834,22 @@ export class Level {
             ctx.fillStyle = grad;
             ctx.fillRect(0, this.height - 200, this.width, 200);
 
-            // Floating ember particles
-            ctx.fillStyle = '#FF6600';
-            for (let i = 0; i < 40; i++) {
+            // Floating ember particles rising all the way to the top
+            for (let i = 0; i < 58; i++) {
                 const ex = (i * 173 + now / 20) % this.width;
-                const ey = this.height - 100 - ((now / 15 + i * 97) % (this.height - 150));
-                const sz = 2 + Math.sin(now / 300 + i) * 1;
-                ctx.globalAlpha = 0.3 + Math.sin(now / 400 + i * 2) * 0.2;
-                ctx.fillRect(ex, ey, sz, sz);
+                const ey = this.height + 80 - ((now / 12 + i * 97) % (this.height + 180));
+                const pulse = 0.5 + Math.sin(now / 180 + i * 1.7) * 0.5;
+                const sz = 2.5 + pulse * 3;
+                ctx.globalAlpha = 0.28 + pulse * 0.45;
+                ctx.fillStyle = '#FFB000';
+                ctx.beginPath();
+                ctx.arc(ex, ey, sz, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 0.12 + pulse * 0.2;
+                ctx.fillStyle = '#FF3300';
+                ctx.beginPath();
+                ctx.arc(ex, ey, sz * 2.4, 0, Math.PI * 2);
+                ctx.fill();
             }
             ctx.globalAlpha = 1.0;
         }
@@ -851,17 +875,20 @@ export class Level {
             ctx.fillStyle = t.cloud;
             for (let i = 0; i < 20; i++) {
                 const cx = i * 400 + 60;
-                ctx.fillRect(cx, 30 + Math.sin(i * 0.5) * 15, 120, 3);
-                ctx.fillRect(cx + 30, 20 + Math.sin(i * 0.5) * 15, 60, 2);
+                ctx.fillRect(cx, 28 + Math.sin(i * 0.5) * 15, 260, 7);
+                ctx.fillRect(cx + 35, 14 + Math.sin(i * 0.5) * 15, 145, 4);
+                ctx.fillRect(cx + 90, 48 + Math.sin(i * 0.5) * 15, 190, 4);
             }
         } else if (this.levelIndex === 5) {
             // Heavy Poison Smog for Sewers
             ctx.fillStyle = t.cloud;
             for (let i = 0; i < 40; i++) {
                 const cx = (i * 150 + now / 15) % (this.width + 200) - 100;
-                // Layer 1: High Smog
-                ctx.fillRect(cx, 20 + Math.sin(i) * 30, 200, 40);
-                ctx.fillRect(cx + 30, 50 + Math.sin(i*2) * 20, 150, 30);
+                // Layer 1: High Smog rising into the top of the level
+                const highY = -70 + Math.sin(now / 1800 + i) * 45;
+                ctx.fillRect(cx, highY, 240, 58);
+                ctx.fillRect(cx + 28, highY + 42 + Math.sin(i*2) * 18, 190, 42);
+                ctx.fillRect(cx - 45, highY + 92 + Math.sin(i*1.4) * 24, 270, 50);
                 // Layer 2: Low-hanging fog over the map
                 ctx.fillRect((cx * 1.5) % this.width, this.height - 250 + Math.sin(i*3) * 50, 300, 50);
             }
@@ -872,9 +899,9 @@ export class Level {
             
             for (let i = 0; i < 40; i++) {
                 const startX = (i * 150) % this.width;
-                const wireLength = 300 + Math.sin(i * 1.5) * 150; // static relative length
+                const wireLength = this.height + 1000;
                 
-                let currentY = 0;
+                let currentY = -1000;
                 let segIdx = 0;
                 while (currentY < wireLength) {
                     const segmentLength = 20 + (Math.sin(i * 3 + segIdx) + 1) * 20; // 20 to 60
@@ -908,8 +935,8 @@ export class Level {
             // Jungle canopy — animated leaf shapes moving slowly
             ctx.fillStyle = t.cloud;
             for (let i = 0; i < 30; i++) {
-                const cx = (i * 200 + now / 25) % (this.width + 200) - 100;
-                const cy = 30 + Math.sin(i * 1.3) * 20;
+                const cx = (i * 200 + now / 90) % (this.width + 240) - 120;
+                const cy = 30 + Math.sin(now / 2200 + i * 1.3) * 22;
                 ctx.fillRect(cx, cy, 80, 30);
                 ctx.fillRect(cx + 20, cy - 14, 40, 20);
                 ctx.fillRect(cx - 20, cy + 20, 50, 18);
@@ -932,6 +959,14 @@ export class Level {
                 ctx.fill();
             }
             ctx.globalAlpha = 1.0;
+
+            ctx.fillStyle = 'rgba(220, 250, 255, 0.18)';
+            for (let i = 0; i < 28; i++) {
+                const fx = (i * 230 + now / 55) % (this.width + 300) - 150;
+                const fy = -30 + Math.sin(now / 1700 + i) * 26;
+                ctx.fillRect(fx, fy, 230, 42);
+                ctx.fillRect(fx + 45, fy + 28, 170, 34);
+            }
             
             // Knightkomba global summon effect
             if (this.winterGlowTimer > 0) {
@@ -939,7 +974,7 @@ export class Level {
                 
                 // Flash the screen blue/cyan
                 ctx.fillStyle = `rgba(0, 200, 255, ${0.4 * ratio})`;
-                ctx.fillRect(0, 0, this.width, this.height);
+                ctx.fillRect(0, -1000, this.width, this.height + 2000);
                 
                 // Extra thick white smoke across the sky
                 ctx.fillStyle = `rgba(255, 255, 255, ${0.4 * ratio})`;
@@ -956,27 +991,36 @@ export class Level {
             // Desert Pyramids & Sun
             ctx.fillStyle = '#FF8C00'; // Sun
             ctx.beginPath();
-            ctx.arc(300, 150, 60, 0, Math.PI * 2);
+            const sunX = this.waterStartX
+                ? Math.min(this.waterStartX - 100, Math.max(180, camX + 300))
+                : camX + 300;
+            ctx.arc(sunX, 72, 54, 0, Math.PI * 2);
             ctx.fill();
 
-            for (let i = 0; i < 5; i++) {
-                const px = i * 800 + 100;
+            const desertGroundY = (this.rows - 6) * this.tileSize;
+            for (let i = 0; i < 8; i++) {
+                const pyramidWidth = 260 + (i % 4) * 85 + (i % 2) * 40;
+                const pyramidHeight = 120 + (i % 5) * 32;
+                const px = i * 455 + 90 + (i % 2) * 75;
+                const baseY = desertGroundY;
+                const apexX = px + pyramidWidth * 0.5;
+                const apexY = baseY - pyramidHeight;
                 // Only draw if pyramid is on the land side
-                if (px + 500 < this.waterStartX) {
+                if (px + pyramidWidth < this.waterStartX) {
                     // Left side of pyramid
                     ctx.fillStyle = '#D2B48C';
                     ctx.beginPath();
-                    ctx.moveTo(px, this.height);
-                    ctx.lineTo(px + 250, 250);
-                    ctx.lineTo(px + 500, this.height);
+                    ctx.moveTo(px, baseY);
+                    ctx.lineTo(apexX, apexY);
+                    ctx.lineTo(px + pyramidWidth, baseY);
                     ctx.fill();
                     
                     // Right shaded side
                     ctx.fillStyle = '#C2B280';
                     ctx.beginPath();
-                    ctx.moveTo(px + 250, 250);
-                    ctx.lineTo(px + 500, this.height);
-                    ctx.lineTo(px + 250, this.height);
+                    ctx.moveTo(apexX, apexY);
+                    ctx.lineTo(px + pyramidWidth, baseY);
+                    ctx.lineTo(apexX, baseY);
                     ctx.fill();
                 }
             }
@@ -984,7 +1028,7 @@ export class Level {
             // Standard clouds - only on land side
             ctx.fillStyle = t.cloud;
             for (let i = 0; i < 20; i++) {
-                const cx = i * 350 + 60;
+                const cx = ((i * 350 + 60 + now / 80) % Math.max(1, this.waterStartX + 360)) - 180;
                 if (cx < this.waterStartX) {
                     ctx.fillRect(cx, 70, 64, 16);
                     ctx.fillRect(cx + 16, 54, 32, 16);
@@ -1025,13 +1069,28 @@ export class Level {
                     ctx.stroke();
                 }
 
-                ctx.fillStyle = 'rgba(180, 230, 255, 0.12)';
+                ctx.fillStyle = 'rgba(190, 245, 255, 0.28)';
                 for (let i = 0; i < 90; i++) {
                     const px = this.waterStartX + ((i * 173 + now / 18) % seaWidth);
                     const py = ((i * 97 + now / 28) % (this.height + 300)) - 120;
-                    const r = 1 + (i % 3);
+                    const r = 2 + (i % 4);
                     ctx.beginPath();
                     ctx.arc(px, py, r, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                for (let i = 0; i < 20; i++) {
+                    const fishX = this.waterStartX + ((i * 260 - now / (18 + i % 5)) % seaWidth + seaWidth) % seaWidth;
+                    const fishY = 100 + (i * 83) % (this.height - 210) + Math.sin(now / 650 + i) * 18;
+                    const dir = i % 2 === 0 ? 1 : -1;
+                    ctx.fillStyle = i % 3 === 0 ? 'rgba(255, 180, 80, 0.62)' : 'rgba(80, 220, 255, 0.58)';
+                    ctx.beginPath();
+                    ctx.ellipse(fishX, fishY, 13, 6, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.moveTo(fishX - dir * 13, fishY);
+                    ctx.lineTo(fishX - dir * 24, fishY - 7);
+                    ctx.lineTo(fishX - dir * 24, fishY + 7);
                     ctx.fill();
                 }
             }
@@ -1047,9 +1106,11 @@ export class Level {
             // Smoke clouds for hell
             ctx.fillStyle = t.cloud;
             for (let i = 0; i < 25; i++) {
-                const cx = i * 280 + 40;
-                ctx.fillRect(cx, 40 + Math.sin(i) * 20, 80, 12);
-                ctx.fillRect(cx + 20, 28 + Math.sin(i) * 20, 40, 12);
+                const cx = (i * 280 + 40 + now / 105) % (this.width + 220) - 110;
+                const cy = 38 + Math.sin(now / 2600 + i) * 24;
+                ctx.fillRect(cx, cy, 100, 18);
+                ctx.fillRect(cx + 20, cy - 18, 55, 16);
+                ctx.fillRect(cx - 16, cy + 18, 70, 14);
             }
         }
 
@@ -1282,6 +1343,30 @@ export class Level {
                         }
                         break;
                     }
+
+                    case 14: { // Tree brick
+                        const barkGrad = ctx.createLinearGradient(px, py, px + ts, py + ts);
+                        barkGrad.addColorStop(0, '#3A210F');
+                        barkGrad.addColorStop(0.55, '#6B3B18');
+                        barkGrad.addColorStop(1, '#2A1608');
+                        ctx.fillStyle = barkGrad;
+                        ctx.fillRect(px, py, ts, ts);
+                        ctx.strokeStyle = '#1B0D04';
+                        ctx.strokeRect(px, py, ts, ts);
+                        ctx.strokeStyle = 'rgba(255, 190, 100, 0.28)';
+                        ctx.beginPath();
+                        ctx.moveTo(px + 8, py + 3);
+                        ctx.quadraticCurveTo(px + 4, py + 15, px + 10, py + 29);
+                        ctx.moveTo(px + 20, py + 2);
+                        ctx.quadraticCurveTo(px + 26, py + 16, px + 18, py + 30);
+                        ctx.stroke();
+                        ctx.fillStyle = 'rgba(40, 130, 28, 0.85)';
+                        ctx.beginPath();
+                        ctx.ellipse(px + 10, py + 9, 10, 6, -0.3, 0, Math.PI * 2);
+                        ctx.ellipse(px + 22, py + 12, 11, 7, 0.4, 0, Math.PI * 2);
+                        ctx.fill();
+                        break;
+                    }
                 }
             }
         }
@@ -1308,13 +1393,28 @@ export class Level {
             ctx.restore();
             
             // Bubbles
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
-            for (let i = 0; i < 50; i++) {
+            ctx.fillStyle = 'rgba(210, 250, 255, 0.42)';
+            for (let i = 0; i < 75; i++) {
                 const bx = this.waterStartX + ((i * 153 + now/20) % (this.width - this.waterStartX));
                 const by = (this.height + 500) - ((i * 77 + now/30) % (this.height + 1000));
                 ctx.beginPath();
-                ctx.arc(bx, by + Math.sin(now/500 + i)*10, 2 + (i%3), 0, Math.PI*2);
+                ctx.arc(bx, by + Math.sin(now/500 + i)*10, 3 + (i%4), 0, Math.PI*2);
                 ctx.fill();
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.34)';
+                ctx.stroke();
+            }
+
+            ctx.strokeStyle = 'rgba(35, 155, 70, 0.55)';
+            ctx.lineWidth = 4;
+            ctx.lineCap = 'round';
+            for (let i = 0; i < 26; i++) {
+                const sx = this.waterStartX + 45 + i * 135;
+                const baseY = this.height - 32;
+                const sway = Math.sin(now / 700 + i) * 20;
+                ctx.beginPath();
+                ctx.moveTo(sx, baseY);
+                ctx.quadraticCurveTo(sx + sway, baseY - 58, sx + sway * 0.4, baseY - 124);
+                ctx.stroke();
             }
         }
 

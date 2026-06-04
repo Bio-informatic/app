@@ -603,6 +603,8 @@ let levelTimeRemaining = LEVEL_TIME_LIMIT_SECONDS; // 3 minutes
 let levelStartScore = 0;      // Backup to reset score for that level
 let levelRestartFlashActive = false;
 let levelRestartFlashTimer = 0;
+let screenFlashOpacity = 0;
+let screenFlashColor = 'white';
 
 // Knightkomba boss reference
 let knightkomba = null;
@@ -1058,6 +1060,11 @@ function gameLoop(timestamp) {
         let deltaTime = Math.min(timestamp - lastTime, 50);
         if (mario.transforming) deltaTime *= 0.3; // Cinematic slow-mo during transformation
         lastTime = timestamp;
+
+        if (screenFlashOpacity > 0) {
+            screenFlashOpacity -= deltaTime / 500;
+            if (screenFlashOpacity < 0) screenFlashOpacity = 0;
+        }
 
         // --- Level Timer Logic ---
         if (gameState === 'PLAYING' && !levelRestartFlashActive) {
@@ -1567,8 +1574,8 @@ function gameLoop(timestamp) {
                         mario.hasDragonglass = true;
                         sfx.collectItem();
                         // Flash screen
-                        ctx.fillStyle = 'white';
-                        ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+                        screenFlashOpacity = 1.0;
+                        screenFlashColor = 'white';
                     } else if (entity.type === 'ooze_goomba') {
                         // Level 5 Enemies
                         if (mario.dashActive) {
@@ -2365,7 +2372,7 @@ function gameLoop(timestamp) {
         }
 
         // ── Draw ──────────────────────────────
-        level.draw(ctx);
+        level.draw(ctx, mario, camX);
 
         entities.forEach(entity => {
             if (entity.type === 'gorillomba' && !entity.dead) {
@@ -2450,6 +2457,16 @@ function gameLoop(timestamp) {
         }
 
         ctx.restore();
+
+        // ── Screen Flash Overlay ─────────────────
+        if (screenFlashOpacity > 0) {
+            ctx.save();
+            ctx.resetTransform();
+            ctx.fillStyle = screenFlashColor;
+            ctx.globalAlpha = screenFlashOpacity;
+            ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+            ctx.restore();
+        }
 
         // ── Level 7 Thermal Vision Overlay (screen-space) ────────
         if (currentLevelIndex === 7 && mario.state === 'WILDMUTT') {
