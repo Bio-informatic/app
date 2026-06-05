@@ -571,6 +571,20 @@ let levelTitleTimer = 0;
 let bossEntrancePlayed = false;
 let lastLavaSizzle = 0;
 
+// ─── Boss Cutscene Variables ───
+let bossCutsceneActive = false;
+let bossCutscenePhase = 'none'; // 'none', 'effect', 'zoom_in', 'dialog', 'zoom_out'
+let bossCutsceneTimer = 0;
+let bossCutsceneTarget = null;
+let bossCutsceneName = '';
+let bossCutsceneText = '';
+let bossCutsceneTextProgress = 0;
+let bossCutsceneSfxPlayed = false;
+
+let currentCamCX = 0;
+let currentCamCY = 0;
+let currentCamScale = 1.0;
+
 // Sound: alien timeout tracking
 let lastAlienState = 'SMALL';
 
@@ -807,6 +821,17 @@ function loadLevel(index, carryOverState = null) {
 
     // Sound: start level music
     bossEntrancePlayed = false;
+    bossCutsceneActive = false;
+    bossCutscenePhase = 'none';
+    bossCutsceneTimer = 0;
+    bossCutsceneTarget = null;
+    bossCutsceneName = '';
+    bossCutsceneText = '';
+    bossCutsceneTextProgress = 0;
+    bossCutsceneSfxPlayed = false;
+    currentCamCX = mario.x + mario.width / 2;
+    currentCamCY = level.height - GAME_HEIGHT / 2;
+    currentCamScale = 1.0;
     lastAlienState = 'SMALL';
     sfx.startMusic(index);
 }
@@ -851,6 +876,127 @@ function deathPenalty() {
         alien.introMessage = null;
     });
     renderAlienGrid();
+}
+
+function triggerBossCutscene(bossEntity, bossName, text) {
+    bossCutsceneActive = true;
+    bossCutscenePhase = 'effect';
+    bossCutsceneTimer = 0;
+    bossCutsceneTarget = bossEntity;
+    bossCutsceneName = bossName;
+    bossCutsceneText = text;
+    bossCutsceneTextProgress = 0;
+    bossCutsceneSfxPlayed = false;
+    bossEntrancePlayed = true;
+}
+
+function wrapText(context, text, x, y, maxWidth, lineHeight) {
+    const words = text.split(' ');
+    let line = '';
+    for (let n = 0; n < words.length; n++) {
+        let testLine = line + words[n] + ' ';
+        let metrics = context.measureText(testLine);
+        let testWidth = metrics.width;
+        if (testWidth > maxWidth && n > 0) {
+            context.fillText(line, x, y);
+            line = words[n] + ' ';
+            y += lineHeight;
+        } else {
+            line = testLine;
+        }
+    }
+    context.fillText(line, x, y);
+}
+
+function drawBossCutsceneOverlay(ctx) {
+    if (!bossCutsceneActive) return;
+
+    // ── 1. Draw Cinematic Black Letterboxes ──
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, GAME_WIDTH, 60);
+    ctx.fillRect(0, GAME_HEIGHT - 60, GAME_WIDTH, 60);
+
+    // ── 2. Scanning / Glitch Special Effect in 'effect' phase ──
+    if (bossCutscenePhase === 'effect') {
+        // Neon green screen sweep
+        const scanY = (bossCutsceneTimer * 1.5) % GAME_HEIGHT;
+        ctx.fillStyle = 'rgba(0, 255, 102, 0.15)';
+        ctx.fillRect(0, scanY, GAME_WIDTH, 8);
+
+        // Random digital glitch bars
+        ctx.fillStyle = 'rgba(0, 255, 102, 0.3)';
+        for (let i = 0; i < 4; i++) {
+            const h = 2 + Math.random() * 8;
+            const y = Math.random() * GAME_HEIGHT;
+            ctx.fillRect(0, y, GAME_WIDTH, h);
+        }
+
+        // Cyber lock-on overlay
+        ctx.strokeStyle = '#00FF66';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(20, 20, GAME_WIDTH - 40, GAME_HEIGHT - 40);
+
+        ctx.fillStyle = '#00FF66';
+        ctx.font = 'bold 16px monospace';
+        ctx.fillText('WARNING: IMMINENT THREAT DETECTED...', 50, 45);
+        ctx.fillText('OMNITRIX SYSTEM ANALYSING...', 50, 75);
+    }
+
+    // ── 3. Dialogue Box in 'dialog' phase ──
+    if (bossCutscenePhase === 'dialog') {
+        const boxWidth = Math.min(680, GAME_WIDTH - 40);
+        const boxHeight = 120;
+        const boxX = (GAME_WIDTH - boxWidth) / 2;
+        const boxY = GAME_HEIGHT - boxHeight - 75;
+
+        // Draw glowing neon border box
+        ctx.save();
+        ctx.fillStyle = 'rgba(8, 15, 8, 0.9)';
+        ctx.strokeStyle = '#00FF66';
+        ctx.lineWidth = 3;
+        ctx.shadowColor = '#00FF66';
+        ctx.shadowBlur = 12;
+        ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
+        ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
+        ctx.restore();
+
+        // Corner decorative lines
+        ctx.strokeStyle = '#00FF66';
+        ctx.lineWidth = 2;
+        // Top-left corner lines
+        ctx.beginPath();
+        ctx.moveTo(boxX - 5, boxY + 15);
+        ctx.lineTo(boxX - 5, boxY - 5);
+        ctx.lineTo(boxX + 15, boxY - 5);
+        ctx.stroke();
+        // Bottom-right corner lines
+        ctx.beginPath();
+        ctx.moveTo(boxX + boxWidth + 5, boxY + boxHeight - 15);
+        ctx.lineTo(boxX + boxWidth + 5, boxY + boxHeight + 5);
+        ctx.lineTo(boxX + boxWidth - 15, boxY + boxHeight + 5);
+        ctx.stroke();
+
+        // Boss Name Header
+        ctx.fillStyle = '#00FF66';
+        ctx.font = 'bold 18px monospace';
+        ctx.fillText(`[ ${bossCutsceneName} ]`, boxX + 20, boxY + 32);
+
+        // Typewriter Message
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = '16px monospace';
+        const visibleText = bossCutsceneText.substring(0, bossCutsceneTextProgress);
+        wrapText(ctx, visibleText, boxX + 20, boxY + 62, boxWidth - 40, 24);
+
+        // Press Space Prompt
+        if (bossCutsceneTextProgress >= bossCutsceneText.length) {
+            const blink = Math.floor(performance.now() / 450) % 2 === 0;
+            if (blink) {
+                ctx.fillStyle = '#00FF66';
+                ctx.font = 'bold 12px monospace';
+                ctx.fillText('PRESS SPACE TO FIGHT', boxX + boxWidth - 170, boxY + boxHeight - 15);
+            }
+        }
+    }
 }
 
 function showLevelModal(title, message, showNext) {
@@ -1067,7 +1213,7 @@ function gameLoop(timestamp) {
         }
 
         // --- Level Timer Logic ---
-        if (gameState === 'PLAYING' && !levelRestartFlashActive) {
+        if (gameState === 'PLAYING' && !levelRestartFlashActive && !bossCutsceneActive) {
             levelTimeRemaining -= deltaTime / 1000;
             if (levelTimeRemaining <= 0) {
                 levelTimeRemaining = 0;
@@ -1087,13 +1233,48 @@ function gameLoop(timestamp) {
 
         ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
+        // --- Camera Interpolation & Target Calculation ---
+        let targetCamScale = 1.0;
+        let targetCamCX = mario.x + mario.width / 2;
+        let targetCamCY = level.height - GAME_HEIGHT / 2;
+
+        if (bossCutsceneActive) {
+            if (bossCutscenePhase === 'effect' || bossCutscenePhase === 'zoom_in' || bossCutscenePhase === 'dialog') {
+                targetCamScale = 2.2;
+                if (bossCutsceneTarget) {
+                    targetCamCX = bossCutsceneTarget.x + bossCutsceneTarget.width / 2;
+                    targetCamCY = bossCutsceneTarget.y + bossCutsceneTarget.height / 2 - 20;
+                }
+            } else if (bossCutscenePhase === 'zoom_out') {
+                targetCamScale = 1.0;
+                targetCamCX = mario.x + mario.width / 2;
+                targetCamCY = level.height - GAME_HEIGHT / 2;
+            }
+        }
+
+        // Smoothly interpolate current values using lerp
+        const lerpSpeed = bossCutsceneActive ? 0.08 : 0.12;
+        currentCamScale += (targetCamScale - currentCamScale) * lerpSpeed;
+        currentCamCX += (targetCamCX - currentCamCX) * lerpSpeed;
+        currentCamCY += (targetCamCY - currentCamCY) * lerpSpeed;
+
+        // Calculate the visible half-dimensions at current zoom
+        const halfW = (GAME_WIDTH / 2) / currentCamScale;
+        const halfH = (GAME_HEIGHT / 2) / currentCamScale;
+
+        // Clamp X: keep camera within level width
+        const clampedCamCX = Math.max(halfW, Math.min(level.width - halfW, currentCamCX));
+
+        // Clamp Y: anchor the level's BOTTOM to the viewport's BOTTOM
+        // This replicates the old `camY = level.height - GAME_HEIGHT` behavior
+        // by always making the bottom of the level sit at the bottom of the screen
+        const clampedCamCY = level.height - halfH;
+
+        // For parallax or other game elements that need camX
+        const camX = clampedCamCX - halfW;
+
         ctx.save();
-        let camX = mario.x - GAME_WIDTH / 2;
-        camX = Math.max(0, Math.min(camX, level.width - GAME_WIDTH));
-
-        // Vertical camera: anchor ground to bottom of viewport
-        let camY = level.height - GAME_HEIGHT;
-
+        
         // Screen shake offset
         let shakeX = 0, shakeY = 0;
         if (screenShake > 0) {
@@ -1101,9 +1282,52 @@ function gameLoop(timestamp) {
             shakeY = (Math.random() - 0.5) * screenShake;
             screenShake -= 0.5;
         }
-        ctx.translate(-camX + shakeX, -camY + shakeY);
 
-        if (gameState === 'PLAYING') {
+        ctx.translate(GAME_WIDTH / 2 + shakeX, GAME_HEIGHT / 2 + shakeY);
+        ctx.scale(currentCamScale, currentCamScale);
+        ctx.translate(-clampedCamCX, -clampedCamCY);
+
+        // ─── Update Boss Cutscene Phase ───
+        if (bossCutsceneActive) {
+            bossCutsceneTimer += deltaTime;
+            if (bossCutscenePhase === 'effect') {
+                if (!bossCutsceneSfxPlayed) {
+                    sfx.bossEntrance(bossCutsceneName);
+                    sfx.bossVoiceLine(bossCutsceneName);
+                    bossCutsceneSfxPlayed = true;
+                    screenShake = 15;
+                }
+                if (bossCutsceneTimer >= 800) {
+                    bossCutscenePhase = 'zoom_in';
+                    bossCutsceneTimer = 0;
+                }
+            } else if (bossCutscenePhase === 'zoom_in') {
+                if (bossCutsceneTimer >= 1200) {
+                    bossCutscenePhase = 'dialog';
+                    bossCutsceneTimer = 0;
+                }
+            } else if (bossCutscenePhase === 'dialog') {
+                const charsPerSecond = 25;
+                bossCutsceneTextProgress = Math.min(bossCutsceneText.length, Math.floor(bossCutsceneTimer / 1000 * charsPerSecond));
+                const textFullyWritten = bossCutsceneTextProgress >= bossCutsceneText.length;
+                
+                const autoAdvanceDelay = 2500;
+                const hasTimeElapsed = bossCutsceneTimer > (bossCutsceneText.length / charsPerSecond * 1000) + autoAdvanceDelay;
+                if (textFullyWritten && (hasTimeElapsed || input.isDown('Space') || input.isDown('F'))) {
+                    bossCutscenePhase = 'zoom_out';
+                    bossCutsceneTimer = 0;
+                    input.keys = {};
+                }
+            } else if (bossCutscenePhase === 'zoom_out') {
+                if (bossCutsceneTimer >= 1200) {
+                    bossCutsceneActive = false;
+                    bossCutscenePhase = 'none';
+                    bossCutsceneTarget = null;
+                }
+            }
+        }
+
+        if (gameState === 'PLAYING' && !bossCutsceneActive) {
             if (bomba && !bomba.dead) {
                 bomba.update(deltaTime, level, mario.x + mario.width / 2, mario.y + mario.height / 2);
             }
@@ -2254,42 +2478,38 @@ function gameLoop(timestamp) {
                 gameState = 'GAMEOVER';
             }
 
-            // ── Sound: Boss entrance trigger ──────
-            if (!bossEntrancePlayed) {
-                if (currentLevelIndex === 2 && bomba && !bomba.dead) {
-                    const dist = Math.abs(mario.x - bomba.x);
+            // ── Boss Cutscene Trigger ──────
+            if (!bossEntrancePlayed && !bossCutsceneActive) {
+                let bossToTrigger = null;
+                let bossName = '';
+                
+                if (currentLevelIndex === 2 && bomba && !bomba.dead) { bossToTrigger = bomba; bossName = 'BOMBA'; }
+                else if (currentLevelIndex === 3 && goombaba && !goombaba.dead) { bossToTrigger = goombaba; bossName = 'GOOMBABA'; }
+                else if (currentLevelIndex === 4 && turtumba && !turtumba.dead) { bossToTrigger = turtumba; bossName = 'TURTUMBA'; }
+                else if (currentLevelIndex === 5 && gomrog && !gomrog.dead) { bossToTrigger = gomrog; bossName = 'GOMROG'; }
+                else if (currentLevelIndex === 6 && gomboto && !gomboto.dead) { bossToTrigger = gomboto; bossName = 'GOMBOTO'; }
+                else if (currentLevelIndex === 7 && gorillomba && !gorillomba.dead) { bossToTrigger = gorillomba; bossName = 'GORILLOMBA'; }
+                else if (currentLevelIndex === 8 && knightkomba && !knightkomba.dead) { bossToTrigger = knightkomba; bossName = 'KNIGHTKOMBA'; }
+                else if (currentLevelIndex === 9 && octumba && !octumba.dead) { bossToTrigger = octumba; bossName = 'OCTUMBA'; }
+                else if (currentLevelIndex === 10 && vilgumbobo && !vilgumbobo.dead) { bossToTrigger = vilgumbobo; bossName = 'VILGUMBOBO'; }
+                else if (currentLevelIndex === 11 && freakosto && !freakosto.dead) { bossToTrigger = freakosto; bossName = 'FREAKOSTO'; }
+
+                if (bossToTrigger) {
+                    const dist = Math.abs(mario.x - bossToTrigger.x);
                     if (dist < 500) {
-                        sfx.bossEntrance('BOMBA');
-                        sfx.bossVoiceLine('BOMBA');
-                        bossEntrancePlayed = true;
-                    }
-                } else if (currentLevelIndex === 3 && goombaba && !goombaba.dead) {
-                    const dist = Math.abs(mario.x - goombaba.x);
-                    if (dist < 500) {
-                        sfx.bossEntrance('GOOMBABA');
-                        sfx.bossVoiceLine('GOOMBABA');
-                        bossEntrancePlayed = true;
-                    }
-                } else if (currentLevelIndex === 4 && turtumba && !turtumba.dead) {
-                    const dist = Math.abs(mario.x - turtumba.x);
-                    if (dist < 500) {
-                        sfx.bossEntrance('TURTUMBA');
-                        sfx.bossVoiceLine('TURTUMBA');
-                        bossEntrancePlayed = true;
-                    }
-                } else if (currentLevelIndex === 5 && gomrog && !gomrog.dead) {
-                    const dist = Math.abs(mario.x - gomrog.x);
-                    if (dist < 500) {
-                        sfx.bossEntrance('GOOMBABA'); // reuse goombaba theme for now
-                        sfx.bossVoiceLine('GOMROG');
-                        bossEntrancePlayed = true;
-                    }
-                } else if (currentLevelIndex === 6 && gomboto && !gomboto.dead) {
-                    const dist = Math.abs(mario.x - gomboto.x);
-                    if (dist < 500) {
-                        sfx.bossEntrance('BOMBA');
-                        sfx.bossVoiceLine('GOMBOTO');
-                        bossEntrancePlayed = true;
+                        const phrases = {
+                            BOMBA: "No one can dent the heavy metal armor of Bomba!",
+                            GOOMBABA: "Your tiny watch will melt in the volcanic fire of Goombaba!",
+                            TURTUMBA: "Try to run when Turtumba slows down time itself!",
+                            GOMROG: "Brave kid, you just walked into Gomrog's swamp!",
+                            GOMBOTO: "You cannot hack Gomboto's perfect robotic system!",
+                            GORILLOMBA: "I am Gorillomba, the invisible king of this jungle!",
+                            KNIGHTKOMBA: "Prepare to freeze under the icy crown of Knightkomba!",
+                            OCTUMBA: "Octumba rules this deep sea, and you will drown here!",
+                            VILGUMBOBO: "Hand over your watch to the great Vilgumbobo!",
+                            FREAKOSTO: "A weak child cannot stop a ghost like Freakosto!"
+                        };
+                        triggerBossCutscene(bossToTrigger, bossName, phrases[bossName] || "");
                     }
                 }
             }
@@ -2472,6 +2692,9 @@ function gameLoop(timestamp) {
         if (currentLevelIndex === 7 && mario.state === 'WILDMUTT') {
             level.drawThermalOverlay(ctx, GAME_WIDTH, GAME_HEIGHT);
         }
+
+        // ── Boss Cutscene Dialogue Overlay ───────────────────────
+        drawBossCutsceneOverlay(ctx);
 
         // ── Level Title Fade ──────────────────────────────────────
         const titleAge = performance.now() - levelTitleTimer;

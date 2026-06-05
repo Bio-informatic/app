@@ -355,39 +355,74 @@ export class SoundManager {
         if (this.muted || !('speechSynthesis' in window)) return;
 
         const presets = {
+            BOMBA: {
+                text: "No one can dent the heavy metal armor of Bomba!",
+                voice: 'child',
+                rate: 1.0,
+                pitch: 1.2,
+                volume: 0.98
+            },
             GOOMBABA: {
-                text: 'Goombaba-hahaha, you are in my hell, kid!',
+                text: "Your tiny watch will melt in the volcanic fire of Goombaba!",
                 voice: 'old_woman',
                 rate: 0.9,
                 pitch: 0.92,
                 volume: 0.95
             },
-            BOMBA: {
-                text: 'Bom-bom-bom, you are done!',
-                voice: 'child',
-                rate: 1.02,
-                pitch: 1.28,
-                volume: 0.98
-            },
             TURTUMBA: {
-                text: 'Turrrr, this is danger, boy. Be wise!',
+                text: "Try to run when Turtumba slows down time itself!",
                 voice: 'old_man',
-                rate: 0.88,
-                pitch: 0.78,
+                rate: 0.85,
+                pitch: 0.75,
                 volume: 0.95
             },
             GOMROG: {
-                text: 'Grog-grog, be careful. You will be swallowed!',
+                text: "Brave kid, you just walked into Gomrog's swamp!",
                 voice: 'mature_man',
                 rate: 0.9,
                 pitch: 0.74,
                 volume: 1.0
             },
             GOMBOTO: {
-                text: 'Bzzzt... You will be assimilated! Bzzzt!',
+                text: "You cannot hack Gomboto's perfect robotic system!",
                 voice: 'mature_man',
-                rate: 0.7,
-                pitch: 0.2,
+                rate: 0.8,
+                pitch: 0.3,
+                volume: 1.0
+            },
+            GORILLOMBA: {
+                text: "I am Gorillomba, the invisible king of this jungle!",
+                voice: 'mature_man',
+                rate: 0.85,
+                pitch: 0.6,
+                volume: 1.0
+            },
+            KNIGHTKOMBA: {
+                text: "Prepare to freeze under the icy crown of Knightkomba!",
+                voice: 'old_man',
+                rate: 0.8,
+                pitch: 0.7,
+                volume: 1.0
+            },
+            OCTUMBA: {
+                text: "Octumba rules this deep sea, and you will drown here!",
+                voice: 'mature_man',
+                rate: 0.75,
+                pitch: 0.5,
+                volume: 1.0
+            },
+            VILGUMBOBO: {
+                text: "Hand over your watch to the great Vilgumbobo!",
+                voice: 'mature_man',
+                rate: 0.85,
+                pitch: 0.4,
+                volume: 1.0
+            },
+            FREAKOSTO: {
+                text: "A weak child cannot stop a ghost like Freakosto!",
+                voice: 'old_woman',
+                rate: 0.9,
+                pitch: 1.1,
                 volume: 1.0
             }
         };
