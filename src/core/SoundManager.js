@@ -351,8 +351,8 @@ export class SoundManager {
         }
     }
 
-    bossVoiceLine(bossName = 'GOOMBABA') {
-        if (this.muted || !('speechSynthesis' in window)) return;
+    bossVoiceLine(bossName = 'GOOMBABA', onBoundary = null, onEnd = null) {
+        if (this.muted || !('speechSynthesis' in window)) return false;
 
         const presets = {
             BOMBA: {
@@ -428,7 +428,7 @@ export class SoundManager {
         };
 
         const preset = presets[bossName];
-        if (!preset) return;
+        if (!preset) return false;
 
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(preset.text);
@@ -438,7 +438,19 @@ export class SoundManager {
         utterance.volume = preset.volume;
         const voice = this._pickVoice(preset.voice);
         if (voice) utterance.voice = voice;
+        utterance.onboundary = event => {
+            if (typeof onBoundary === 'function' && Number.isFinite(event.charIndex)) {
+                onBoundary(event.charIndex, event.charLength || 1);
+            }
+        };
+        utterance.onend = () => {
+            if (typeof onEnd === 'function') onEnd();
+        };
+        utterance.onerror = () => {
+            if (typeof onEnd === 'function') onEnd();
+        };
         window.speechSynthesis.speak(utterance);
+        return true;
     }
 
     // 10 ── Boss Hit ───────────────────────────────────────────────

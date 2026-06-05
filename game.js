@@ -580,6 +580,10 @@ let bossCutsceneName = '';
 let bossCutsceneText = '';
 let bossCutsceneTextProgress = 0;
 let bossCutsceneSfxPlayed = false;
+let bossCutsceneVoicePlayed = false;
+let bossCutsceneVoiceEnded = false;
+let bossCutsceneVoiceEndTime = 0;
+let bossCutsceneSpeechSynced = false;
 
 let currentCamCX = 0;
 let currentCamCY = 0;
@@ -829,6 +833,10 @@ function loadLevel(index, carryOverState = null) {
     bossCutsceneText = '';
     bossCutsceneTextProgress = 0;
     bossCutsceneSfxPlayed = false;
+    bossCutsceneVoicePlayed = false;
+    bossCutsceneVoiceEnded = false;
+    bossCutsceneVoiceEndTime = 0;
+    bossCutsceneSpeechSynced = false;
     currentCamCX = mario.x + mario.width / 2;
     currentCamCY = level.height - GAME_HEIGHT / 2;
     currentCamScale = 1.0;
@@ -880,14 +888,31 @@ function deathPenalty() {
 
 function triggerBossCutscene(bossEntity, bossName, text) {
     bossCutsceneActive = true;
-    bossCutscenePhase = 'effect';
+    bossCutscenePhase = 'zoom_in';
     bossCutsceneTimer = 0;
     bossCutsceneTarget = bossEntity;
     bossCutsceneName = bossName;
     bossCutsceneText = text;
     bossCutsceneTextProgress = 0;
     bossCutsceneSfxPlayed = false;
+    bossCutsceneVoicePlayed = false;
+    bossCutsceneVoiceEnded = false;
+    bossCutsceneVoiceEndTime = 0;
+    bossCutsceneSpeechSynced = false;
     bossEntrancePlayed = true;
+}
+
+function entityFullyInsideScreen(entity, camLeft, camTop, camWidth, camHeight) {
+    if (!entity) return false;
+    const entityLeft = entity.x;
+    const entityRight = entity.x + entity.width;
+    const entityTop = entity.y;
+    const entityBottom = entity.y + entity.height;
+
+    return entityLeft >= camLeft &&
+        entityRight <= camLeft + camWidth &&
+        entityTop >= camTop &&
+        entityBottom <= camTop + camHeight;
 }
 
 function wrapText(context, text, x, y, maxWidth, lineHeight) {
@@ -908,13 +933,45 @@ function wrapText(context, text, x, y, maxWidth, lineHeight) {
     context.fillText(line, x, y);
 }
 
+function getBossIntroDetails(bossName) {
+    const details = {
+        BOMBA: { className: 'ARMORED BRUTE', domain: 'Foundry Gate', signature: 'Impact armor', behavior: 'Close-range shock', counter: 'Heavy strikes', threatId: 'MB-02', danger: 4, color: '#FFDD88' },
+        GOOMBABA: { className: 'VOLCANIC QUEEN', domain: 'Magma Nest', signature: 'Lava brood', behavior: 'Summons minions', counter: 'Keep moving', threatId: 'VG-03', danger: 5, color: '#FF6B2A' },
+        TURTUMBA: { className: 'TIME CRUSHER', domain: 'Slow Field', signature: 'Chrono drag', behavior: 'Speed drain', counter: 'Dash windows', threatId: 'CT-04', danger: 5, color: '#78FFB0' },
+        GOMROG: { className: 'SWAMP TITAN', domain: 'Rotten Marsh', signature: 'Ambush leaps', behavior: 'Terrain control', counter: 'Air spacing', threatId: 'SW-05', danger: 4, color: '#55DD66' },
+        GOMBOTO: { className: 'ROGUE MACHINE', domain: 'Circuit Vault', signature: 'System lock', behavior: 'Drone command', counter: 'Hack breach', threatId: 'RX-06', danger: 5, color: '#00FFCC' },
+        GORILLOMBA: { className: 'INVISIBLE APEX', domain: 'Jungle Canopy', signature: 'Predator cloak', behavior: 'Vanish strikes', counter: 'Sense trails', threatId: 'JN-07', danger: 5, color: '#AAFF44' },
+        KNIGHTKOMBA: { className: 'FROST WARLORD', domain: 'Ice Keep', signature: 'Frozen blade', behavior: 'Freeze pressure', counter: 'Crystal break', threatId: 'FR-08', danger: 5, color: '#DDF6FF' },
+        OCTUMBA: { className: 'ABYSSAL RULER', domain: 'Deep Current', signature: 'Pressure waves', behavior: 'Area denial', counter: 'Sonar burst', threatId: 'AB-09', danger: 4, color: '#44AAFF' },
+        VILGUMBOBO: { className: 'VIRUS OVERLORD', domain: 'Infected Core', signature: 'Code swarm', behavior: 'Virus spread', counter: 'Reprogram', threatId: 'VX-10', danger: 5, color: '#55FF55' },
+        FREAKOSTO: { className: 'PHANTOM ENTITY', domain: 'Haunted Rift', signature: 'Possession', behavior: 'Phase attacks', counter: 'Ghost lock', threatId: 'GH-11', danger: 5, color: '#C66BFF' }
+    };
+    return details[bossName] || { className: 'UNKNOWN THREAT', domain: 'Unmapped Zone', signature: 'Unstable power', behavior: 'Unclear pattern', counter: 'Stay alert', threatId: '??-00', danger: 3, color: '#00FF66' };
+}
+
 function drawBossCutsceneOverlay(ctx) {
     if (!bossCutsceneActive) return;
 
+    const rawIntroProgress = bossCutscenePhase === 'zoom_in'
+        ? Math.min(1, bossCutsceneTimer / 1200)
+        : 1;
+    const introProgress = 1 - Math.pow(1 - rawIntroProgress, 3);
+    const letterboxH = 54 + introProgress * 22;
+    const motionTime = performance.now();
+
     // ── 1. Draw Cinematic Black Letterboxes ──
     ctx.fillStyle = '#000000';
-    ctx.fillRect(0, 0, GAME_WIDTH, 60);
-    ctx.fillRect(0, GAME_HEIGHT - 60, GAME_WIDTH, 60);
+    ctx.fillRect(0, 0, GAME_WIDTH, letterboxH);
+    ctx.fillRect(0, GAME_HEIGHT - letterboxH, GAME_WIDTH, letterboxH);
+
+    const vignette = ctx.createRadialGradient(
+        GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_HEIGHT * 0.2,
+        GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH * 0.72
+    );
+    vignette.addColorStop(0, 'rgba(0, 0, 0, 0)');
+    vignette.addColorStop(1, 'rgba(0, 0, 0, 0.55)');
+    ctx.fillStyle = vignette;
+    ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
     // ── 2. Scanning / Glitch Special Effect in 'effect' phase ──
     if (bossCutscenePhase === 'effect') {
@@ -931,33 +988,183 @@ function drawBossCutsceneOverlay(ctx) {
             ctx.fillRect(0, y, GAME_WIDTH, h);
         }
 
-        // Cyber lock-on overlay
-        ctx.strokeStyle = '#00FF66';
-        ctx.lineWidth = 3;
-        ctx.strokeRect(20, 20, GAME_WIDTH - 40, GAME_HEIGHT - 40);
-
         ctx.fillStyle = '#00FF66';
         ctx.font = 'bold 16px monospace';
         ctx.fillText('WARNING: IMMINENT THREAT DETECTED...', 50, 45);
         ctx.fillText('OMNITRIX SYSTEM ANALYSING...', 50, 75);
     }
 
-    // ── 3. Dialogue Box in 'dialog' phase ──
+    // ── 3. Cinematic motion accents in zoom/dialog phases ──
+    if (bossCutscenePhase === 'zoom_in' || bossCutscenePhase === 'dialog') {
+        const sweepProgress = (motionTime % 1600) / 1600;
+        const sweepX = -GAME_WIDTH * 0.25 + sweepProgress * GAME_WIDTH * 1.5;
+        const shimmer = 0.55 + Math.sin(motionTime / 150) * 0.25;
+        const bossDetails = getBossIntroDetails(bossCutsceneName);
+        const detailAlpha = bossCutscenePhase === 'zoom_in' ? introProgress : 0.92;
+
+        ctx.save();
+        ctx.globalAlpha = bossCutscenePhase === 'zoom_in' ? introProgress : 0.48;
+        ctx.strokeStyle = `rgba(0, 255, 102, ${0.2 + shimmer * 0.25})`;
+        ctx.lineWidth = 2;
+        ctx.shadowColor = '#00FF66';
+        ctx.shadowBlur = 12;
+        ctx.beginPath();
+        ctx.moveTo(sweepX - 120, letterboxH + 12);
+        ctx.lineTo(sweepX + 80, letterboxH + 12);
+        ctx.moveTo(GAME_WIDTH - sweepX - 80, GAME_HEIGHT - letterboxH - 12);
+        ctx.lineTo(GAME_WIDTH - sweepX + 120, GAME_HEIGHT - letterboxH - 12);
+        ctx.stroke();
+
+        ctx.globalAlpha *= 0.55;
+        for (let i = 0; i < 3; i++) {
+            const y = letterboxH + 28 + i * 18;
+            const x = ((motionTime * (0.08 + i * 0.025)) % (GAME_WIDTH + 160)) - 160;
+            ctx.fillStyle = `rgba(0, 255, 102, ${0.1 + i * 0.04})`;
+            ctx.fillRect(x, y, 120 - i * 18, 2);
+            ctx.fillRect(GAME_WIDTH - x - 120, GAME_HEIGHT - y, 120 - i * 18, 2);
+        }
+        ctx.restore();
+
+        ctx.save();
+        ctx.globalAlpha = detailAlpha;
+        ctx.textBaseline = 'alphabetic';
+        ctx.shadowColor = bossDetails.color;
+        ctx.shadowBlur = 12;
+        const panelY = letterboxH + 22;
+        const panelW = 242;
+        const panelH = 136;
+        const leftPanelX = 24 - (1 - detailAlpha) * 44;
+        const rightPanelX = GAME_WIDTH - panelW - 24 + (1 - detailAlpha) * 44;
+        const drawPanelShell = (x, y, w, h, title) => {
+            const notch = 13;
+            const g = ctx.createLinearGradient(x, y, x + w, y + h);
+            g.addColorStop(0, 'rgba(0, 34, 18, 0.92)');
+            g.addColorStop(0.55, 'rgba(0, 13, 8, 0.88)');
+            g.addColorStop(1, 'rgba(0, 3, 3, 0.82)');
+            ctx.beginPath();
+            ctx.moveTo(x + notch, y);
+            ctx.lineTo(x + w, y);
+            ctx.lineTo(x + w, y + h - notch);
+            ctx.lineTo(x + w - notch, y + h);
+            ctx.lineTo(x, y + h);
+            ctx.lineTo(x, y + notch);
+            ctx.closePath();
+            ctx.fillStyle = g;
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(0, 255, 102, 0.78)';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            ctx.fillStyle = 'rgba(0, 255, 102, 0.16)';
+            ctx.fillRect(x + 8, y + 8, w - 16, 16);
+            ctx.fillStyle = bossDetails.color;
+            ctx.fillRect(x + 8, y + 8, 4, 16);
+            ctx.globalAlpha *= 0.72;
+            ctx.fillRect(x + 18, y + h - 7, (w - 36) * (0.46 + shimmer * 0.18), 2);
+            ctx.globalAlpha /= 0.72;
+
+            ctx.fillStyle = '#00170C';
+            ctx.beginPath();
+            ctx.arc(x + w - 22, y + 16, 10, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = bossDetails.color;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(x + w - 22, y + 16, 10, -Math.PI / 2, -Math.PI / 2 + Math.PI * 1.45);
+            ctx.stroke();
+            ctx.fillStyle = bossDetails.color;
+            ctx.font = 'bold 10px monospace';
+            ctx.fillText(title, x + 18, y + 20);
+        };
+        const drawDataRow = (x, y, label, value, color = 'rgba(255, 255, 255, 0.82)') => {
+            ctx.fillStyle = 'rgba(0, 255, 102, 0.18)';
+            ctx.fillRect(x, y - 10, 4, 12);
+            ctx.fillStyle = 'rgba(0, 255, 102, 0.72)';
+            ctx.font = 'bold 10px monospace';
+            ctx.fillText(label, x + 10, y);
+            ctx.fillStyle = color;
+            ctx.font = 'bold 11px monospace';
+            ctx.fillText(value, x + 92, y);
+        };
+
+        drawPanelShell(leftPanelX, panelY, panelW, panelH, 'OMNITRIX SCAN');
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = 'bold 20px monospace';
+        ctx.fillText(bossCutsceneName, leftPanelX + 18, panelY + 48);
+        ctx.fillStyle = bossDetails.color;
+        ctx.font = 'bold 11px monospace';
+        ctx.fillText(bossDetails.className, leftPanelX + 18, panelY + 67);
+        drawDataRow(leftPanelX + 18, panelY + 88, 'ID', bossDetails.threatId, bossDetails.color);
+        drawDataRow(leftPanelX + 18, panelY + 107, 'ZONE', bossDetails.domain.toUpperCase());
+        drawDataRow(leftPanelX + 18, panelY + 126, 'TYPE', bossDetails.signature.toUpperCase());
+
+        drawPanelShell(rightPanelX, panelY, panelW, panelH, 'BATTLE READOUT');
+        drawDataRow(rightPanelX + 18, panelY + 48, 'PATTERN', bossDetails.behavior.toUpperCase());
+        drawDataRow(rightPanelX + 18, panelY + 67, 'COUNTER', bossDetails.counter.toUpperCase(), bossDetails.color);
+        ctx.fillStyle = 'rgba(0, 255, 102, 0.72)';
+        ctx.font = 'bold 10px monospace';
+        ctx.fillText('DANGER', rightPanelX + 18, panelY + 91);
+        for (let i = 0; i < 5; i++) {
+            const barX = rightPanelX + 80 + i * 28;
+            const filled = i < bossDetails.danger;
+            ctx.fillStyle = filled ? bossDetails.color : 'rgba(255, 255, 255, 0.13)';
+            ctx.fillRect(barX, panelY + 82, 20, 10);
+            ctx.fillStyle = filled ? 'rgba(255, 255, 255, 0.28)' : 'rgba(0, 0, 0, 0.22)';
+            ctx.fillRect(barX, panelY + 82, 20, 2);
+        }
+        const scanWidth = (panelW - 36) * ((motionTime % 1100) / 1100);
+        ctx.fillStyle = 'rgba(0, 255, 102, 0.18)';
+        ctx.fillRect(rightPanelX + 18, panelY + 108, panelW - 36, 12);
+        ctx.fillStyle = bossDetails.color;
+        ctx.fillRect(rightPanelX + 18, panelY + 108, scanWidth, 12);
+        ctx.fillStyle = '#00170C';
+        ctx.font = 'bold 10px monospace';
+        ctx.fillText('DNA LOCK // ACTIVE', rightPanelX + 24, panelY + 118);
+        ctx.restore();
+
+        if (bossCutscenePhase === 'zoom_in') {
+            const titleRise = 16 * (1 - introProgress);
+            ctx.save();
+            ctx.globalAlpha = introProgress;
+            ctx.textAlign = 'center';
+            ctx.fillStyle = bossDetails.color;
+            ctx.font = 'bold 14px monospace';
+            ctx.shadowColor = bossDetails.color;
+            ctx.shadowBlur = 9;
+            ctx.fillText('THREAT DETECTED', GAME_WIDTH / 2, 34 + titleRise);
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = 'bold 30px monospace';
+            ctx.shadowBlur = 16;
+            ctx.fillText(bossCutsceneName, GAME_WIDTH / 2, GAME_HEIGHT - 28 - titleRise);
+            ctx.fillStyle = bossDetails.color;
+            ctx.font = 'bold 12px monospace';
+            ctx.fillText(bossDetails.className, GAME_WIDTH / 2, GAME_HEIGHT - 10 - titleRise);
+            ctx.restore();
+        }
+    }
+
+    // ── 4. Dialogue Box in 'dialog' phase ──
     if (bossCutscenePhase === 'dialog') {
         const boxWidth = Math.min(680, GAME_WIDTH - 40);
         const boxHeight = 120;
         const boxX = (GAME_WIDTH - boxWidth) / 2;
         const boxY = GAME_HEIGHT - boxHeight - 75;
 
-        // Draw glowing neon border box
+        // Draw glowing command box
         ctx.save();
-        ctx.fillStyle = 'rgba(8, 15, 8, 0.9)';
+        const panelGradient = ctx.createLinearGradient(boxX, boxY, boxX, boxY + boxHeight);
+        panelGradient.addColorStop(0, 'rgba(6, 22, 14, 0.96)');
+        panelGradient.addColorStop(1, 'rgba(2, 8, 6, 0.94)');
+        ctx.fillStyle = panelGradient;
         ctx.strokeStyle = '#00FF66';
         ctx.lineWidth = 3;
         ctx.shadowColor = '#00FF66';
-        ctx.shadowBlur = 12;
+        ctx.shadowBlur = 14;
         ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
         ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
+        ctx.globalAlpha = 0.22;
+        ctx.fillStyle = '#00FF66';
+        ctx.fillRect(boxX + 3, boxY + 3, boxWidth - 6, 2);
         ctx.restore();
 
         // Corner decorative lines
@@ -1243,7 +1450,7 @@ function gameLoop(timestamp) {
                 targetCamScale = 2.2;
                 if (bossCutsceneTarget) {
                     targetCamCX = bossCutsceneTarget.x + bossCutsceneTarget.width / 2;
-                    targetCamCY = bossCutsceneTarget.y + bossCutsceneTarget.height / 2 - 20;
+                    targetCamCY = bossCutsceneTarget.y + bossCutsceneTarget.height / 2;
                 }
             } else if (bossCutscenePhase === 'zoom_out') {
                 targetCamScale = 1.0;
@@ -1265,10 +1472,12 @@ function gameLoop(timestamp) {
         // Clamp X: keep camera within level width
         const clampedCamCX = Math.max(halfW, Math.min(level.width - halfW, currentCamCX));
 
-        // Clamp Y: anchor the level's BOTTOM to the viewport's BOTTOM
-        // This replicates the old `camY = level.height - GAME_HEIGHT` behavior
-        // by always making the bottom of the level sit at the bottom of the screen
-        const clampedCamCY = level.height - halfH;
+        // Clamp Y normally to the bottom, but center the boss during the intro zoom.
+        const shouldCenterBossCamera = bossCutsceneActive &&
+            (bossCutscenePhase === 'effect' || bossCutscenePhase === 'zoom_in' || bossCutscenePhase === 'dialog');
+        const clampedCamCY = shouldCenterBossCamera
+            ? Math.max(halfH, Math.min(level.height - halfH, currentCamCY))
+            : level.height - halfH;
 
         // For parallax or other game elements that need camX
         const camX = clampedCamCX - halfW;
@@ -1293,7 +1502,6 @@ function gameLoop(timestamp) {
             if (bossCutscenePhase === 'effect') {
                 if (!bossCutsceneSfxPlayed) {
                     sfx.bossEntrance(bossCutsceneName);
-                    sfx.bossVoiceLine(bossCutsceneName);
                     bossCutsceneSfxPlayed = true;
                     screenShake = 15;
                 }
@@ -1302,17 +1510,50 @@ function gameLoop(timestamp) {
                     bossCutsceneTimer = 0;
                 }
             } else if (bossCutscenePhase === 'zoom_in') {
+                if (!bossCutsceneSfxPlayed) {
+                    sfx.bossEntrance(bossCutsceneName);
+                    bossCutsceneSfxPlayed = true;
+                    screenShake = 15;
+                }
                 if (bossCutsceneTimer >= 1200) {
                     bossCutscenePhase = 'dialog';
                     bossCutsceneTimer = 0;
+                    bossCutsceneTextProgress = 0;
                 }
             } else if (bossCutscenePhase === 'dialog') {
                 const charsPerSecond = 25;
-                bossCutsceneTextProgress = Math.min(bossCutsceneText.length, Math.floor(bossCutsceneTimer / 1000 * charsPerSecond));
+                if (!bossCutsceneVoicePlayed) {
+                    bossCutsceneVoiceEnded = false;
+                    bossCutsceneVoiceEndTime = 0;
+                    bossCutsceneSpeechSynced = false;
+                    const speechStarted = sfx.bossVoiceLine(
+                        bossCutsceneName,
+                        (charIndex, charLength = 1) => {
+                            bossCutsceneSpeechSynced = true;
+                            bossCutsceneTextProgress = Math.min(bossCutsceneText.length, Math.max(1, charIndex + charLength));
+                        },
+                        () => {
+                            bossCutsceneVoiceEnded = true;
+                            bossCutsceneVoiceEndTime = bossCutsceneTimer;
+                            bossCutsceneTextProgress = bossCutsceneText.length;
+                        }
+                    );
+                    if (!speechStarted) {
+                        bossCutsceneVoiceEnded = true;
+                        bossCutsceneVoiceEndTime = 0;
+                    }
+                    bossCutsceneVoicePlayed = true;
+                }
+                if (!bossCutsceneSpeechSynced) {
+                    const typedChars = Math.floor(bossCutsceneTimer / 1000 * charsPerSecond);
+                    bossCutsceneTextProgress = Math.min(bossCutsceneText.length, Math.max(1, typedChars));
+                }
                 const textFullyWritten = bossCutsceneTextProgress >= bossCutsceneText.length;
                 
                 const autoAdvanceDelay = 2500;
-                const hasTimeElapsed = bossCutsceneTimer > (bossCutsceneText.length / charsPerSecond * 1000) + autoAdvanceDelay;
+                const hasTimeElapsed = bossCutsceneVoiceEnded
+                    ? bossCutsceneTimer > bossCutsceneVoiceEndTime + autoAdvanceDelay
+                    : bossCutsceneTimer > (bossCutsceneText.length / charsPerSecond * 1000) + autoAdvanceDelay;
                 if (textFullyWritten && (hasTimeElapsed || input.isDown('Space') || input.isDown('F'))) {
                     bossCutscenePhase = 'zoom_out';
                     bossCutsceneTimer = 0;
@@ -2495,8 +2736,12 @@ function gameLoop(timestamp) {
                 else if (currentLevelIndex === 11 && freakosto && !freakosto.dead) { bossToTrigger = freakosto; bossName = 'FREAKOSTO'; }
 
                 if (bossToTrigger) {
-                    const dist = Math.abs(mario.x - bossToTrigger.x);
-                    if (dist < 500) {
+                    const visibleWorldWidth = halfW * 2;
+                    const visibleWorldHeight = halfH * 2;
+                    const visibleWorldTop = clampedCamCY - halfH;
+                    const playerFullyVisible = entityFullyInsideScreen(mario, camX, visibleWorldTop, visibleWorldWidth, visibleWorldHeight);
+                    const bossFullyVisible = entityFullyInsideScreen(bossToTrigger, camX, visibleWorldTop, visibleWorldWidth, visibleWorldHeight);
+                    if (playerFullyVisible && bossFullyVisible) {
                         const phrases = {
                             BOMBA: "No one can dent the heavy metal armor of Bomba!",
                             GOOMBABA: "Your tiny watch will melt in the volcanic fire of Goombaba!",
