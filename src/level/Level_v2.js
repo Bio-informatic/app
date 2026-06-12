@@ -707,16 +707,16 @@ export class Level {
         }
         if (this.levelIndex === 6) {
             return {
-                sky:            '#0A0A0C',
-                ground:         '#1A1A24',
-                groundStroke:   '#111118',
-                brick:          '#2A2A35',
-                brickStroke:    '#111122',
-                mystery:        '#00FFCC',
-                pipe:           '#151520',
-                unstable:       '#1F6FEB',
-                unstableStroke: '#388BFD',
-                cloud:          'rgba(0, 255, 150, 0.05)'
+                sky:            '#D3D9CF',   // Hazy bright sky
+                ground:         '#8C7255',   // Sandy/muddy ground
+                groundStroke:   '#5E4A35',
+                brick:          '#7F8A80',   // Scrap metal/junk brick
+                brickStroke:    '#4A554A',
+                mystery:        '#FFCC00',   // Warning yellow
+                pipe:           '#505050',
+                unstable:       '#B89F70',   // Rusted junk
+                unstableStroke: '#7A623F',
+                cloud:          'rgba(255, 255, 230, 0.4)' // dusty clouds
             };
         }
         if (this.levelIndex === 5) {
@@ -848,6 +848,12 @@ export class Level {
             skyGrad.addColorStop(0, '#2AB1FC'); // Top sky blue
             skyGrad.addColorStop(0.6, '#86D4FF'); // Lighter near horizon
             skyGrad.addColorStop(1.0, '#DDF3FF'); // Almost white horizon
+            ctx.fillStyle = skyGrad;
+        } else if (this.levelIndex === 6) {
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, this.height);
+            skyGrad.addColorStop(0, '#7EA6B8'); // Dusty blue
+            skyGrad.addColorStop(0.6, '#C4C9B8'); // Hazy clouds
+            skyGrad.addColorStop(1.0, '#D9CDA4'); // Sand dust at horizon
             ctx.fillStyle = skyGrad;
         } else {
             ctx.fillStyle = t.sky;
@@ -1112,43 +1118,57 @@ export class Level {
                 ctx.fill();
             }
         } else if (this.levelIndex === 6) {
-            // Destroyed World: Straight broken background wires + Sparks
-            const now = performance.now();
+            // Distant junk mountains
+            ctx.fillStyle = '#818B8A';
+            for (let i = 0; i < 18; i++) {
+                const mx = (i * 400 + 50) + camX * 0.1;
+                const mh = 200 + (i % 4) * 80;
+                ctx.beginPath();
+                ctx.moveTo(mx - 150, this.height);
+                ctx.lineTo(mx, this.height - mh);
+                ctx.lineTo(mx + 100, this.height - mh * 0.7);
+                ctx.lineTo(mx + 200, this.height);
+                ctx.fill();
+            }
+
+            // Yellow Cranes / Excavators in background
+            ctx.fillStyle = '#D9A426';
+            ctx.strokeStyle = '#2A2A2A';
             ctx.lineWidth = 4;
-            
-            for (let i = 0; i < 40; i++) {
-                const startX = (i * 150) % this.width;
-                const wireLength = this.height + 1000;
-                
-                let currentY = -1000;
-                let segIdx = 0;
-                while (currentY < wireLength) {
-                    const segmentLength = 20 + (Math.sin(i * 3 + segIdx) + 1) * 20; // 20 to 60
-                    const gap = 10 + (Math.cos(i + segIdx * 2) + 1) * 8; // 10 to 26
-                    
-                    ctx.strokeStyle = '#22222E'; // dark inert wire
-                    ctx.beginPath();
-                    ctx.moveTo(startX, currentY);
-                    ctx.lineTo(startX, Math.min(wireLength, currentY + segmentLength));
-                    ctx.stroke();
-                    
-                    // Electric shock spanning the gap
-                    if (currentY + segmentLength < wireLength) {
-                        if ((now + i * 379 + segIdx * 123) % 2000 < 150) {
-                            ctx.strokeStyle = '#00FFCC';
-                            ctx.lineWidth = 2 + Math.random() * 2;
-                            ctx.beginPath();
-                            ctx.moveTo(startX, currentY + segmentLength);
-                            const jx = (Math.random() - 0.5) * 25; // spark jitter
-                            ctx.quadraticCurveTo(startX + jx, currentY + segmentLength + gap / 2, startX, currentY + segmentLength + gap);
-                            ctx.stroke();
-                            ctx.lineWidth = 4; // Reset to wire thickness
-                        }
-                    }
-                    
-                    currentY += segmentLength + gap;
-                    segIdx++;
-                }
+            for (let i = 0; i < 6; i++) {
+                const cx = (i * 700 + 300) + camX * 0.2;
+                // Crane base
+                ctx.fillRect(cx - 30, this.height - 120, 100, 120);
+                // Crane arm
+                ctx.beginPath();
+                ctx.moveTo(cx + 20, this.height - 80);
+                ctx.lineTo(cx + 150, this.height - 250 + Math.sin(now/1000 + i)*20);
+                ctx.stroke();
+                // Hanging claw
+                ctx.beginPath();
+                ctx.moveTo(cx + 150, this.height - 250 + Math.sin(now/1000 + i)*20);
+                ctx.lineTo(cx + 150, this.height - 180 + Math.sin(now/1000 + i)*20);
+                ctx.stroke();
+            }
+
+            // Foreground scrap piles
+            ctx.fillStyle = '#5C5449';
+            for (let i = 0; i < 25; i++) {
+                const px = (i * 200) + camX * 0.4;
+                const ph = 80 + (i % 3) * 50;
+                ctx.beginPath();
+                ctx.ellipse(px, this.height, 120, ph, 0, Math.PI, 0);
+                ctx.fill();
+            }
+
+            // Dusty atmosphere/clouds
+            ctx.fillStyle = t.cloud;
+            for (let i = 0; i < 12; i++) {
+                const cx = (i * 400 + now / 60) % (this.width + 400) - 200;
+                const cy = this.height - 250 + Math.sin(now / 2000 + i) * 30;
+                ctx.beginPath();
+                ctx.ellipse(cx, cy, 250, 80, 0, 0, Math.PI * 2);
+                ctx.fill();
             }
         } else if (this.levelIndex === 7) {
             // Mountains
@@ -1732,43 +1752,57 @@ export class Level {
 
                     case 12: { // Wire hole (Level 6)
                         const now = performance.now();
-                        ctx.fillStyle = '#050510';
+                        ctx.fillStyle = '#261C14'; // Dark oil/mud
                         ctx.fillRect(px, py, ts, ts);
-                        ctx.strokeStyle = '#00FFCC';
-                        ctx.lineWidth = 1;
+                        ctx.strokeStyle = '#D9A426'; // Yellow warning wire
+                        ctx.lineWidth = 2;
                         ctx.beginPath();
-                        ctx.moveTo(px + 4, py + ts); ctx.lineTo(px + 10, py + ts*0.2); ctx.lineTo(px + 16, py + ts);
+                        ctx.moveTo(px, py + ts*0.8);
+                        ctx.quadraticCurveTo(px + ts/2, py + ts*0.4, px + ts, py + ts*0.9);
                         ctx.stroke();
-                        ctx.strokeStyle = '#A0A0FF';
-                        ctx.beginPath();
-                        ctx.moveTo(px + 16, py + ts); ctx.lineTo(px + 22, py + ts*0.1); ctx.lineTo(px + 28, py + ts);
-                        ctx.stroke();
-                        // Occasional sparks
-                        if (Math.random() > 0.95) {
-                            ctx.fillStyle = '#FFFFFF';
-                            ctx.fillRect(px + Math.random() * ts, py + Math.random() * ts, 2, 2);
+                        ctx.fillStyle = 'rgba(255, 100, 0, 0.4)';
+                        if (Math.random() > 0.9) {
+                            ctx.fillRect(px + Math.random() * ts, py + Math.random() * ts, 3, 3);
                         }
                         break;
                     }
 
                     case 13: { // Electronic Block (Level 6 & 10)
-                        const isRed = this.levelIndex === 10 && !this.omnitrixFixed;
-                        const isGreen = this.levelIndex === 10 && this.omnitrixFixed;
-                        const activeColor = isRed ? '#F00' : (isGreen ? '#0F0' : '#00FFCC');
+                        if (this.levelIndex === 6) {
+                            // Junkyard Block
+                            ctx.fillStyle = '#5A4A3A';
+                            ctx.fillRect(px, py, ts, ts);
+                            ctx.strokeStyle = '#D9A426'; // Yellow stripe
+                            ctx.lineWidth = 4;
+                            ctx.beginPath();
+                            ctx.moveTo(px, py+ts/2); ctx.lineTo(px+ts, py+ts/2);
+                            ctx.stroke();
+                            ctx.lineWidth = 1;
+                            ctx.strokeStyle = '#2A1F18';
+                            ctx.strokeRect(px, py, ts, ts);
+                            // Rusty spots
+                            ctx.fillStyle = '#8B4513';
+                            ctx.fillRect(px + 4, py + 4, 6, 4);
+                            ctx.fillRect(px + ts - 8, py + ts - 8, 4, 6);
+                        } else {
+                            const isRed = this.levelIndex === 10 && !this.omnitrixFixed;
+                            const isGreen = this.levelIndex === 10 && this.omnitrixFixed;
+                            const activeColor = isRed ? '#F00' : (isGreen ? '#0F0' : '#00FFCC');
 
-                        ctx.fillStyle = isRed ? '#2A0505' : (isGreen ? '#052A05' : '#1A1A24');
-                        ctx.fillRect(px, py, ts, ts);
-                        ctx.strokeStyle = activeColor;
-                        ctx.beginPath();
-                        ctx.moveTo(px, py+ts/2); ctx.lineTo(px+ts, py+ts/2);
-                        ctx.moveTo(px+ts/2, py); ctx.lineTo(px+ts/2, py+ts);
-                        ctx.stroke();
-                        ctx.strokeRect(px, py, ts, ts);
-                        ctx.fillStyle = activeColor;
-                        ctx.fillRect(px + 14, py + 14, 4, 4);
-                        if (Math.random() > 0.99) {
-                            ctx.fillStyle = '#FFFFFF';
-                            ctx.fillRect(px + ts/2 - 2, py + ts/2 - 2, 4, 4);
+                            ctx.fillStyle = isRed ? '#2A0505' : (isGreen ? '#052A05' : '#1A1A24');
+                            ctx.fillRect(px, py, ts, ts);
+                            ctx.strokeStyle = activeColor;
+                            ctx.beginPath();
+                            ctx.moveTo(px, py+ts/2); ctx.lineTo(px+ts, py+ts/2);
+                            ctx.moveTo(px+ts/2, py); ctx.lineTo(px+ts/2, py+ts);
+                            ctx.stroke();
+                            ctx.strokeRect(px, py, ts, ts);
+                            ctx.fillStyle = activeColor;
+                            ctx.fillRect(px + 14, py + 14, 4, 4);
+                            if (Math.random() > 0.99) {
+                                ctx.fillStyle = '#FFFFFF';
+                                ctx.fillRect(px + ts/2 - 2, py + ts/2 - 2, 4, 4);
+                            }
                         }
                         break;
                     }

@@ -119,8 +119,8 @@ export class Electromba {
             return;
         }
 
-        // Electronic coloring
-        ctx.fillStyle = '#1A1A24';
+        // Junkyard coloring
+        ctx.fillStyle = '#2E251B'; // Rusty base
         ctx.beginPath();
         ctx.moveTo(cx, this.y + 4);
         ctx.lineTo(this.x + this.width, this.y + this.height);
@@ -128,18 +128,18 @@ export class Electromba {
         ctx.closePath();
         ctx.fill();
 
-        ctx.strokeStyle = '#00FFCC';
+        ctx.strokeStyle = '#D9A426'; // Junkyard yellow
         ctx.lineWidth = 2;
         ctx.stroke();
 
         // Eye
-        ctx.fillStyle = '#FFFFFF';
+        ctx.fillStyle = '#FF6600'; // Orange eye
         ctx.fillRect(cx - 6, cy - 2, 4, 4);
         ctx.fillRect(cx + 2, cy - 2, 4, 4);
 
         // Electric thunder effect
         if ((performance.now() % 300) < 150) {
-            ctx.strokeStyle = '#FFFF00';
+            ctx.strokeStyle = '#FF4400'; // Rusty spark
             ctx.beginPath();
             ctx.moveTo(cx, this.y - 5);
             ctx.lineTo(cx - 5, this.y - 12);

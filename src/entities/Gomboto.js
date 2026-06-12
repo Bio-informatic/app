@@ -68,9 +68,9 @@ export class Gomboto {
     draw(ctx) {
         // Theme Colors
         const hacked = this.absorbed || this.isHacked();
-        const baseColor = hacked ? '#080808' : '#111';
-        const accentColor = hacked ? '#00FF44' : '#00FFCC';
-        const eyeColor = hacked ? '#00FF44' : '#FF0000';
+        const baseColor = hacked ? '#080808' : '#2A2218'; // dark rusty base
+        const accentColor = hacked ? '#00FF44' : '#D9A426'; // yellow rust accent
+        const eyeColor = hacked ? '#00FF44' : '#FF6600'; // orange glowing eye
         const now = performance.now();
         const hover = Math.sin(now / 200) * 2.2;
         const scan = (Math.sin(now / 260) + 1) * 0.5;
