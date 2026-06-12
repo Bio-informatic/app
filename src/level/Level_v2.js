@@ -648,32 +648,32 @@ export class Level {
         }
         if (this.levelIndex === 10) {
             if (this.omnitrixFixed) {
-                // Fixed: Omnitrix Green
+                // Fixed: Omnitrix Green circuit
                 return {
-                    sky:            '#0A2A0A',
-                    ground:         '#1A4A1A',
-                    groundStroke:   '#00FF00',
-                    brick:          '#2A6A2A',
-                    brickStroke:    '#AAFFAA',
+                    sky:            '#0A120A',
+                    ground:         '#1A2A1A',
+                    groundStroke:   '#00FF44',
+                    brick:          '#1E2E1E',
+                    brickStroke:    '#00FF44',
                     mystery:        '#00FF00',
-                    pipe:           '#003300',
-                    unstable:       '#3A8A3A',
-                    unstableStroke: '#6AFFAA',
-                    cloud:          'rgba(0, 255, 0, 0.1)'
+                    pipe:           '#0A1A0A',
+                    unstable:       '#2A3A2A',
+                    unstableStroke: '#00CC33',
+                    cloud:          'rgba(0, 255, 68, 0.06)'
                 };
             } else {
-                // Broken: Glitchy Red
+                // Broken: Dark PCB with red/orange glowing traces
                 return {
-                    sky:            '#2A0A0A',
-                    ground:         '#4A1A1A',
-                    groundStroke:   '#FF0000',
-                    brick:          '#6A2A2A',
-                    brickStroke:    '#FFAAAA',
-                    mystery:        '#FF0000',
-                    pipe:           '#330000',
-                    unstable:       '#8A3A3A',
-                    unstableStroke: '#FF6AAA',
-                    cloud:          'rgba(255, 0, 0, 0.1)'
+                    sky:            '#0C0E12',   // Dark metallic gray
+                    ground:         '#1A1C22',   // Dark circuit board
+                    groundStroke:   '#FF2200',   // Red trace
+                    brick:          '#22252C',   // Dark chip color
+                    brickStroke:    '#FF4400',   // Orange glow outline
+                    mystery:        '#FF6600',   // Orange warning
+                    pipe:           '#0A0C10',
+                    unstable:       '#2A2D35',
+                    unstableStroke: '#FF3300',
+                    cloud:          'rgba(255, 60, 0, 0.05)'
                 };
             }
         }
@@ -860,6 +860,18 @@ export class Level {
             skyGrad.addColorStop(0, '#100522'); // Dark roof
             skyGrad.addColorStop(0.6, '#31104A'); // Ambient purple
             skyGrad.addColorStop(1.0, '#4B2875'); // Warm ground bounce
+            ctx.fillStyle = skyGrad;
+        } else if (this.levelIndex === 10) {
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, this.height);
+            if (this.omnitrixFixed) {
+                skyGrad.addColorStop(0, '#040A04');
+                skyGrad.addColorStop(0.5, '#0A1A0A');
+                skyGrad.addColorStop(1.0, '#0C1F0C');
+            } else {
+                skyGrad.addColorStop(0, '#08090C'); // Very dark steel
+                skyGrad.addColorStop(0.5, '#0E1015'); // Deep charcoal
+                skyGrad.addColorStop(1.0, '#141720'); // Slight warm base
+            }
             ctx.fillStyle = skyGrad;
         } else {
             ctx.fillStyle = t.sky;
@@ -1548,6 +1560,81 @@ export class Level {
                 ctx.arc(mx + mr * 0.4, my - mr * 0.15, mr * 0.6, 0, Math.PI * 2);
                 ctx.fill();
             }
+        } else if (this.levelIndex === 10) {
+            // PCB / Motherboard Background
+            const traceColor = this.omnitrixFixed ? '#00FF44' : '#FF2200';
+            const traceGlow = this.omnitrixFixed ? 'rgba(0, 255, 68, 0.15)' : 'rgba(255, 34, 0, 0.15)';
+            const chipColor = this.omnitrixFixed ? '#0A1A0A' : '#1A1C22';
+            const chipBorder = this.omnitrixFixed ? '#00AA22' : '#444855';
+
+            // Horizontal circuit traces
+            ctx.strokeStyle = traceColor;
+            ctx.lineWidth = 2;
+            for (let i = 0; i < 30; i++) {
+                const ty = (i * 60 + 20);
+                const startX = (i * 137 + 50) % 400;
+                ctx.beginPath();
+                ctx.moveTo(startX + camX * 0.2, ty);
+                ctx.lineTo(startX + 200 + (i % 4) * 80 + camX * 0.2, ty);
+                ctx.lineTo(startX + 220 + (i % 4) * 80 + camX * 0.2, ty + 20);
+                ctx.lineTo(startX + 400 + (i % 3) * 100 + camX * 0.2, ty + 20);
+                ctx.stroke();
+            }
+
+            // Vertical circuit traces
+            for (let i = 0; i < 20; i++) {
+                const tx = (i * 120 + 30) + camX * 0.15;
+                ctx.beginPath();
+                ctx.moveTo(tx, (i * 47) % this.height);
+                ctx.lineTo(tx, (i * 47) % this.height + 100 + (i % 3) * 60);
+                ctx.stroke();
+            }
+
+            // IC Chips (dark rectangles with borders)
+            ctx.fillStyle = chipColor;
+            ctx.strokeStyle = chipBorder;
+            ctx.lineWidth = 1;
+            for (let i = 0; i < 12; i++) {
+                const cx = (i * 350 + 80) + camX * 0.25;
+                const cy = 50 + (i % 5) * 100;
+                const cw = 60 + (i % 3) * 40;
+                const ch = 40 + (i % 2) * 30;
+                ctx.fillRect(cx, cy, cw, ch);
+                ctx.strokeRect(cx, cy, cw, ch);
+                // Chip pins
+                ctx.strokeStyle = traceColor;
+                for (let p = 0; p < 4; p++) {
+                    ctx.beginPath();
+                    ctx.moveTo(cx + 10 + p * 15, cy);
+                    ctx.lineTo(cx + 10 + p * 15, cy - 8);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(cx + 10 + p * 15, cy + ch);
+                    ctx.lineTo(cx + 10 + p * 15, cy + ch + 8);
+                    ctx.stroke();
+                }
+                ctx.strokeStyle = chipBorder;
+            }
+
+            // Glowing solder points
+            ctx.fillStyle = traceColor;
+            for (let i = 0; i < 40; i++) {
+                const sx = (i * 193 + 20) + camX * 0.3;
+                const sy = (i * 97 + 40) % this.height;
+                ctx.beginPath();
+                ctx.arc(sx, sy, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Ambient glow haze
+            ctx.fillStyle = traceGlow;
+            for (let i = 0; i < 8; i++) {
+                const gx = (i * 500 + now / 80) % (this.width + 400) - 200;
+                const gy = this.height - 150 + Math.sin(now / 2000 + i) * 40;
+                ctx.beginPath();
+                ctx.ellipse(gx, gy, 250, 80, 0, 0, Math.PI * 2);
+                ctx.fill();
+            }
         } else if (this.levelIndex !== 3 && this.levelIndex !== 6) {
             ctx.fillStyle = t.cloud;
             for (let i = 0; i < 20; i++) {
@@ -1663,6 +1750,20 @@ export class Level {
                             ctx.fill();
                             ctx.strokeStyle = '#FFFFFF';
                             ctx.strokeRect(px + 2, py + 2, ts - 4, ts - 4);
+                        }
+                        // Level 10: PCB Bricks
+                        if (this.levelIndex === 10) {
+                            const tc = this.omnitrixFixed ? '#00FF44' : '#FF4400';
+                            ctx.strokeStyle = tc;
+                            ctx.lineWidth = 1;
+                            ctx.beginPath();
+                            ctx.moveTo(px + 4, py + ts/2);
+                            ctx.lineTo(px + ts/2, py + ts/2);
+                            ctx.lineTo(px + ts/2, py + 4);
+                            ctx.stroke();
+                            ctx.fillStyle = tc;
+                            ctx.fillRect(px + ts/2 - 2, py + 2, 4, 4);
+                            ctx.fillRect(px + 2, py + ts/2 - 2, 4, 4);
                         }
                         break;
 
