@@ -679,16 +679,16 @@ export class Level {
         }
         if (this.levelIndex === 8) {
             return {
-                sky:            '#0A1A2A',   // Deep icy night sky
-                ground:         '#E0F0FF',   // Snow
-                groundStroke:   '#A0C0E0',
-                brick:          '#80D0FF',   // Ice blocks
-                brickStroke:    '#0080FF',
-                mystery:        '#00FFFF',   // Cyan crystal box
-                pipe:           '#004080',
-                unstable:       '#B0E0FF',
-                unstableStroke: '#60A0FF',
-                cloud:          'rgba(200, 240, 255, 0.15)', // Frost fog
+                sky:            '#180B2B',   // Deep purple cavern
+                ground:         '#3A205A',   // Purple crystal floor
+                groundStroke:   '#25123E',
+                brick:          '#00D4FF',   // Glowing cyan crystal
+                brickStroke:    '#0088CC',
+                mystery:        '#FF3399',   // Pink crystal box
+                pipe:           '#4B2875',
+                unstable:       '#7B2CD4',   // Violet crystal
+                unstableStroke: '#48148A',
+                cloud:          'rgba(255, 180, 100, 0.1)', // Warm fog
             };
         }
         if (this.levelIndex === 7) {
@@ -854,6 +854,12 @@ export class Level {
             skyGrad.addColorStop(0, '#7EA6B8'); // Dusty blue
             skyGrad.addColorStop(0.6, '#C4C9B8'); // Hazy clouds
             skyGrad.addColorStop(1.0, '#D9CDA4'); // Sand dust at horizon
+            ctx.fillStyle = skyGrad;
+        } else if (this.levelIndex === 8) {
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, this.height);
+            skyGrad.addColorStop(0, '#100522'); // Dark roof
+            skyGrad.addColorStop(0.6, '#31104A'); // Ambient purple
+            skyGrad.addColorStop(1.0, '#4B2875'); // Warm ground bounce
             ctx.fillStyle = skyGrad;
         } else {
             ctx.fillStyle = t.sky;
@@ -1222,30 +1228,76 @@ export class Level {
                 ctx.fill();
             }
         } else if (this.levelIndex === 8) {
-            // Winter is here — falling snow and frost fog
-            ctx.fillStyle = t.cloud;
-            for (let i = 0; i < 40; i++) {
-                // Thick bottom fog
-                const cx = (i * 150 + now / 20) % (this.width + 200) - 100;
-                ctx.fillRect(cx, this.height - 200 + Math.sin(i) * 30, 200, 50);
-                
-                // Falling snow
-                const sx = (i * 273 + now / 30) % this.width;
-                const sy = ((i * 100) + now / (15 + i % 5)) % this.height;
-                ctx.fillStyle = '#FFFFFF';
-                ctx.globalAlpha = 0.5 + Math.random() * 0.5;
+            // Crystal Cavern Background
+            // Background stalagmites (purple)
+            ctx.fillStyle = '#291040';
+            for (let i = 0; i < 20; i++) {
+                const mx = (i * 200 + 50) + camX * 0.15;
+                const mh = 150 + (i % 4) * 100;
                 ctx.beginPath();
-                ctx.arc(sx, sy, 2 + (i % 3), 0, Math.PI * 2);
+                ctx.moveTo(mx - 80, this.height);
+                ctx.lineTo(mx, this.height - mh);
+                ctx.lineTo(mx + 80, this.height);
                 ctx.fill();
             }
-            ctx.globalAlpha = 1.0;
 
-            ctx.fillStyle = 'rgba(220, 250, 255, 0.18)';
-            for (let i = 0; i < 28; i++) {
-                const fx = (i * 230 + now / 55) % (this.width + 300) - 150;
-                const fy = -30 + Math.sin(now / 1700 + i) * 26;
-                ctx.fillRect(fx, fy, 230, 42);
-                ctx.fillRect(fx + 45, fy + 28, 170, 34);
+            // Warm glowing light rays from the right
+            ctx.fillStyle = 'rgba(255, 200, 100, 0.08)';
+            for (let i = 0; i < 5; i++) {
+                ctx.beginPath();
+                ctx.moveTo(this.width + camX * 0.1, -100 + i * 50);
+                ctx.lineTo(this.width - 600 + camX * 0.3 - i*100, this.height);
+                ctx.lineTo(this.width + 100 + camX * 0.3, this.height);
+                ctx.fill();
+            }
+
+            // Glowing cyan giant crystals (foreground)
+            ctx.fillStyle = 'rgba(0, 200, 255, 0.4)';
+            ctx.strokeStyle = '#00FFFF';
+            ctx.lineWidth = 2;
+            for (let i = 0; i < 15; i++) {
+                const cx = (i * 350 + 150) + camX * 0.3;
+                const ch = 200 + (i % 3) * 120;
+                ctx.beginPath();
+                ctx.moveTo(cx - 40, this.height);
+                ctx.lineTo(cx, this.height - ch);
+                ctx.lineTo(cx + 40, this.height);
+                ctx.fill();
+                ctx.stroke();
+
+                // Crystal highlight
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+                ctx.beginPath();
+                ctx.moveTo(cx, this.height - ch);
+                ctx.lineTo(cx + 20, this.height);
+                ctx.lineTo(cx, this.height);
+                ctx.fill();
+            }
+
+            // Glowing pink/purple giant crystals (scattered)
+            ctx.fillStyle = 'rgba(200, 50, 255, 0.3)';
+            ctx.strokeStyle = '#FF33FF';
+            for (let i = 0; i < 12; i++) {
+                const cx = (i * 450 + 50) + camX * 0.4;
+                const ch = 100 + (i % 4) * 80;
+                ctx.beginPath();
+                ctx.moveTo(cx - 30, this.height);
+                ctx.lineTo(cx + 20, this.height - ch);
+                ctx.lineTo(cx + 60, this.height);
+                ctx.fill();
+                ctx.stroke();
+            }
+
+            // Ceiling stalactites
+            ctx.fillStyle = '#1A0A2A';
+            for (let i = 0; i < 25; i++) {
+                const tx = (i * 180 + 30) + camX * 0.2;
+                const th = 80 + (i % 5) * 60;
+                ctx.beginPath();
+                ctx.moveTo(tx - 40, -100);
+                ctx.lineTo(tx, th - 100);
+                ctx.lineTo(tx + 40, -100);
+                ctx.fill();
             }
             
             // Knightkomba global summon effect
@@ -1600,6 +1652,17 @@ export class Level {
                                 ctx.fillStyle = 'rgba(40, 100, 50, 0.3)';
                                 ctx.fillRect(px + 1, py, ts - 2, 3);
                             }
+                        }
+                        // Level 8: Crystal Bricks
+                        if (this.levelIndex === 8) {
+                            ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+                            ctx.beginPath();
+                            ctx.moveTo(px + 4, py + 4);
+                            ctx.lineTo(px + 14, py + 14);
+                            ctx.lineTo(px + 4, py + 22);
+                            ctx.fill();
+                            ctx.strokeStyle = '#FFFFFF';
+                            ctx.strokeRect(px + 2, py + 2, ts - 4, ts - 4);
                         }
                         break;
 
