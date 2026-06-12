@@ -634,16 +634,16 @@ export class Level {
     getTheme() {
         if (this.levelIndex === 11) {
             return {
-                sky:            '#050505',   // Black
-                ground:         '#113311',   // Dark Green
-                groundStroke:   '#00FF00',   // Bright Green
-                brick:          '#222222',   // Dark Grey
-                brickStroke:    '#FFFFFF',   // White
-                mystery:        '#00FF00',   // Green
-                pipe:           '#FFFFFF',   // White
-                unstable:       '#333333',
-                unstableStroke: '#00FF00',
-                cloud:          'rgba(255, 255, 255, 0.1)'
+                sky:            '#0B1520',   // Dark blue night
+                ground:         '#2A2520',   // Muddy dark ground
+                groundStroke:   '#1A1510',
+                brick:          '#3A3228',   // Old wooden plank
+                brickStroke:    '#1E1A14',
+                mystery:        '#7788AA',   // Ghostly blue box
+                pipe:           '#1A1A22',
+                unstable:       '#2E2820',
+                unstableStroke: '#504838',
+                cloud:          'rgba(100, 130, 170, 0.08)' // Blue moonlit fog
             };
         }
         if (this.levelIndex === 10) {
@@ -872,6 +872,13 @@ export class Level {
                 skyGrad.addColorStop(0.5, '#0E1015'); // Deep charcoal
                 skyGrad.addColorStop(1.0, '#141720'); // Slight warm base
             }
+            ctx.fillStyle = skyGrad;
+        } else if (this.levelIndex === 11) {
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, this.height);
+            skyGrad.addColorStop(0, '#080E18'); // Deep night
+            skyGrad.addColorStop(0.4, '#0F1A2A'); // Dark blue
+            skyGrad.addColorStop(0.8, '#1A2535'); // Slightly lighter near horizon
+            skyGrad.addColorStop(1.0, '#151C25'); // Dark ground base
             ctx.fillStyle = skyGrad;
         } else {
             ctx.fillStyle = t.sky;
@@ -1635,6 +1642,105 @@ export class Level {
                 ctx.ellipse(gx, gy, 250, 80, 0, 0, Math.PI * 2);
                 ctx.fill();
             }
+        } else if (this.levelIndex === 11) {
+            // Haunted Village Background
+            // Full moon
+            const moonX = 300 + camX * 0.05;
+            const moonY = 80;
+            ctx.fillStyle = '#E8E8F0';
+            ctx.beginPath();
+            ctx.arc(moonX, moonY, 45, 0, Math.PI * 2);
+            ctx.fill();
+            // Moon glow
+            ctx.fillStyle = 'rgba(180, 200, 230, 0.08)';
+            ctx.beginPath();
+            ctx.arc(moonX, moonY, 120, 0, Math.PI * 2);
+            ctx.fill();
+            // Moon craters
+            ctx.fillStyle = 'rgba(180, 190, 210, 0.4)';
+            ctx.beginPath();
+            ctx.arc(moonX - 10, moonY - 8, 7, 0, Math.PI * 2);
+            ctx.arc(moonX + 12, moonY + 5, 5, 0, Math.PI * 2);
+            ctx.arc(moonX + 3, moonY + 14, 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Distant dark building silhouettes
+            ctx.fillStyle = '#0C1218';
+            for (let i = 0; i < 10; i++) {
+                const bx = (i * 450 + 100) + camX * 0.15;
+                const bw = 80 + (i % 3) * 60;
+                const bh = 120 + (i % 4) * 80;
+                ctx.fillRect(bx, this.height - bh, bw, bh);
+                // Roof
+                ctx.beginPath();
+                ctx.moveTo(bx - 10, this.height - bh);
+                ctx.lineTo(bx + bw / 2, this.height - bh - 40 - (i % 3) * 20);
+                ctx.lineTo(bx + bw + 10, this.height - bh);
+                ctx.fill();
+                // Window glow
+                ctx.fillStyle = 'rgba(255, 200, 100, 0.15)';
+                ctx.fillRect(bx + 15, this.height - bh + 20, 12, 15);
+                ctx.fillRect(bx + bw - 25, this.height - bh + 20, 12, 15);
+                ctx.fillStyle = '#0C1218';
+            }
+
+            // Closer buildings (mid-ground)
+            ctx.fillStyle = '#111820';
+            for (let i = 0; i < 8; i++) {
+                const bx = (i * 550 + 250) + camX * 0.3;
+                const bw = 100 + (i % 3) * 50;
+                const bh = 150 + (i % 3) * 60;
+                ctx.fillRect(bx, this.height - bh, bw, bh);
+                // Timber frame lines
+                ctx.strokeStyle = '#1A222E';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(bx, this.height - bh + bh * 0.4);
+                ctx.lineTo(bx + bw, this.height - bh + bh * 0.4);
+                ctx.moveTo(bx + bw / 2, this.height - bh);
+                ctx.lineTo(bx + bw / 2, this.height);
+                ctx.stroke();
+                // Peaked roof
+                ctx.fillStyle = '#0E151D';
+                ctx.beginPath();
+                ctx.moveTo(bx - 15, this.height - bh);
+                ctx.lineTo(bx + bw / 2, this.height - bh - 50);
+                ctx.lineTo(bx + bw + 15, this.height - bh);
+                ctx.fill();
+                ctx.fillStyle = '#111820';
+            }
+
+            // Dead trees
+            ctx.strokeStyle = '#0A0E14';
+            ctx.lineWidth = 6;
+            ctx.lineCap = 'round';
+            for (let i = 0; i < 12; i++) {
+                const tx = (i * 380 + 80) + camX * 0.4;
+                const th = 100 + (i % 4) * 40;
+                ctx.beginPath();
+                ctx.moveTo(tx, this.height);
+                ctx.lineTo(tx + (i % 2 ? 4 : -4), this.height - th);
+                ctx.stroke();
+                // Branches
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(tx, this.height - th * 0.6);
+                ctx.lineTo(tx - 25 - (i % 3) * 10, this.height - th * 0.75);
+                ctx.moveTo(tx, this.height - th * 0.4);
+                ctx.lineTo(tx + 20 + (i % 2) * 15, this.height - th * 0.55);
+                ctx.stroke();
+                ctx.lineWidth = 6;
+            }
+
+            // Ground fog
+            ctx.fillStyle = 'rgba(80, 110, 150, 0.1)';
+            for (let i = 0; i < 20; i++) {
+                const fx = (i * 250 + now / 50) % (this.width + 300) - 150;
+                const fy = this.height - 60 + Math.sin(now / 2000 + i) * 20;
+                ctx.beginPath();
+                ctx.ellipse(fx, fy, 200, 50, 0, 0, Math.PI * 2);
+                ctx.fill();
+            }
         } else if (this.levelIndex !== 3 && this.levelIndex !== 6) {
             ctx.fillStyle = t.cloud;
             for (let i = 0; i < 20; i++) {
@@ -1764,6 +1870,20 @@ export class Level {
                             ctx.fillStyle = tc;
                             ctx.fillRect(px + ts/2 - 2, py + 2, 4, 4);
                             ctx.fillRect(px + 2, py + ts/2 - 2, 4, 4);
+                        }
+                        // Level 11: Old wooden plank bricks
+                        if (this.levelIndex === 11) {
+                            ctx.strokeStyle = 'rgba(60, 50, 35, 0.5)';
+                            ctx.lineWidth = 1;
+                            ctx.beginPath();
+                            ctx.moveTo(px + 3, py + 5); ctx.lineTo(px + ts - 3, py + 6);
+                            ctx.moveTo(px + 2, py + 14); ctx.lineTo(px + ts - 2, py + 15);
+                            ctx.moveTo(px + 4, py + 22); ctx.lineTo(px + ts - 4, py + 23);
+                            ctx.stroke();
+                            // Nail heads
+                            ctx.fillStyle = '#555555';
+                            ctx.fillRect(px + 6, py + 8, 3, 3);
+                            ctx.fillRect(px + ts - 10, py + 18, 3, 3);
                         }
                         break;
 
