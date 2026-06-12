@@ -693,16 +693,16 @@ export class Level {
         }
         if (this.levelIndex === 7) {
             return {
-                sky:            '#1A3A0A',   // deep jungle green sky
-                ground:         '#2E5A0E',
-                groundStroke:   '#1A3A08',
-                brick:          '#3D6B1A',
-                brickStroke:    '#2A4D10',
-                mystery:        '#AAFF44',
-                pipe:           '#1A4A05',
-                unstable:       '#5A7A20',
-                unstableStroke: '#3A5A10',
-                cloud:          'rgba(100, 200, 50, 0.12)',
+                sky:            '#3DB2FF',   // bright blue sky
+                ground:         '#76C239',   // bright green grass
+                groundStroke:   '#4A8A1E',
+                brick:          '#8DB600',   // weed-like brick color
+                brickStroke:    '#558000',
+                mystery:        '#FFD700',
+                pipe:           '#3B8E23',
+                unstable:       '#A4DE02',
+                unstableStroke: '#76B001',
+                cloud:          'rgba(255, 255, 255, 0.9)', // puffy white clouds
             };
         }
         if (this.levelIndex === 6) {
@@ -842,6 +842,12 @@ export class Level {
             skyGrad.addColorStop(0.5, '#0a1a0a'); // Dark green mid
             skyGrad.addColorStop(0.8, '#153315'); // Glowing toxic base
             skyGrad.addColorStop(1.0, '#0a1a0a');
+            ctx.fillStyle = skyGrad;
+        } else if (this.levelIndex === 7) {
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, this.height);
+            skyGrad.addColorStop(0, '#2AB1FC'); // Top sky blue
+            skyGrad.addColorStop(0.6, '#86D4FF'); // Lighter near horizon
+            skyGrad.addColorStop(1.0, '#DDF3FF'); // Almost white horizon
             ctx.fillStyle = skyGrad;
         } else {
             ctx.fillStyle = t.sky;
@@ -1145,14 +1151,55 @@ export class Level {
                 }
             }
         } else if (this.levelIndex === 7) {
-            // Jungle canopy — animated leaf shapes moving slowly
+            // Mountains
+            ctx.fillStyle = '#8EB8CC';
+            for (let i = 0; i < 15; i++) {
+                const mx = (i * 350 + 100) + camX * 0.15;
+                const mh = 250 + (i % 3) * 100;
+                ctx.beginPath();
+                ctx.moveTo(mx - 150, this.height);
+                ctx.lineTo(mx, this.height - mh);
+                ctx.lineTo(mx + 150, this.height);
+                ctx.fill();
+                
+                // Mountain shading
+                ctx.fillStyle = '#6D9BB2';
+                ctx.beginPath();
+                ctx.moveTo(mx, this.height - mh);
+                ctx.lineTo(mx + 150, this.height);
+                ctx.lineTo(mx, this.height);
+                ctx.fill();
+                ctx.fillStyle = '#8EB8CC';
+            }
+
+            // Distant Hills
+            ctx.fillStyle = '#5A9E30';
+            for (let i = 0; i < 20; i++) {
+                const hx = (i * 250) + camX * 0.3;
+                const hh = 120 + (i % 4) * 40;
+                ctx.beginPath();
+                ctx.ellipse(hx, this.height, 200, hh, 0, Math.PI, 0);
+                ctx.fill();
+            }
+
+            // Blue River across the background
+            ctx.fillStyle = '#2288CC';
+            ctx.fillRect(camX, this.height - 80, this.width, 80);
+            ctx.fillStyle = '#44AAEE';
+            for (let i = 0; i < 15; i++) {
+                ctx.fillRect(camX + (i * 120 + now / 20) % this.width, this.height - 60 + Math.sin(i) * 20, 80, 5);
+            }
+
+            // Puffy White Clouds
             ctx.fillStyle = t.cloud;
-            for (let i = 0; i < 30; i++) {
-                const cx = (i * 200 + now / 90) % (this.width + 240) - 120;
-                const cy = 30 + Math.sin(now / 2200 + i * 1.3) * 22;
-                ctx.fillRect(cx, cy, 80, 30);
-                ctx.fillRect(cx + 20, cy - 14, 40, 20);
-                ctx.fillRect(cx - 20, cy + 20, 50, 18);
+            for (let i = 0; i < 15; i++) {
+                const cx = (i * 300 + now / 40) % (this.width + 300) - 150;
+                const cy = 60 + Math.sin(now / 1500 + i) * 20 + (i % 3) * 30;
+                ctx.beginPath();
+                ctx.arc(cx, cy, 40, 0, Math.PI * 2);
+                ctx.arc(cx + 35, cy - 20, 50, 0, Math.PI * 2);
+                ctx.arc(cx + 70, cy, 40, 0, Math.PI * 2);
+                ctx.fill();
             }
         } else if (this.levelIndex === 8) {
             // Winter is here — falling snow and frost fog
@@ -1726,27 +1773,28 @@ export class Level {
                         break;
                     }
 
-                    case 14: { // Tree brick
-                        const barkGrad = ctx.createLinearGradient(px, py, px + ts, py + ts);
-                        barkGrad.addColorStop(0, '#3A210F');
-                        barkGrad.addColorStop(0.55, '#6B3B18');
-                        barkGrad.addColorStop(1, '#2A1608');
-                        ctx.fillStyle = barkGrad;
+                    case 14: { // Block of leaves
+                        ctx.fillStyle = '#4CA62B'; // Base leaf green
                         ctx.fillRect(px, py, ts, ts);
-                        ctx.strokeStyle = '#1B0D04';
-                        ctx.strokeRect(px, py, ts, ts);
-                        ctx.strokeStyle = 'rgba(255, 190, 100, 0.28)';
+                        
+                        // Leafy highlights
+                        ctx.fillStyle = '#65C23D'; 
                         ctx.beginPath();
-                        ctx.moveTo(px + 8, py + 3);
-                        ctx.quadraticCurveTo(px + 4, py + 15, px + 10, py + 29);
-                        ctx.moveTo(px + 20, py + 2);
-                        ctx.quadraticCurveTo(px + 26, py + 16, px + 18, py + 30);
-                        ctx.stroke();
-                        ctx.fillStyle = 'rgba(40, 130, 28, 0.85)';
-                        ctx.beginPath();
-                        ctx.ellipse(px + 10, py + 9, 10, 6, -0.3, 0, Math.PI * 2);
-                        ctx.ellipse(px + 22, py + 12, 11, 7, 0.4, 0, Math.PI * 2);
+                        ctx.arc(px + 8, py + 8, 6, 0, Math.PI * 2);
+                        ctx.arc(px + 22, py + 12, 8, 0, Math.PI * 2);
+                        ctx.arc(px + 16, py + 24, 7, 0, Math.PI * 2);
                         ctx.fill();
+                        
+                        // Leafy shadows
+                        ctx.fillStyle = '#317A16'; 
+                        ctx.beginPath();
+                        ctx.arc(px + 24, py + 24, 6, 0, Math.PI * 2);
+                        ctx.arc(px + 8, py + 22, 5, 0, Math.PI * 2);
+                        ctx.arc(px + 14, py + 6, 4, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        ctx.strokeStyle = '#23570F'; // Dark border
+                        ctx.strokeRect(px, py, ts, ts);
                         break;
                     }
                 }
