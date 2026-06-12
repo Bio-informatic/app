@@ -721,32 +721,32 @@ export class Level {
         }
         if (this.levelIndex === 5) {
             return {
-                sky:            '#0A1A0A',
-                ground:         '#1A331A',
-                groundStroke:   '#081908',
-                brick:          '#224422',
-                brickStroke:    '#112211',
-                mystery:        '#00FF88',
-                pipe:           '#003300',
-                unstable:       '#335533',
-                unstableStroke: '#1A2A1A',
-                cloud:          'rgba(50, 200, 50, 0.1)',
+                sky:            '#050a05',
+                ground:         '#182018',
+                groundStroke:   '#0f150f',
+                brick:          '#2a3a2a',
+                brickStroke:    '#1a2a1a',
+                mystery:        '#aaff00',
+                pipe:           '#152515',
+                unstable:       '#3a4a3a',
+                unstableStroke: '#2a3a2a',
+                cloud:          'rgba(170, 255, 0, 0.15)',
             };
         }
         if (this.levelIndex === 4) {
             return {
-                sky:            '#050520',
-                ground:         '#1A1A2E',
-                groundStroke:   '#0A0A1E',
-                brick:          '#3A3A5A',
-                brickStroke:    '#22224A',
-                mystery:        '#00FFFF',
-                pipe:           '#1A1A3E',
-                unstable:       '#2A2A4A',
-                unstableStroke: '#1A1A3A',
-                cloud:          'rgba(0, 255, 255, 0.08)',
-                speedPanel:     '#00AAAA',
-                efence:         '#FFFF00',
+                sky:            '#0a0033',
+                ground:         '#221144',
+                groundStroke:   '#110022',
+                brick:          '#5522aa',
+                brickStroke:    '#331166',
+                mystery:        '#00eeff',
+                pipe:           '#331188',
+                unstable:       '#441177',
+                unstableStroke: '#220044',
+                cloud:          'rgba(150, 50, 200, 0.4)',
+                speedPanel:     '#00eeff',
+                efence:         '#00ffff',
             };
         }
         if (this.levelIndex === 3) {
@@ -767,16 +767,16 @@ export class Level {
         }
         if (this.levelIndex === 2) {
             return {
-                sky:            '#1a0505',
-                ground:         '#5C1A1A',
-                groundStroke:   '#3A0E0E',
-                brick:          '#8B2500',
-                brickStroke:    '#5C1A00',
-                mystery:        '#FFD700',
-                pipe:           '#4A0000',
-                unstable:       '#8B5C00',
-                unstableStroke: '#5C3D00',
-                cloud:          'rgba(200, 50, 50, 0.20)',
+                sky:            '#0b0a1a',
+                ground:         '#1a1428',
+                groundStroke:   '#0d0a18',
+                brick:          '#2a1f3a',
+                brickStroke:    '#150e22',
+                mystery:        '#c8a2ff',
+                pipe:           '#1a0e2a',
+                unstable:       '#3a2850',
+                unstableStroke: '#221640',
+                cloud:          'rgba(80, 50, 120, 0.18)',
             };
         }
         if (this.levelIndex === 9) {
@@ -813,7 +813,39 @@ export class Level {
         const now = performance.now();
 
         // Sky
-        ctx.fillStyle = t.sky;
+        if (this.levelIndex === 3) {
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, this.height);
+            skyGrad.addColorStop(0, '#0a000d');
+            skyGrad.addColorStop(0.4, '#1b020c');
+            skyGrad.addColorStop(0.7, '#3c0512');
+            skyGrad.addColorStop(0.9, '#600711');
+            skyGrad.addColorStop(1.0, '#901212');
+            ctx.fillStyle = skyGrad;
+        } else if (this.levelIndex === 2) {
+            const skyGrad = ctx.createLinearGradient(0, -200, 0, this.height);
+            skyGrad.addColorStop(0, '#05040f');     // Almost black top
+            skyGrad.addColorStop(0.3, '#0e0a22');   // Deep indigo
+            skyGrad.addColorStop(0.6, '#1a1235');   // Dark purple
+            skyGrad.addColorStop(0.85, '#1f1540');  // Muted violet
+            skyGrad.addColorStop(1.0, '#140e28');   // Dark base
+            ctx.fillStyle = skyGrad;
+        } else if (this.levelIndex === 4) {
+            const skyGrad = ctx.createLinearGradient(0, -200, 0, this.height);
+            skyGrad.addColorStop(0, '#0a0033'); // Deep starry blue
+            skyGrad.addColorStop(0.4, '#220066'); // Rich purple
+            skyGrad.addColorStop(0.8, '#4411aa'); // Bright purple glow near horizon
+            skyGrad.addColorStop(1.0, '#110033'); // Dark ground base
+            ctx.fillStyle = skyGrad;
+        } else if (this.levelIndex === 5) {
+            const skyGrad = ctx.createLinearGradient(0, -200, 0, this.height);
+            skyGrad.addColorStop(0, '#050a05'); // Pitch black cavern roof
+            skyGrad.addColorStop(0.5, '#0a1a0a'); // Dark green mid
+            skyGrad.addColorStop(0.8, '#153315'); // Glowing toxic base
+            skyGrad.addColorStop(1.0, '#0a1a0a');
+            ctx.fillStyle = skyGrad;
+        } else {
+            ctx.fillStyle = t.sky;
+        }
         ctx.fillRect(0, -1000, this.width, this.height + 2000);
 
         // Level 9: deep sea background on the second half
@@ -826,11 +858,119 @@ export class Level {
             ctx.fillRect(this.waterStartX, -1000, this.width - this.waterStartX, this.height + 2000);
         }
 
-        // Level 3: lava glow from below
+        // Level 3: lava glow from below and volcanic landscape
         if (this.levelIndex === 3) {
+            // Distant volcanoes with parallax (moving slower than foreground)
+            const numVolcanoes = 15;
+            for (let i = 0; i < numVolcanoes; i++) {
+                // Determine base world X coordinate
+                const worldX = i * 450 + 120;
+                // Parallax shift: scroll at 60% of camera speed (looks like 40% speed relative to foreground)
+                const drawX = worldX + camX * 0.6;
+                
+                // Deterministic width/height based on index
+                const w = 180 + (i % 4) * 50 + (i % 3) * 20;
+                const h = 130 + (i % 3) * 40 + (i % 2) * 30;
+                const baseLine = 452; // slightly below ground Y (448)
+                const craterW = w * 0.16;
+                const craterY = baseLine - h;
+                
+                // Draw volcano body
+                const volGrad = ctx.createLinearGradient(drawX - w/2, craterY, drawX + w/2, baseLine);
+                volGrad.addColorStop(0, '#2d1820'); // Dark rocky purple-grey
+                volGrad.addColorStop(0.35, '#1e0e14');
+                volGrad.addColorStop(0.7, '#14070d');
+                volGrad.addColorStop(1, '#0c0208');
+                ctx.fillStyle = volGrad;
+                
+                ctx.beginPath();
+                ctx.moveTo(drawX - w/2, baseLine);
+                ctx.lineTo(drawX - craterW/2, craterY);
+                ctx.lineTo(drawX + craterW/2, craterY);
+                ctx.lineTo(drawX + w/2, baseLine);
+                ctx.closePath();
+                ctx.fill();
+
+                // Draw glowing lava cracks down the slopes
+                ctx.strokeStyle = '#ff3300';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                // Left crack
+                ctx.moveTo(drawX - craterW/4, craterY + 5);
+                ctx.lineTo(drawX - w*0.12, craterY + h*0.3);
+                ctx.lineTo(drawX - w*0.08, craterY + h*0.5);
+                ctx.lineTo(drawX - w*0.2, baseLine - 10);
+                // Right crack
+                ctx.moveTo(drawX + craterW/5, craterY + 4);
+                ctx.lineTo(drawX + w*0.1, craterY + h*0.4);
+                ctx.lineTo(drawX + w*0.18, craterY + h*0.7);
+                ctx.lineTo(drawX + w*0.25, baseLine - 5);
+                ctx.stroke();
+
+                // Glow on the cracks
+                ctx.strokeStyle = 'rgba(255, 100, 0, 0.4)';
+                ctx.lineWidth = 3.5;
+                ctx.stroke();
+
+                // Draw glowing lava inside the crater
+                ctx.fillStyle = '#ffea00';
+                ctx.beginPath();
+                ctx.ellipse(drawX, craterY, craterW/2, 4, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Volcano eruption geysers (every 3rd volcano)
+                if (i % 3 === 0) {
+                    const eruptHeight = 35 + Math.sin(now / 160 + i) * 15 + Math.random() * 4;
+                    
+                    // Geyser glow
+                    const geyserGlow = ctx.createRadialGradient(drawX, craterY - eruptHeight/2, 4, drawX, craterY - eruptHeight/2, eruptHeight * 1.2);
+                    geyserGlow.addColorStop(0, 'rgba(255, 120, 0, 0.45)');
+                    geyserGlow.addColorStop(1, 'rgba(255, 40, 0, 0)');
+                    ctx.fillStyle = geyserGlow;
+                    ctx.beginPath();
+                    ctx.arc(drawX, craterY - eruptHeight/2, eruptHeight * 1.2, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Erupting jets
+                    ctx.strokeStyle = '#ffea00';
+                    ctx.lineWidth = 2.5 + Math.sin(now / 40) * 0.5;
+                    ctx.lineCap = 'round';
+                    for (let j = -2; j <= 2; j++) {
+                        if (j === 0) continue;
+                        ctx.beginPath();
+                        ctx.moveTo(drawX, craterY);
+                        const targetX = drawX + j * (14 + Math.sin(now/180 + i*3.5)*6);
+                        const targetY = craterY - eruptHeight * (0.85 + Math.abs(j)*0.08);
+                        const controlX = drawX + j * 4;
+                        const controlY = craterY - eruptHeight * 1.15;
+                        ctx.quadraticCurveTo(controlX, controlY, targetX, targetY);
+                        ctx.stroke();
+                    }
+                    
+                    // Volcanic particles flying up and down (parabolic physics)
+                    ctx.fillStyle = '#ffaa00';
+                    for (let d = 0; d < 5; d++) {
+                        const tOffset = (now / 7 + d * 140) % 550;
+                        const progress = tOffset / 550;
+                        const angle = -Math.PI/2 + (d - 2) * 0.3;
+                        const speed = 60 + (d % 2) * 18;
+                        const startVx = Math.cos(angle) * speed;
+                        const startVy = Math.sin(angle) * speed;
+                        
+                        const px = drawX + startVx * progress;
+                        const py = craterY + startVy * progress + 0.5 * 110 * progress * progress;
+                        
+                        ctx.beginPath();
+                        ctx.arc(px, py, 1.5 + (d % 2), 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+            }
+
+            // Foreground lava glow (base bottom glow)
             const grad = ctx.createLinearGradient(0, this.height - 200, 0, this.height);
             grad.addColorStop(0, 'rgba(255, 40, 0, 0)');
-            grad.addColorStop(1, 'rgba(255, 60, 0, 0.3)');
+            grad.addColorStop(1, 'rgba(255, 60, 0, 0.35)');
             ctx.fillStyle = grad;
             ctx.fillRect(0, this.height - 200, this.width, 200);
 
@@ -856,41 +996,114 @@ export class Level {
 
         // Clouds
         if (this.levelIndex === 4) {
-            // Digital grid lines
-            ctx.strokeStyle = 'rgba(0, 255, 255, 0.04)';
-            ctx.lineWidth = 1;
-            for (let gx = 0; gx < this.width; gx += 128) {
+            // Stars
+            ctx.fillStyle = '#FFFFFF';
+            for (let i = 0; i < 60; i++) {
+                const sx = ((i * 321 + now / 80) % this.width);
+                const sy = (i * 87) % (this.height - 150);
+                const size = 1 + (i % 2);
+                ctx.globalAlpha = 0.5 + Math.sin(now / 300 + i) * 0.5;
                 ctx.beginPath();
-                ctx.moveTo(gx, 0);
-                ctx.lineTo(gx, this.height);
-                ctx.stroke();
+                ctx.arc(sx, sy, size, 0, Math.PI * 2);
+                ctx.fill();
             }
-            for (let gy = 0; gy < this.height; gy += 128) {
-                ctx.beginPath();
-                ctx.moveTo(0, gy);
-                ctx.lineTo(this.width, gy);
-                ctx.stroke();
-            }
-            // Holographic cyan streaks
-            ctx.fillStyle = t.cloud;
+            ctx.globalAlpha = 1.0;
+
+            // Giant cracked moon (parallax)
+            const moonX = camX * 0.15 + 400;
+            const moonY = this.height - 350;
+            ctx.fillStyle = '#b366ff'; // Purple moon
+            ctx.beginPath();
+            ctx.arc(moonX, moonY, 180, 0, Math.PI * 2);
+            ctx.fill();
+            // Cyan glowing craters/cracks
+            ctx.fillStyle = '#00eeff';
+            ctx.beginPath();
+            ctx.arc(moonX - 40, moonY - 30, 25, 0, Math.PI * 2);
+            ctx.arc(moonX + 70, moonY + 40, 35, 0, Math.PI * 2);
+            ctx.arc(moonX + 20, moonY - 70, 15, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Distant purple organic spires
+            ctx.fillStyle = '#331166';
             for (let i = 0; i < 20; i++) {
-                const cx = i * 400 + 60;
-                ctx.fillRect(cx, 28 + Math.sin(i * 0.5) * 15, 260, 7);
-                ctx.fillRect(cx + 35, 14 + Math.sin(i * 0.5) * 15, 145, 4);
-                ctx.fillRect(cx + 90, 48 + Math.sin(i * 0.5) * 15, 190, 4);
+                const spX = (i * 250 + 100) + camX * 0.3;
+                const spH = 120 + (i % 4) * 60;
+                ctx.beginPath();
+                ctx.moveTo(spX - 50, this.height);
+                ctx.quadraticCurveTo(spX - 15, this.height - spH / 2, spX, this.height - spH);
+                ctx.quadraticCurveTo(spX + 15, this.height - spH / 2, spX + 50, this.height);
+                ctx.fill();
+
+                // Cyan crystal glowing parts on spires
+                ctx.fillStyle = '#00ffff';
+                ctx.globalAlpha = 0.8 + Math.sin(now / 200 + i) * 0.2;
+                ctx.beginPath();
+                ctx.ellipse(spX, this.height - spH + 30, 6, 12, 0, 0, Math.PI * 2);
+                ctx.ellipse(spX - 15, this.height - spH / 2, 4, 10, 0, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1.0;
+
+            // Magenta floating clouds
+            ctx.fillStyle = t.cloud;
+            for (let i = 0; i < 15; i++) {
+                const cx = ((i * 350 + 60 + now / 40) % (this.width + 400)) - 200;
+                const cy = 50 + (i % 3) * 60 + Math.sin(now / 1000 + i) * 20;
+                ctx.beginPath();
+                ctx.ellipse(cx, cy, 100 + (i % 2) * 40, 35, 0, 0, Math.PI * 2);
+                ctx.ellipse(cx + 70, cy - 15, 80, 45, 0, 0, Math.PI * 2);
+                ctx.fill();
             }
         } else if (this.levelIndex === 5) {
-            // Heavy Poison Smog for Sewers
+            // Cavern stalactites (parallax)
+            ctx.fillStyle = '#0a140a';
+            for (let i = 0; i < 25; i++) {
+                const sx = (i * 180 + 50) + camX * 0.2;
+                const sh = 100 + (i % 5) * 60;
+                ctx.beginPath();
+                ctx.moveTo(sx - 40, -100);
+                ctx.quadraticCurveTo(sx, sh, sx + 40, -100);
+                ctx.fill();
+            }
+
+            // Glowing toxic waterfalls in background
+            const toxicGrad = ctx.createLinearGradient(0, 0, 0, this.height);
+            toxicGrad.addColorStop(0, 'rgba(100, 255, 0, 0.6)');
+            toxicGrad.addColorStop(1, 'rgba(50, 150, 0, 0.1)');
+            ctx.fillStyle = toxicGrad;
+            for (let i = 0; i < 8; i++) {
+                const wx = ((i * 450 + 120 + now / 30) % (this.width + 200)) - 100;
+                ctx.beginPath();
+                ctx.moveTo(wx - 20, -50);
+                ctx.lineTo(wx + 20, -50);
+                ctx.quadraticCurveTo(wx + 10, this.height / 2, wx + 30, this.height);
+                ctx.lineTo(wx - 30, this.height);
+                ctx.quadraticCurveTo(wx - 10, this.height / 2, wx - 20, -50);
+                ctx.fill();
+            }
+
+            // Floating glowing spores
+            ctx.fillStyle = '#aaff00';
+            for (let i = 0; i < 50; i++) {
+                const px = ((i * 273 + now / 25) % this.width);
+                const py = ((i * 117 - now / 35) % (this.height + 200)) - 50;
+                const size = 1.5 + Math.sin(now / 200 + i) * 1.5;
+                ctx.globalAlpha = 0.4 + Math.sin(now / 150 + i) * 0.4;
+                ctx.beginPath();
+                ctx.arc(px, py, Math.max(0.1, size), 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1.0;
+
+            // Toxic fog at bottom
             ctx.fillStyle = t.cloud;
-            for (let i = 0; i < 40; i++) {
-                const cx = (i * 150 + now / 15) % (this.width + 200) - 100;
-                // Layer 1: High Smog rising into the top of the level
-                const highY = -70 + Math.sin(now / 1800 + i) * 45;
-                ctx.fillRect(cx, highY, 240, 58);
-                ctx.fillRect(cx + 28, highY + 42 + Math.sin(i*2) * 18, 190, 42);
-                ctx.fillRect(cx - 45, highY + 92 + Math.sin(i*1.4) * 24, 270, 50);
-                // Layer 2: Low-hanging fog over the map
-                ctx.fillRect((cx * 1.5) % this.width, this.height - 250 + Math.sin(i*3) * 50, 300, 50);
+            for (let i = 0; i < 20; i++) {
+                const cx = (i * 200 + now / 15) % (this.width + 200) - 100;
+                const cy = this.height - 150 + Math.sin(now / 800 + i) * 40;
+                ctx.beginPath();
+                ctx.ellipse(cx, cy, 150, 60, 0, 0, Math.PI * 2);
+                ctx.fill();
             }
         } else if (this.levelIndex === 6) {
             // Destroyed World: Straight broken background wires + Sparks
@@ -1094,6 +1307,128 @@ export class Level {
                     ctx.fill();
                 }
             }
+        } else if (this.levelIndex === 2) {
+            // ── Spooky forest background ──────────────────────
+            const groundY = (this.rows - 6) * ts;
+
+            // Large glowing moon (parallax — moves at 20% cam speed)
+            const moonX = 600 + camX * 0.2;
+            const moonY = 55;
+            const moonR = 42;
+            // Outer glow
+            const moonGlow = ctx.createRadialGradient(moonX, moonY, moonR * 0.3, moonX, moonY, moonR * 3.5);
+            moonGlow.addColorStop(0, 'rgba(200, 190, 255, 0.25)');
+            moonGlow.addColorStop(0.4, 'rgba(120, 100, 180, 0.08)');
+            moonGlow.addColorStop(1, 'rgba(60, 40, 100, 0)');
+            ctx.fillStyle = moonGlow;
+            ctx.beginPath();
+            ctx.arc(moonX, moonY, moonR * 3.5, 0, Math.PI * 2);
+            ctx.fill();
+            // Moon disc
+            ctx.fillStyle = '#d8d0f0';
+            ctx.beginPath();
+            ctx.arc(moonX, moonY, moonR, 0, Math.PI * 2);
+            ctx.fill();
+            // Moon craters
+            ctx.fillStyle = 'rgba(160, 140, 200, 0.35)';
+            ctx.beginPath();
+            ctx.arc(moonX - 12, moonY - 8, 8, 0, Math.PI * 2);
+            ctx.arc(moonX + 14, moonY + 5, 6, 0, Math.PI * 2);
+            ctx.arc(moonX + 4, moonY + 16, 5, 0, Math.PI * 2);
+            ctx.arc(moonX - 8, moonY + 10, 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Dead trees (parallax at 50% cam speed)
+            const treeSeeds = [0, 380, 710, 1150, 1520, 1900, 2350, 2750, 3100, 3500, 3900, 4350, 4700];
+            for (let i = 0; i < treeSeeds.length; i++) {
+                const worldX = treeSeeds[i] + 60;
+                const drawX = worldX + camX * 0.5;
+                const trunkH = 100 + (i % 4) * 30 + (i % 3) * 15;
+                const trunkW = 8 + (i % 3) * 3;
+                const baseY = groundY + 4;
+
+                // Trunk
+                ctx.strokeStyle = '#1a1230';
+                ctx.lineWidth = trunkW;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(drawX, baseY);
+                ctx.lineTo(drawX + (i % 2 ? 5 : -5), baseY - trunkH);
+                ctx.stroke();
+
+                // Branches
+                ctx.lineWidth = trunkW * 0.4;
+                const topX = drawX + (i % 2 ? 5 : -5);
+                const topY = baseY - trunkH;
+                // Left branch
+                ctx.beginPath();
+                ctx.moveTo(topX, topY + trunkH * 0.3);
+                ctx.quadraticCurveTo(topX - 30 - (i % 3) * 10, topY + trunkH * 0.1, topX - 45 - (i % 2) * 15, topY + trunkH * 0.15);
+                ctx.stroke();
+                // Right branch
+                ctx.beginPath();
+                ctx.moveTo(topX, topY + trunkH * 0.2);
+                ctx.quadraticCurveTo(topX + 25 + (i % 3) * 8, topY - 10, topX + 40 + (i % 2) * 12, topY + trunkH * 0.05);
+                ctx.stroke();
+                // Top fork
+                ctx.lineWidth = trunkW * 0.3;
+                ctx.beginPath();
+                ctx.moveTo(topX, topY);
+                ctx.lineTo(topX - 12 - (i % 3) * 5, topY - 20 - (i % 2) * 10);
+                ctx.moveTo(topX, topY);
+                ctx.lineTo(topX + 10 + (i % 2) * 8, topY - 18 - (i % 3) * 8);
+                ctx.stroke();
+            }
+
+            // Animated bats flying across the sky
+            for (let i = 0; i < 12; i++) {
+                const batSpeed = 40 + (i % 4) * 12;
+                const bx = (i * 520 + now / batSpeed) % (this.width + 400) - 200;
+                const by = 40 + (i % 5) * 35 + Math.sin(now / 600 + i * 2.3) * 18;
+                const wingFlap = Math.sin(now / 80 + i * 1.7);
+                const batSize = 5 + (i % 3) * 2;
+
+                ctx.fillStyle = '#0a0818';
+                // Body
+                ctx.beginPath();
+                ctx.ellipse(bx, by, batSize * 0.6, batSize * 0.35, 0, 0, Math.PI * 2);
+                ctx.fill();
+                // Left wing
+                ctx.beginPath();
+                ctx.moveTo(bx, by);
+                ctx.quadraticCurveTo(bx - batSize, by - batSize * wingFlap * 0.8, bx - batSize * 1.8, by + batSize * wingFlap * 0.3);
+                ctx.quadraticCurveTo(bx - batSize * 0.8, by + batSize * 0.2, bx, by);
+                ctx.fill();
+                // Right wing
+                ctx.beginPath();
+                ctx.moveTo(bx, by);
+                ctx.quadraticCurveTo(bx + batSize, by - batSize * wingFlap * 0.8, bx + batSize * 1.8, by + batSize * wingFlap * 0.3);
+                ctx.quadraticCurveTo(bx + batSize * 0.8, by + batSize * 0.2, bx, by);
+                ctx.fill();
+            }
+
+            // Creeping ground fog
+            ctx.fillStyle = 'rgba(60, 45, 90, 0.14)';
+            for (let i = 0; i < 30; i++) {
+                const fx = (i * 230 + now / 55) % (this.width + 300) - 150;
+                const fy = groundY - 25 + Math.sin(now / 2200 + i * 1.1) * 12;
+                const fr = 60 + (i % 4) * 20;
+                ctx.beginPath();
+                ctx.arc(fx, fy, fr, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // High mist wisps
+            ctx.fillStyle = 'rgba(80, 60, 130, 0.1)';
+            for (let i = 0; i < 15; i++) {
+                const mx = (i * 400 + now / 90) % (this.width + 350) - 175;
+                const my = 80 + Math.sin(now / 2800 + i) * 30;
+                const mr = 45 + (i % 3) * 18;
+                ctx.beginPath();
+                ctx.arc(mx, my, mr, 0, Math.PI * 2);
+                ctx.arc(mx + mr * 0.4, my - mr * 0.15, mr * 0.6, 0, Math.PI * 2);
+                ctx.fill();
+            }
         } else if (this.levelIndex !== 3 && this.levelIndex !== 6) {
             ctx.fillStyle = t.cloud;
             for (let i = 0; i < 20; i++) {
@@ -1103,14 +1438,18 @@ export class Level {
                 ctx.fillRect(cx + 8, 86, 48, 16);
             }
         } else if (this.levelIndex === 3) {
-            // Smoke clouds for hell
-            ctx.fillStyle = t.cloud;
-            for (let i = 0; i < 25; i++) {
-                const cx = (i * 280 + 40 + now / 105) % (this.width + 220) - 110;
-                const cy = 38 + Math.sin(now / 2600 + i) * 24;
-                ctx.fillRect(cx, cy, 100, 18);
-                ctx.fillRect(cx + 20, cy - 18, 55, 16);
-                ctx.fillRect(cx - 16, cy + 18, 70, 14);
+            // Dark volcanic smoke clouds drifting across the sky
+            ctx.fillStyle = 'rgba(25, 12, 22, 0.45)'; // dark purple smoke
+            for (let i = 0; i < 20; i++) {
+                const cx = (i * 320 + now / 70) % (this.width + 300) - 150;
+                const cy = 60 + Math.sin(now / 1800 + i) * 25;
+                const r = 50 + (i % 3) * 15;
+                
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, 0, Math.PI * 2);
+                ctx.arc(cx - r * 0.5, cy + r * 0.1, r * 0.7, 0, Math.PI * 2);
+                ctx.arc(cx + r * 0.5, cy + r * 0.1, r * 0.7, 0, Math.PI * 2);
+                ctx.fill();
             }
         }
 
@@ -1125,11 +1464,38 @@ export class Level {
 
                 switch (tile) {
                     case 1: // Ground
-                        ctx.fillStyle = t.ground;
-                        ctx.fillRect(px, py, ts, ts);
-                        ctx.strokeStyle = t.groundStroke;
-                        ctx.lineWidth = 1;
-                        ctx.strokeRect(px, py, ts, ts);
+                        if (this.levelIndex === 2) {
+                            // Spooky forest ground with dirt gradient
+                            const gGrad = ctx.createLinearGradient(px, py, px, py + ts);
+                            gGrad.addColorStop(0, '#1e1530');
+                            gGrad.addColorStop(1, '#120c20');
+                            ctx.fillStyle = gGrad;
+                            ctx.fillRect(px, py, ts, ts);
+                            ctx.strokeStyle = '#0d0a18';
+                            ctx.lineWidth = 1;
+                            ctx.strokeRect(px, py, ts, ts);
+                            // Top edge grass tufts on topmost ground row
+                            if (y > 0 && this.tiles[y - 1] && this.tiles[y - 1][x] === 0) {
+                                ctx.fillStyle = 'rgba(30, 80, 45, 0.55)';
+                                ctx.fillRect(px, py, ts, 3);
+                                // Small grass blades
+                                ctx.strokeStyle = 'rgba(35, 90, 50, 0.4)';
+                                ctx.lineWidth = 1;
+                                ctx.beginPath();
+                                for (let g = 0; g < 4; g++) {
+                                    const gx = px + 4 + g * 7;
+                                    ctx.moveTo(gx, py);
+                                    ctx.lineTo(gx + (g % 2 ? 2 : -2), py - 4 - (g % 3) * 2);
+                                }
+                                ctx.stroke();
+                            }
+                        } else {
+                            ctx.fillStyle = t.ground;
+                            ctx.fillRect(px, py, ts, ts);
+                            ctx.strokeStyle = t.groundStroke;
+                            ctx.lineWidth = 1;
+                            ctx.strokeRect(px, py, ts, ts);
+                        }
                         break;
 
                     case 2: // Brick
@@ -1151,6 +1517,22 @@ export class Level {
                             ctx.moveTo(px + 4, py + 10);
                             ctx.lineTo(px + 20, py + 22);
                             ctx.stroke();
+                        }
+                        // Level 2: mossy cracks on bricks
+                        if (this.levelIndex === 2) {
+                            // Diagonal crack
+                            ctx.strokeStyle = 'rgba(100, 80, 160, 0.25)';
+                            ctx.lineWidth = 1;
+                            ctx.beginPath();
+                            ctx.moveTo(px + 3, py + 6);
+                            ctx.lineTo(px + 14, py + 18);
+                            ctx.lineTo(px + 22, py + 14);
+                            ctx.stroke();
+                            // Tiny moss patch
+                            if ((x + y) % 3 === 0) {
+                                ctx.fillStyle = 'rgba(40, 100, 50, 0.3)';
+                                ctx.fillRect(px + 1, py, ts - 2, 3);
+                            }
                         }
                         break;
 
@@ -1181,7 +1563,7 @@ export class Level {
                     case 4: // Pipe
                         ctx.fillStyle = t.pipe;
                         ctx.fillRect(px, py, ts, ts);
-                        ctx.fillStyle = this.levelIndex === 2 ? '#7A1111' : '#00AA00';
+                        ctx.fillStyle = this.levelIndex === 2 ? '#4a2870' : '#00AA00';
                         ctx.fillRect(px + 2, py, 4, ts);
                         ctx.strokeStyle = '#000';
                         ctx.strokeRect(px, py, ts, ts);
