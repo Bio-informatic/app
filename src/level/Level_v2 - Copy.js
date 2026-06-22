@@ -887,7 +887,7 @@ export class Level {
 
         // Level 9: deep sea background on the second half
         if (this.levelIndex === 4) {
-            const seamY = this.height - 192;
+            const seamY = this.height - 118;
             const seamBand = ctx.createLinearGradient(0, seamY - 80, 0, this.height);
             seamBand.addColorStop(0, 'rgba(50, 18, 90, 0)');
             seamBand.addColorStop(1, 'rgba(35, 10, 72, 0.55)');
@@ -901,7 +901,7 @@ export class Level {
                 ctx.fill();
             }
         } else if (this.levelIndex === 6) {
-            const seamY = this.height - 400;
+            const seamY = this.height - 110;
             const seamBand = ctx.createLinearGradient(0, seamY - 90, 0, this.height);
             seamBand.addColorStop(0, 'rgba(120, 90, 50, 0)');
             seamBand.addColorStop(1, 'rgba(95, 70, 45, 0.55)');
@@ -1120,7 +1120,7 @@ export class Level {
 
             // Giant cracked moon (parallax)
             const moonX = camX * 0.15 + 400;
-            const moonY = this.height - 800;
+            const moonY = this.height - 350;
             ctx.fillStyle = '#b366ff'; // Purple moon
             ctx.beginPath();
             ctx.arc(moonX, moonY, 180, 0, Math.PI * 2);
@@ -1137,10 +1137,8 @@ export class Level {
             ctx.fillStyle = '#331166';
             for (let i = 0; i < 20; i++) {
                 const spX = (i * 250 + 100) + camX * 0.3;
-                // Height is increased so they extend above the ground
-                const spH = 700 + (i % 4) * 90;
-                // Base is extended to the absolute screen bottom so they remain visible in pits
-                const spBaseY = this.height;
+                const spH = 120 + (i % 4) * 60;
+                const spBaseY = this.height - 52;
                 ctx.beginPath();
                 ctx.moveTo(spX - 50, spBaseY);
                 ctx.quadraticCurveTo(spX - 15, spBaseY - spH / 2, spX, spBaseY - spH);
@@ -1157,12 +1155,11 @@ export class Level {
             }
             ctx.globalAlpha = 1.0;
 
-            // Adjusted coordinates to align with the ground line (192px tall)
-            const seamGlow = ctx.createLinearGradient(0, this.height - 192, 0, this.height);
+            const seamGlow = ctx.createLinearGradient(0, this.height - 220, 0, this.height);
             seamGlow.addColorStop(0, 'rgba(80, 20, 120, 0)');
             seamGlow.addColorStop(1, 'rgba(40, 10, 80, 0.45)');
             ctx.fillStyle = seamGlow;
-            ctx.fillRect(0, this.height - 192, this.width, 192);
+            ctx.fillRect(0, this.height - 220, this.width, 220);
 
             // Magenta floating clouds
             ctx.fillStyle = t.cloud;
