@@ -436,11 +436,23 @@ function closeOmnitrixShop() {
     showOmnitrixAlienScreen();
 }
 
+function resizeOmnitrixPanel() {
+    if (!omnitrixPanel) return;
+    const minDim = Math.min(window.innerWidth, window.innerHeight);
+    const scale = Math.min(1, (minDim * 0.95) / 540);
+    omnitrixPanel.style.transform = `translate(-50%, -50%) scale(${scale})`;
+}
+
+window.addEventListener('resize', () => {
+    if (omnitrixPanelOpen) resizeOmnitrixPanel();
+});
+
 function openOmnitrixPanel() {
     if (!mario.hasWatch) return;
     showOmnitrixAlienScreen();
     omnitrixPanelOpen = true;
     omnitrixPanel.classList.toggle('locked', isTransformationLocked());
+    resizeOmnitrixPanel();
     omnitrixPanel.style.display = 'flex';
     if (alienGrid) alienGrid.classList.add('rotating-clockwise');
     renderAlienGrid();

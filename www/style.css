@@ -257,6 +257,7 @@ canvas.level10-theme.fixed {
     transform: translate(-50%, -50%);
     width: 540px;
     height: 540px;
+    aspect-ratio: 1 / 1;
     background: radial-gradient(circle, #0e1e0e 0%, #000 100%);
     border: 6px solid #39FF14;
     border-radius: 50%;
