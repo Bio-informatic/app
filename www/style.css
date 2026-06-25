@@ -1,0 +1,583 @@
+body {
+    margin: 0;
+    padding: 0;
+    background-color: #333;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    font-family: 'Press Start 2P', cursive, sans-serif;
+    /* Fallback to sans-serif */
+    color: white;
+}
+
+#game-container {
+    position: relative;
+    border: none;
+    box-shadow: none;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+}
+
+canvas {
+    display: block;
+    background-color: #5c94fc;
+    /* Mario Sky Blue */
+    image-rendering: pixelated;
+    /* Sharp pixels */
+    width: 100%;
+    height: 100%;
+}
+
+canvas.level2-theme {
+    background-color: #0b0a1a;
+    /* Dark spooky forest sky for Four Arms level */
+}
+
+canvas.level3-theme {
+    background-color: #0A0000;
+    /* Dark hell sky for Heatblast level */
+}
+
+canvas.level4-theme {
+    background-color: #050520;
+    /* Deep navy cyber highway for XLR8 level */
+}
+
+canvas.level5-theme {
+    background-color: #0A1A0A;
+    /* Dark green swamp for Stinkfly level */
+}
+
+canvas.level6-theme {
+    background-color: #0A0A0C;
+    /* Destroyed world dark cyber sky */
+}
+
+canvas.level7-theme {
+    background-color: #1A3A0A;
+    /* Deep jungle green sky for Wild Mutt level */
+}
+
+canvas.level8-theme {
+    background-color: #0A1A2A;
+    /* Deep icy night sky for Diamondhead level */
+}
+
+canvas.level9-theme {
+    background-color: #FFDAB9;
+    /* Peach bright desert sky for Ripjaws level */
+}
+
+canvas.level10-theme {
+    background-color: #2A0A0A;
+}
+canvas.level10-theme.fixed {
+    background-color: #0A2A0A;
+}
+
+#ui-layer {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    pointer-events: none;
+    text-shadow: 2px 2px 0 #000;
+}
+
+#level-complete-modal {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.85);
+    padding: 40px;
+    border: 4px solid white;
+    text-align: center;
+    display: none;
+    /* Hidden by default */
+    flex-direction: column;
+    gap: 20px;
+    z-index: 100;
+}
+
+#level-complete-modal h1 {
+    margin: 0 0 20px 0;
+    color: #FFD700;
+    font-size: 24px;
+}
+
+.btn {
+    padding: 15px 30px;
+    font-family: 'Press Start 2P', cursive, sans-serif;
+    font-size: 16px;
+    cursor: pointer;
+    border: 2px solid white;
+    background: #333;
+    color: white;
+    transition: background 0.2s;
+}
+
+.btn:hover {
+    background: #555;
+}
+
+.btn-primary {
+    background: #C80000;
+}
+
+.btn-primary:hover {
+    background: #ff0000;
+}
+
+/* ===== OMNITRIX INTRO POPUP ===== */
+#omnitrix-intro {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.88);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 200;
+}
+
+#omnitrix-intro-inner {
+    background: #0a0a0a;
+    border: 3px solid #39FF14;
+    border-radius: 12px;
+    padding: 40px 50px;
+    text-align: center;
+    box-shadow: 0 0 40px #39FF14aa;
+    max-width: 520px;
+}
+
+.omnitrix-logo {
+    font-size: 64px;
+    margin-bottom: 10px;
+    filter: drop-shadow(0 0 12px #39FF14);
+}
+
+#omnitrix-intro-inner h2 {
+    color: #39FF14;
+    font-size: 22px;
+    margin: 0 0 16px;
+    letter-spacing: 3px;
+}
+
+#omnitrix-intro-inner p {
+    color: #ccc;
+    font-size: 13px;
+    line-height: 1.8;
+    margin-bottom: 28px;
+}
+
+/* ===== OMNITRIX WATCH PANEL (PRO CIRCULAR) ===== */
+#omnitrix-panel {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 540px;
+    height: 540px;
+    background: radial-gradient(circle, #0e1e0e 0%, #000 100%);
+    border: 6px solid #39FF14;
+    border-radius: 50%;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1500; /* High z-index to be on top */
+    box-shadow: 0 0 50px rgba(57, 255, 20, 0.4), inset 0 0 30px rgba(57, 255, 20, 0.3);
+}
+
+/* Watch face rim deco */
+#omnitrix-panel::before {
+    content: '';
+    position: absolute;
+    inset: -10px;
+    border: 12px double rgba(57, 255, 20, 0.6);
+    border-radius: 50%;
+    animation: rotate-watch-rim 30s linear infinite;
+    pointer-events: none;
+}
+
+#omnitrix-panel::after {
+    content: '';
+    position: absolute;
+    inset: 40px;
+    border: 1px dashed rgba(57, 255, 20, 0.2);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+#omnitrix-panel.locked {
+    background: radial-gradient(circle, #2a0e0e 0%, #120000 100%);
+    border-color: #ff3a3a;
+    box-shadow: 0 0 50px rgba(255, 58, 58, 0.45), inset 0 0 30px rgba(255, 58, 58, 0.25);
+}
+
+#omnitrix-panel.locked::before {
+    border-color: rgba(255, 58, 58, 0.7);
+}
+
+#omnitrix-panel.locked::after {
+    border-color: rgba(255, 58, 58, 0.25);
+}
+
+@keyframes rotate-watch-rim {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+#alien-grid {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    transform-origin: center center;
+}
+
+#alien-grid.rotating-clockwise {
+    animation: rotate-clockwise-slow 60s linear infinite;
+}
+
+#alien-grid.rotating-clockwise .alien-slot {
+    animation: rotate-counter-clockwise 60s linear infinite;
+}
+
+@keyframes rotate-clockwise-slow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes rotate-counter-clockwise {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(-360deg); }
+}
+
+/* Individual alien slot */
+.alien-slot {
+    position: absolute;
+    background: linear-gradient(135deg, #1a1a1a 0%, #050505 100%);
+    border: 3px solid #39FF1488;
+    border-radius: 50%;
+    width: 90px;
+    height: 90px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: default;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    padding: 0;
+    pointer-events: auto;
+    box-shadow: 0 6px 15px rgba(0,0,0,0.8);
+    overflow: visible;
+}
+
+.alien-slot.unlocked {
+    border-color: #39FF14;
+    cursor: pointer;
+    background: linear-gradient(135deg, #222 0%, #0a0a0a 100%);
+}
+
+.alien-slot.unlocked:hover {
+    box-shadow: 0 0 30px #39FF14;
+    border-color: #fff;
+    z-index: 100;
+}
+
+.alien-slot.unlocked:hover .alien-slot-inner {
+    transform: scale(1.2);
+}
+
+.alien-slot-inner {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.alien-slot .slot-key {
+    position: absolute;
+    top: -5px;
+    background: #39FF14;
+    color: #000;
+    font-size: 11px;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 4px;
+    z-index: 5;
+    box-shadow: 0 0 10px #39FF14aa;
+}
+
+.alien-slot .slot-icon {
+    width: 70px;
+    height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+}
+
+.alien-slot .slot-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 0 5px rgba(57, 255, 20, 0.4));
+}
+
+.alien-slot .slot-name {
+    position: absolute;
+    bottom: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #000;
+    border: 1px solid #39FF14;
+    color: #39FF14;
+    font-size: 9px;
+    padding: 2px 6px;
+    white-space: nowrap;
+    max-width: 92px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border-radius: 4px;
+    opacity: 0;
+    transition: opacity 0.2s, bottom 0.2s;
+    pointer-events: none;
+}
+
+.alien-slot:hover .slot-name {
+    opacity: 1;
+    bottom: -10px;
+}
+
+.alien-slot.locked .slot-icon {
+    opacity: 0.2;
+    filter: grayscale(1) blur(1px);
+}
+
+.alien-slot.locked::after {
+    content: '🔒';
+    position: absolute;
+    font-size: 20px;
+    opacity: 0.5;
+}
+
+.alien-slot .slot-lives {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px;
+    color: #FF4444;
+    z-index: 6;
+    text-shadow: 0 0 5px #000;
+    background: rgba(0, 0, 0, 0.85);
+    border: 1px solid #FF4444;
+    border-radius: 999px;
+    padding: 1px 7px;
+    white-space: nowrap;
+}
+
+#omnitrix-controls-wrapper {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 212px;
+    height: 212px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: radial-gradient(circle, #111 0%, #000 100%);
+    border: 5px solid #39FF14;
+    border-radius: 50%;
+    box-shadow: 0 0 50px rgba(57, 255, 20, 0.5), inset 0 0 30px rgba(57, 255, 20, 0.4);
+    z-index: 10;
+    overflow: hidden;
+}
+
+/* Scanline effect on center hub */
+#omnitrix-controls-wrapper::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+    background-size: 100% 4px, 3px 100%;
+    pointer-events: none;
+    z-index: 2;
+}
+
+#omnitrix-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
+    width: 100%;
+    padding: 10px 0;
+    z-index: 3;
+}
+
+#omnitrix-status {
+    font-size: 8px;
+    line-height: 1.25;
+    min-height: 20px;
+    max-width: 170px;
+    color: #39FF14;
+    text-align: center;
+    padding: 0 10px;
+    text-transform: none;
+    font-weight: bold;
+    text-shadow: 0 0 8px rgba(57, 255, 20, 0.8);
+    letter-spacing: 0.5px;
+}
+
+#omnitrix-controls button {
+    padding: 7px 6px;
+    font-size: 8px;
+    width: 140px;
+    border-radius: 8px;
+    background: #000;
+    color: #39FF14;
+    border: 2px solid #39FF14;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+}
+
+#omnitrix-controls button:hover {
+    background: #39FF14;
+    color: #000;
+    box-shadow: 0 0 20px #39FF14;
+    transform: translateY(-2px);
+}
+
+#omnitrix-controls button:active {
+    transform: translateY(1px);
+}
+
+#omnitrix-controls button::after {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%; width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(57, 255, 20, 0.4), transparent);
+    transition: 0.5s;
+}
+
+#omnitrix-controls button:hover::after {
+    left: 100%;
+}
+
+#omnitrix-controls button:disabled,
+#omnitrix-shop-screen button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+#omnitrix-controls button:disabled:hover,
+#omnitrix-shop-screen button:disabled:hover {
+    background: #000;
+    color: #39FF14;
+    transform: none;
+}
+
+#omnitrix-shop-screen {
+    position: absolute;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 18px;
+    background: radial-gradient(circle, rgba(10, 30, 10, 0.95) 0%, rgba(0, 0, 0, 0.97) 75%);
+    border-radius: 50%;
+    z-index: 20;
+}
+
+#omnitrix-shop-title {
+    margin: 0;
+    color: #39FF14;
+    font-size: 18px;
+    letter-spacing: 1.2px;
+}
+
+#omnitrix-shop-message {
+    min-height: 34px;
+    max-width: 285px;
+    padding: 0 8px;
+    font-size: 10px;
+    line-height: 1.45;
+    color: #9BFFAA;
+    text-align: center;
+}
+
+#omnitrix-shop-screen button {
+    width: 245px;
+    padding: 11px 10px;
+    font-size: 11px;
+    border-radius: 10px;
+    background: #000;
+    color: #39FF14;
+    border: 2px solid #39FF14;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+}
+
+#omnitrix-shop-screen button:hover {
+    background: #39FF14;
+    color: #000;
+}
+
+#panel-hint-bar {
+    font-size: 7px;
+    line-height: 1.2;
+    max-width: 170px;
+    text-align: center;
+    color: #39FF14;
+    opacity: 0.6;
+    margin-top: 2px;
+    font-weight: normal;
+}
+
+/* ===== CONTROLS MODAL ===== */
+.modal-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.9);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 500;
+}
+
+.modal-content {
+    background: #0a0a0a;
+    border: 3px solid #ff0;
+    border-radius: 12px;
+    padding: 30px 40px;
+    text-align: center;
+    box-shadow: 0 0 30px #ffff0066;
+    max-width: 500px;
+}
+
+.modal-content h2 {
+    color: #ff0;
+    font-size: 20px;
+    margin-bottom: 20px;
+}
+
+.modal-content ul li {
+    margin-bottom: 10px;
+    font-size: 14px;
+}
+
+.modal-content b {
+    color: #0f0;
+}

@@ -1,0 +1,2533 @@
+export class Mario {
+    constructor(x, y, input) {
+        this.x = x;
+        this.y = y;
+        this.width = 32;
+        this.height = 32;
+        this.vx = 0;
+        this.vy = 0;
+        this.speed = 5;
+        this.jumpForce = -12;
+        this.gravity = 0.5;
+        this.grounded = false;
+        this.input = input;
+        this.state = 'SMALL'; // SMALL, FOURARMS, HEATBLAST, DIAMONDHEAD
+        this.transforming = false;
+        this.transformTimer = 0;
+        this.victory = false;
+        this.hasWatch = false;
+
+        // Ground Pound (Four Arms)
+        this.groundPounding = false;
+        this.groundPoundLanded = false;
+        this.groundPoundCooldown = 0;
+
+        // Fireball (Heatblast)
+        this.fireballPower = 0;       // Current rapid-press power level (1-5)
+        this.fireballLastPress = 0;   // Timestamp of last F press
+        this.fireballCooldown = 0;    // Timestamp of last fired
+        this.facingRight = true;      // Direction for fireball
+
+        // Lava resistance
+        this.lavaTimer = 0;           // How long in lava (Heatblast gets 2s grace)
+
+        // Alien countdown timer
+        this.alienTimer = 0;              // Timestamp when transformation started
+        this.alienTimerDuration = 15000;  // 15 seconds
+        this.alienTimerRemaining = 0;     // Seconds left (for HUD display)
+
+        // Double jump (5 per level)
+        this.doubleJumpsRemaining = 5;
+        this.canDoubleJump = false;       // true after first jump, false after landing or using
+        this._jumpWasDown = false;        // edge-detection for key press
+
+        // XLR8 Speed Dash
+        this.dashActive = false;
+        this.dashTimer = 0;
+        this.dashDuration = 500;     // 0.5s burst
+        this.dashCooldown = 0;
+        this.dashCooldownMs = 2000;  // 2s cooldown
+        this.dashTrail = [];         // Speed trail particles
+        this.lavaDeath = false;
+
+        // Stinkfly Stamina
+        this.maxWingStamina = 6000; // 6 seconds
+        this.wingStamina = this.maxWingStamina;
+
+        // Level 6 Upgrade hacking
+        this.upgradeShotCooldown = 0;
+        this.upgradeElectricImmunity = false;
+
+        // Wild Mutt punch & pounce
+        this.punchActive = false;
+        this.punchTimer = 0;
+        this.punchCooldown = 0;
+        this.punchRect = null; // {x,y,width,height} hit zone
+        this.pounceActive = false;
+        this.pounceCooldown = 0;
+
+        // Ripjaws sound wave
+        this.soundWaveActive = false;
+
+        // Grey Matter hacking
+        this.hackingTimer = 0;
+        this.hackingWaveTriggered = false;
+    }
+
+    _applyFormSize(targetWidth, targetHeight) {
+        const prevWidth = this.width;
+        const prevHeight = this.height;
+        const prevCenterX = this.x + prevWidth / 2;
+        const prevFootY = this.y + prevHeight;
+
+        this.width = targetWidth;
+        this.height = targetHeight;
+
+        // Keep feet planted on the same ground pixel and keep body centered.
+        this.x = prevCenterX - this.width / 2;
+        this.y = prevFootY - this.height;
+    }
+
+    startAlienTimer() {
+        this.alienTimer = performance.now();
+        // Random duration between 15 and 25 seconds (15000ms to 25000ms)
+        this.alienTimerDuration = 15000 + Math.random() * 10000;
+        this.transforming = true;
+        this.transformTimer = this.alienTimer;
+    }
+
+    getOmnitrixColor() {
+        if (this.state === 'SMALL' || this.alienTimer <= 0) return '#39FF14';
+        const elapsed = performance.now() - this.alienTimer;
+        const remaining = (this.alienTimerDuration - elapsed) / 1000;
+        if (remaining <= 4) {
+            const flash = Math.floor(performance.now() / 250) % 2 === 0;
+            return flash ? '#FF2222' : '#39FF14';
+        }
+        return '#39FF14';
+    }
+
+    applyOmnitrixGlow(ctx, ox = 0, oy = 0) {
+        const color = this.getOmnitrixColor();
+        ctx.fillStyle = color;
+        const isRed = (color === '#FF2222');
+        
+        if (isRed) {
+            const now = performance.now();
+            // Large transparent halo backing
+            ctx.save();
+            const pulse = 0.45 + Math.sin(now / 100) * 0.25;
+            const radius = 28 + Math.sin(now / 100) * 8;
+            const grad = ctx.createRadialGradient(ox, oy, 2, ox, oy, radius);
+            grad.addColorStop(0, `rgba(255, 0, 0, ${pulse})`);
+            grad.addColorStop(0.7, `rgba(255, 0, 0, ${pulse * 0.3})`);
+            grad.addColorStop(1, 'rgba(255, 0, 0, 0)');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(ox, oy, radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+
+            // Core symbol glow
+            ctx.shadowBlur = 25 + Math.sin(now / 50) * 15;
+            ctx.shadowColor = '#FF0000';
+            ctx.fillStyle = color;
+        } else {
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#39FF14';
+        }
+        return color;
+    }
+
+    transformToRipjaws() {
+        if (this.state === 'RIPJAWS') return;
+        this.state = 'RIPJAWS';
+        this.startAlienTimer();
+        this._applyFormSize(42, 58);
+    }
+
+    transformToGreyMatter() {
+        if (this.state === 'GREYMATTER') return;
+        this.state = 'GREYMATTER';
+        this.startAlienTimer();
+        this._applyFormSize(20, 28);
+    }
+
+    transformToGhostfreak() {
+        if (this.state === 'GHOSTFREAK') return;
+        this.state = 'GHOSTFREAK';
+        this.startAlienTimer();
+        this._applyFormSize(42, 54);
+    }
+
+    transformToFourArms() {
+        if (this.state === 'FOURARMS') return;
+        this.state = 'FOURARMS';
+        this.startAlienTimer();
+        this._applyFormSize(50, 66);
+    }
+
+    transformToHeatblast() {
+        if (this.state === 'HEATBLAST') return;
+        this.state = 'HEATBLAST';
+        this.startAlienTimer();
+        this._applyFormSize(48, 64);
+    }
+
+    revertToSmall() {
+        if (this.state === 'SMALL') return;
+        this.state = 'SMALL';
+        this.transforming = true;
+        this.transformTimer = performance.now();
+        this._applyFormSize(32, 32);
+        this.groundPounding = false;
+        this.dashActive = false;
+        this.punchActive = false;
+        this.alienTimer = 0;
+        this.alienTimerRemaining = 0;
+        this.ghostfreakFTimer = 0;
+        this.ghostfreakAcquireReady = false;
+        
+        // Stinkfly stats
+        this.wingStamina = 6000;
+        this.maxWingStamina = 6000;
+        this.upgradeElectricImmunity = false;
+    }
+
+    transformToXLR8() {
+        if (this.state === 'XLR8') return;
+        this.state = 'XLR8';
+        this.startAlienTimer();
+        this._applyFormSize(42, 58);
+    }
+
+    transformToStinkfly() {
+        if (this.state === 'STINKFLY') return;
+        this.state = 'STINKFLY';
+        this.startAlienTimer();
+        this._applyFormSize(46, 52);
+        this.wingStamina = this.maxWingStamina;
+    }
+
+    transformToUpgrade() {
+        if (this.state === 'UPGRADE') return;
+        this.state = 'UPGRADE';
+        this.startAlienTimer();
+        this._applyFormSize(38, 52);
+    }
+
+    transformToWildMutt() {
+        if (this.state === 'WILDMUTT') return;
+        this.state = 'WILDMUTT';
+        this.startAlienTimer();
+        this._applyFormSize(54, 50);
+    }
+
+    transformToDiamondhead() {
+        if (this.state === 'DIAMONDHEAD') return;
+        this.state = 'DIAMONDHEAD';
+        this.startAlienTimer();
+        this._applyFormSize(46, 62);
+    }
+
+    update(deltaTime, level) {
+        if (this.transforming) {
+            if (performance.now() - this.transformTimer > 1000) {
+                this.transforming = false;
+            }
+        }
+
+        // Alien countdown timer — revert to SMALL after 15 seconds
+        if (this.alienTimer > 0 && this.state !== 'SMALL') {
+            const elapsed = performance.now() - this.alienTimer;
+            this.alienTimerRemaining = Math.max(0, Math.ceil((this.alienTimerDuration - elapsed) / 1000));
+            if (elapsed >= this.alienTimerDuration) {
+                this.revertToSmall();
+            }
+        }
+
+        let inWater = level.waterStartX !== undefined && this.x > level.waterStartX;
+        this.inWater = inWater;
+        let activeGravity = inWater ? 0.2 : this.gravity;
+
+        // Apply Gravity (Stinkfly flies only in level 5, Ripjaws swims naturally in water)
+        const stinkflyCanFly = this.state === 'STINKFLY' && level.levelIndex === 5;
+        if (stinkflyCanFly || this.state === 'GHOSTFREAK' || (inWater && this.state === 'RIPJAWS')) {
+            this.vy = 0; // zero gravity base
+        } else {
+            this.vy += activeGravity;
+        }
+
+        // Horizontal Movement
+        let moveSpeed = this.speed;
+        if (this.state === 'XLR8') moveSpeed = this.speed * 2.5;
+        if (this.dashActive) moveSpeed = this.speed * 4;
+        if (this.state === 'STINKFLY') moveSpeed = this.speed * 1.5;
+        if (this.state === 'GHOSTFREAK') moveSpeed = this.speed * 1.5;
+        if (this.state === 'RIPJAWS' && inWater) moveSpeed = this.speed * 2.2; // Fast swimmer
+
+        if (this.pounceActive) {
+            // Keep pounce velocity until grounded or timeout
+            if (this.grounded && performance.now() - this.pounceStartTime > 100) {
+                this.pounceActive = false;
+            } else if (performance.now() - this.pounceStartTime > 600) {
+                this.pounceActive = false;
+            }
+        } else {
+            if (this.input.isDown('ArrowRight')) {
+                this.vx = moveSpeed;
+                this.facingRight = true;
+            } else if (this.input.isDown('ArrowLeft')) {
+                this.vx = -moveSpeed;
+                this.facingRight = false;
+            } else {
+                this.vx = 0;
+            }
+        }
+
+        // XLR8 Speed Dash update
+        if (this.dashActive) {
+            if (performance.now() - this.dashTimer > this.dashDuration) {
+                this.dashActive = false;
+            }
+            // Speed trail
+            this.dashTrail.push({ x: this.x, y: this.y, alpha: 1.0 });
+            if (this.dashTrail.length > 8) this.dashTrail.shift();
+        } else {
+            // Fade trail
+            for (let i = this.dashTrail.length - 1; i >= 0; i--) {
+                this.dashTrail[i].alpha -= 0.1;
+                if (this.dashTrail[i].alpha <= 0) this.dashTrail.splice(i, 1);
+            }
+        }
+
+        // --- Grey Matter Hacking ---
+        if (this.state === 'GREYMATTER') {
+            if (this.input.isDown('F')) {
+                this.hackingTimer += (deltaTime || 16);
+                if (this.hackingTimer >= 2000) {
+                    this.hackingWaveTriggered = true;
+                    this.hackingTimer = 0;
+                }
+            } else {
+                this.hackingTimer = 0;
+            }
+        } else {
+            this.hackingTimer = 0;
+        }
+
+        // --- Ripjaws logic ---
+        if (this.state === 'RIPJAWS') {
+            if (this.input.isDown('F')) {
+                this.soundWaveActive = true;
+            } else {
+                this.soundWaveActive = false;
+            }
+        } else {
+            this.soundWaveActive = false;
+        }
+
+        // --- Ghostfreak logic ---
+        if (this.state === 'GHOSTFREAK') {
+            if (this.input.isDown('F')) {
+                this.ghostfreakFTimer = (this.ghostfreakFTimer || 0) + (deltaTime || 16);
+                if (this.ghostfreakFTimer >= 5000) {
+                    this.ghostfreakAcquireReady = true;
+                }
+            } else {
+                this.ghostfreakFTimer = 0;
+                this.ghostfreakAcquireReady = false;
+            }
+        } else {
+            this.ghostfreakFTimer = 0;
+            this.ghostfreakAcquireReady = false;
+        }
+
+        // Move X
+        this.x += this.vx;
+        this.handleHorizontalCollisions(level);
+
+        const jumpPressed = this.input.isDown('Space') || this.input.isDown('ArrowUp');
+        const jumpJustPressed = jumpPressed && !this._jumpWasDown;
+        this._jumpWasDown = jumpPressed;
+
+        const stinkflyCanFlyJump = this.state === 'STINKFLY' && level.levelIndex === 5;
+        if (stinkflyCanFlyJump || this.state === 'GHOSTFREAK' || (inWater && this.state === 'RIPJAWS')) {
+            if (stinkflyCanFlyJump) this.wingStamina = this.maxWingStamina;
+            
+            if (jumpPressed) {
+                this.vy = -moveSpeed; // Fly/Swim up
+                this._justJumped = true;
+            } else if (this.input.isDown('ArrowDown')) {
+                this.vy = moveSpeed; // Fly/Swim down
+            } else {
+                // If swimming/flying and no vertical keys, stay buoyant but allow X movement
+                this.vy = 0;
+            }
+        } else {
+            if (jumpPressed && this.grounded) {
+                // Upgrade has higher floaty jump
+                this.vy = this.state === 'FOURARMS' ? -14 : (this.state === 'UPGRADE' ? -15 : -12);
+                this.grounded = false;
+                this.canDoubleJump = true;
+                this._justJumped = true;
+            } else if (jumpJustPressed && !this.grounded && this.canDoubleJump && this.doubleJumpsRemaining > 0) {
+                // Double jump — higher boost
+                this.vy = this.state === 'FOURARMS' ? -18 : (this.state === 'UPGRADE' ? -19 : -16);
+                this.canDoubleJump = false;
+                this.doubleJumpsRemaining--;
+                this._justJumped = true;
+            }
+        }
+
+        // Ground Pound (Four Arms only, triggered by game.js)
+        if (this.groundPounding) {
+            this.vx = 0;
+            this.vy = 20;
+        }
+
+        // Move Y
+        this.y += this.vy;
+        this.handleVerticalCollisions(level);
+
+        // Lava detection
+        const ts = level.tileSize;
+        const footY = Math.floor((this.y + this.height) / ts);
+        const feetL = Math.floor(this.x / ts);
+        const feetR = Math.floor((this.x + this.width - 1) / ts);
+        let onLava = false;
+        if (level.tiles[footY]) {
+            if (level.tiles[footY][feetL] === 9 || level.tiles[footY][feetR] === 9) {
+                onLava = true;
+            }
+        }
+        // Also check body center
+        const bodyY = Math.floor((this.y + this.height / 2) / ts);
+        const bodyX = Math.floor((this.x + this.width / 2) / ts);
+        if (level.tiles[bodyY] && level.tiles[bodyY][bodyX] === 9) {
+            onLava = true;
+        }
+
+        if (onLava) {
+            if (this.state === 'STINKFLY' && level.levelIndex === 5) {
+                // Stinkfly is immune to poison
+                this.lavaTimer = 0;
+            } else if (this.state === 'HEATBLAST') {
+                // Heatblast: slow sink, 2 second grace
+                this.lavaTimer += deltaTime || 16;
+                this.vy = Math.min(this.vy, 1); // slow sinking
+                if (this.lavaTimer > 2000) {
+                    this.lavaDeath = true; // game.js reads this
+                }
+            } else {
+                // Instant death
+                this.lavaDeath = true;
+            }
+        } else {
+            this.lavaTimer = 0;
+        }
+
+        // Screen Boundaries
+        if (this.x < 0) this.x = 0;
+        if (this.y > 2000) this.y = 0;
+
+        // Controlled Boss
+        if (this.controllingBoss) {
+            this.width = this.controllingBoss.width;
+            this.height = this.controllingBoss.height;
+            this.controllingBoss.x = this.x;
+            this.controllingBoss.y = this.y;
+            this.controllingBoss.vx = this.vx;
+            this.viewYOffset = 40; // shift draw up or let the boss render
+        } else {
+            // Restore width if dropped?
+        }
+    }
+
+    activateUpgradeElectricImmunity() {
+        this.upgradeElectricImmunity = true;
+    }
+
+    hasUpgradeElectricImmunity(levelIndex = null) {
+        return this.state === 'UPGRADE' &&
+            levelIndex === 6 &&
+            this.upgradeElectricImmunity;
+    }
+
+    _getCollisionProfile() {
+        const profiles = {
+            SMALL:      { sideInset: 4, topInset: 2, bottomInset: 0, headInset: 4, feetInset: 5 },
+            FOURARMS:   { sideInset: 3, topInset: 3, bottomInset: 0, headInset: 5, feetInset: 7 },
+            HEATBLAST:  { sideInset: 4, topInset: 3, bottomInset: 0, headInset: 6, feetInset: 7 },
+            XLR8:       { sideInset: 6, topInset: 2, bottomInset: 0, headInset: 7, feetInset: 8 },
+            STINKFLY:   { sideInset: 5, topInset: 3, bottomInset: 0, headInset: 6, feetInset: 8 },
+            UPGRADE:    { sideInset: 4, topInset: 2, bottomInset: 0, headInset: 6, feetInset: 6 },
+            WILDMUTT:   { sideInset: 4, topInset: 6, bottomInset: 0, headInset: 6, feetInset: 8 },
+            DIAMONDHEAD:{ sideInset: 4, topInset: 2, bottomInset: 0, headInset: 6, feetInset: 7 },
+            RIPJAWS:    { sideInset: 5, topInset: 3, bottomInset: 0, headInset: 6, feetInset: 7 },
+            GREYMATTER: { sideInset: 3, topInset: 2, bottomInset: 0, headInset: 4, feetInset: 4 },
+            GHOSTFREAK: { sideInset: 5, topInset: 2, bottomInset: 0, headInset: 6, feetInset: 6 }
+        };
+        return profiles[this.state] || profiles.SMALL;
+    }
+
+    _getCollisionRect() {
+        const p = this._getCollisionProfile();
+        const left = this.x + p.sideInset;
+        const top = this.y + p.topInset;
+        const right = this.x + this.width - p.sideInset;
+        const bottom = this.y + this.height - p.bottomInset;
+        return { left, top, right, bottom, p };
+    }
+
+    // Non-solid tiles: 0 (air), 9 (lava), 10 (speed panel), 11 (electric fence)
+    isSolid(tile) {
+        if (this.state === 'GHOSTFREAK' && this.input.isDown('F')) {
+            if (tile === 2 || tile === 13) return false;
+        }
+        return tile !== 0 && tile !== 9 && tile !== 10 && tile !== 11;
+    }
+
+    handleHorizontalCollisions(level) {
+        const ts = level.tileSize;
+        const { left, top, right, bottom } = this._getCollisionRect();
+        const ySamples = [top + 2, (top + bottom) * 0.5, bottom - 2];
+
+        if (this.vx > 0) {
+            const gridRight = Math.floor((right + 0.1) / ts);
+            let hit = false;
+            for (let i = 0; i < ySamples.length; i++) {
+                const gy = Math.floor(ySamples[i] / ts);
+                if (level.tiles[gy] && this.isSolid(level.tiles[gy][gridRight])) {
+                    hit = true;
+                    break;
+                }
+            }
+            if (hit) {
+                const sideInset = this._getCollisionProfile().sideInset;
+                this.x = gridRight * ts - (this.width - sideInset);
+                this.vx = 0;
+            }
+        } else if (this.vx < 0) {
+            const gridLeft = Math.floor((left - 0.1) / ts);
+            let hit = false;
+            for (let i = 0; i < ySamples.length; i++) {
+                const gy = Math.floor(ySamples[i] / ts);
+                if (level.tiles[gy] && this.isSolid(level.tiles[gy][gridLeft])) {
+                    hit = true;
+                    break;
+                }
+            }
+            if (hit) {
+                const sideInset = this._getCollisionProfile().sideInset;
+                this.x = (gridLeft + 1) * ts - sideInset;
+                this.vx = 0;
+            }
+        }
+    }
+
+    handleVerticalCollisions(level) {
+        const ts = level.tileSize;
+        const { left, top, right, bottom, p } = this._getCollisionRect();
+        const downXSamples = [left + p.feetInset, (left + right) * 0.5, right - p.feetInset];
+        const upXSamples = [left + p.headInset, (left + right) * 0.5, right - p.headInset];
+
+        if (this.vy > 0) {
+            const gridBottom = Math.floor((bottom + 0.1) / ts);
+            let hitGround = false;
+            for (let i = 0; i < downXSamples.length; i++) {
+                const gx = Math.floor(downXSamples[i] / ts);
+                const tile = level.tiles[gridBottom] ? level.tiles[gridBottom][gx] : 0;
+                if (this.isSolid(tile)) {
+                    hitGround = true;
+                    break;
+                }
+            }
+
+            if (hitGround) {
+                this.y = gridBottom * ts - this.height + p.bottomInset;
+                this.vy = 0;
+                this.grounded = true;
+                this.canDoubleJump = false;
+
+                if (this.groundPounding) {
+                    this.groundPounding = false;
+                    this.groundPoundLanded = true;
+                    this.groundPoundCooldown = performance.now();
+                }
+            } else {
+                this.grounded = false;
+            }
+        } else if (this.vy < 0) {
+            const gridTop = Math.floor((top - 0.1) / ts);
+            let hitTile = 0;
+            let hitX = -1;
+            if (level.tiles[gridTop]) {
+                for (let i = 0; i < upXSamples.length; i++) {
+                    const gx = Math.floor(upXSamples[i] / ts);
+                    if (this.isSolid(level.tiles[gridTop][gx])) {
+                        hitTile = level.tiles[gridTop][gx];
+                        hitX = gx;
+                        break;
+                    }
+                }
+            }
+
+            if (hitTile !== 0) {
+                this.y = (gridTop + 1) * ts - p.topInset;
+                this.vy = 0;
+
+                if (hitTile === 3 && this.onBlockHit) {
+                    this.onBlockHit(3, hitX * ts, gridTop * ts);
+                }
+            }
+            this.grounded = false;
+        }
+    }
+
+    draw(ctx) {
+        if (this.transforming) {
+            this.drawTransformation(ctx);
+            return;
+        }
+
+        if (this.state === 'HEATBLAST') {
+            this._drawAlienWithFx(ctx, () => this.drawHeatblast(ctx), 'HEATBLAST');
+        } else if (this.state === 'FOURARMS') {
+            this._drawAlienWithFx(ctx, () => this.drawFourArms(ctx), 'FOURARMS');
+        } else if (this.state === 'XLR8') {
+            this._drawAlienWithFx(ctx, () => this.drawXLR8(ctx), 'XLR8');
+        } else if (this.state === 'STINKFLY') {
+            this._drawAlienWithFx(ctx, () => this.drawStinkfly(ctx), 'STINKFLY');
+        } else if (this.state === 'UPGRADE') {
+            this._drawAlienWithFx(ctx, () => this.drawUpgrade(ctx), 'UPGRADE');
+        } else if (this.state === 'WILDMUTT') {
+            this._drawAlienWithFx(ctx, () => this.drawWildMutt(ctx), 'WILDMUTT');
+        } else if (this.state === 'DIAMONDHEAD') {
+            this._drawAlienWithFx(ctx, () => this.drawDiamondhead(ctx), 'DIAMONDHEAD');
+        } else if (this.state === 'RIPJAWS') {
+            this._drawAlienWithFx(ctx, () => this.drawRipjaws(ctx), 'RIPJAWS');
+        } else if (this.state === 'GREYMATTER') {
+            this._drawAlienWithFx(ctx, () => this.drawGreyMatter(ctx), 'GREYMATTER');
+        } else if (this.state === 'GHOSTFREAK') {
+            this._drawAlienWithFx(ctx, () => this.drawGhostfreak(ctx), 'GHOSTFREAK');
+        } else {
+            this.drawMario(ctx);
+        }
+    }
+
+    _getAlienFxProfile(state, now) {
+        const profiles = {
+            FOURARMS: { aura: 'rgba(255,110,60,0.20)', glow: '#ff6a3a', bobAmp: 1.4, bobSpeed: 200, tiltAmp: 0.02, tiltSpeed: 350, scalePulse: 0.02, scaleSpeed: 300 },
+            HEATBLAST: { aura: 'rgba(255,120,0,0.24)', glow: '#ff6c00', bobAmp: 1.6, bobSpeed: 170, tiltAmp: 0.018, tiltSpeed: 320, scalePulse: 0.025, scaleSpeed: 250 },
+            XLR8: { aura: 'rgba(0,220,255,0.20)', glow: '#00e6ff', bobAmp: 1.0, bobSpeed: 230, tiltAmp: 0.035, tiltSpeed: 190, scalePulse: 0.018, scaleSpeed: 220 },
+            STINKFLY: { aura: 'rgba(170,255,70,0.19)', glow: '#9aff3f', bobAmp: 2.3, bobSpeed: 140, tiltAmp: 0.03, tiltSpeed: 210, scalePulse: 0.02, scaleSpeed: 180 },
+            UPGRADE: { aura: 'rgba(57,255,20,0.20)', glow: '#39ff14', bobAmp: 1.2, bobSpeed: 200, tiltAmp: 0.02, tiltSpeed: 260, scalePulse: 0.02, scaleSpeed: 210 },
+            WILDMUTT: { aura: 'rgba(255,180,80,0.16)', glow: '#ffbe50', bobAmp: 1.3, bobSpeed: 175, tiltAmp: 0.02, tiltSpeed: 300, scalePulse: 0.015, scaleSpeed: 230 },
+            DIAMONDHEAD: { aura: 'rgba(0,255,255,0.18)', glow: '#47ffff', bobAmp: 1.1, bobSpeed: 260, tiltAmp: 0.015, tiltSpeed: 300, scalePulse: 0.015, scaleSpeed: 260 },
+            RIPJAWS: { aura: 'rgba(0,170,255,0.18)', glow: '#00a8ff', bobAmp: 1.8, bobSpeed: 170, tiltAmp: 0.02, tiltSpeed: 230, scalePulse: 0.02, scaleSpeed: 200 },
+            GREYMATTER: { aura: 'rgba(170,255,40,0.18)', glow: '#abff28', bobAmp: 1.0, bobSpeed: 190, tiltAmp: 0.03, tiltSpeed: 220, scalePulse: 0.018, scaleSpeed: 240 },
+            GHOSTFREAK: { aura: 'rgba(200,140,255,0.16)', glow: '#cc8cff', bobAmp: 2.6, bobSpeed: 120, tiltAmp: 0.028, tiltSpeed: 200, scalePulse: 0.022, scaleSpeed: 180 }
+        };
+        return profiles[state] || { aura: 'rgba(57,255,20,0.15)', glow: '#39ff14', bobAmp: 1.0, bobSpeed: 200, tiltAmp: 0.015, tiltSpeed: 260, scalePulse: 0.015, scaleSpeed: 250 };
+    }
+
+    _drawAlienWithFx(ctx, drawFn, state) {
+        const now = performance.now();
+        const p = this._getAlienFxProfile(state, now);
+        const cx = this.x + this.width / 2;
+        const cy = this.y + this.height / 2;
+        const bob = Math.sin(now / p.bobSpeed + this.x * 0.02) * p.bobAmp;
+        const tilt = Math.sin(now / p.tiltSpeed + this.y * 0.01) * p.tiltAmp;
+        const pulse = 1 + Math.sin(now / p.scaleSpeed) * p.scalePulse;
+
+        ctx.save();
+        ctx.globalAlpha = 0.85;
+        ctx.fillStyle = p.aura;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy + bob, this.width * 0.78, this.height * 0.72, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        ctx.save();
+        ctx.shadowBlur = 12 + Math.sin(now / 180) * 4;
+        ctx.shadowColor = p.glow;
+        ctx.translate(cx, cy + bob);
+        ctx.rotate(tilt);
+        ctx.scale(pulse, pulse);
+        ctx.translate(-cx, -cy);
+        drawFn();
+        ctx.restore();
+    }
+
+    drawTransformation(ctx) {
+        const now = performance.now();
+        const elapsed = now - this.transformTimer;
+        const duration = 1000;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        ctx.save();
+        const cx = this.x + this.width / 2;
+        const cy = this.y + this.height / 2;
+
+        // 1. Signature Green Flash
+        const flashRadius = progress < 0.5 
+            ? progress * 400 
+            : (1 - progress) * 400;
+        
+        const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, flashRadius);
+        gradient.addColorStop(0, '#FFFFFF');
+        gradient.addColorStop(0.3, '#39FF14');
+        gradient.addColorStop(1, 'rgba(0, 255, 0, 0)');
+        
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(cx, cy, flashRadius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 2. Silhouette Blending
+        ctx.globalAlpha = progress < 0.5 ? progress * 2 : (1 - progress) * 2;
+        ctx.save();
+        // Draw a "shadow" of the target form
+        ctx.filter = 'brightness(0) drop-shadow(0 0 10px #39FF14)';
+        if (this.state === 'HEATBLAST') this.drawHeatblast(ctx);
+        else if (this.state === 'FOURARMS') this.drawFourArms(ctx);
+        else if (this.state === 'XLR8') this.drawXLR8(ctx);
+        else if (this.state === 'STINKFLY') this.drawStinkfly(ctx);
+        else if (this.state === 'UPGRADE') this.drawUpgrade(ctx);
+        else if (this.state === 'WILDMUTT') this.drawWildMutt(ctx);
+        else if (this.state === 'DIAMONDHEAD') this.drawDiamondhead(ctx);
+        else if (this.state === 'RIPJAWS') this.drawRipjaws(ctx);
+        else if (this.state === 'GREYMATTER') this.drawGreyMatter(ctx);
+        else if (this.state === 'GHOSTFREAK') this.drawGhostfreak(ctx);
+        else this.drawMario(ctx);
+        ctx.restore();
+
+        // 3. Shockwaves
+        ctx.globalAlpha = 1 - progress;
+        ctx.strokeStyle = '#39FF14';
+        ctx.lineWidth = 4;
+        for (let i = 0; i < 3; i++) {
+            const waveProgress = (progress + i * 0.3) % 1;
+            const r = waveProgress * 150;
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
+        // 4. Pixel Particles
+        ctx.globalAlpha = 1.0;
+        for (let i = 0; i < 15; i++) {
+            const angle = (i / 15) * Math.PI * 2 + (progress * 5);
+            const dist = 30 + progress * 100;
+            const px = cx + Math.cos(angle) * dist;
+            const py = cy + Math.sin(angle) * dist;
+            ctx.fillStyle = i % 2 === 0 ? '#39FF14' : '#FFF';
+            ctx.fillRect(px, py, 4, 4);
+        }
+
+        ctx.restore();
+    }
+
+    drawGhostfreak(ctx) {
+        ctx.save();
+        const floatY = Math.sin(performance.now() / 200) * 3;
+        
+        ctx.translate(this.x + this.width / 2, this.y + this.height / 2 + floatY);
+        
+        ctx.globalAlpha = (this.input.isDown('F') || this.ghostfreakAcquireReady) ? 0.5 : 1.0;
+        if (!this.facingRight) {
+            ctx.scale(-1, 1);
+        }
+        ctx.scale(0.8, 0.8);
+
+        const skinGrey = '#B5B3B6';
+        const blackLine = '#111111';
+
+        // Animated tail wag
+        const tailWag = Math.sin(performance.now() / 150) * 10;
+        
+        if (this.invulnerableTimer > 0 && Math.floor(performance.now() / 100) % 2 === 0) {
+            // blink
+        } else {
+            // Charging and Ready Aura Effects
+            if (this.ghostfreakAcquireReady) {
+                // Intense, pulsating green and black aura
+                const pulse = Math.abs(Math.sin(performance.now() / 200)) * 10;
+                const gradient = ctx.createRadialGradient(0, 0, 10, 0, 0, 50 + pulse);
+                gradient.addColorStop(0, 'rgba(0, 255, 0, 0.8)'); // Green core
+                gradient.addColorStop(0.5, 'rgba(0, 50, 0, 0.5)'); // Dark mid
+                gradient.addColorStop(1, 'rgba(0, 255, 0, 0)'); // Fades out
+                
+                ctx.beginPath();
+                ctx.arc(0, 0, 50 + pulse, 0, Math.PI * 2);
+                ctx.fillStyle = gradient;
+                ctx.fill();
+
+                // Crackling lightning tendrils
+                ctx.strokeStyle = '#00FF00';
+                ctx.lineWidth = 2;
+                for(let i=0; i<3; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, 0);
+                    const angle = (performance.now() / 100) + (i * Math.PI * 2 / 3);
+                    ctx.lineTo(Math.cos(angle) * (40 + pulse), Math.sin(angle) * (40 + pulse));
+                    ctx.stroke();
+                }
+            } else if (this.ghostfreakFTimer > 0) {
+                // Charging particles pulling inward
+                const chargePct = this.ghostfreakFTimer / 5000;
+                ctx.beginPath();
+                ctx.arc(0, 0, 45 - (chargePct * 15), 0, Math.PI * 2);
+                ctx.strokeStyle = `rgba(0, 255, 0, ${chargePct})`; // Green charging ring
+                ctx.lineWidth = 3;
+                ctx.setLineDash([5, 10]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+        }
+
+        // Left Arm (Back)
+        ctx.strokeStyle = skinGrey;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(0, -10);
+        ctx.lineTo(15, 5); // elbow
+        ctx.lineTo(25, 25); // wrist
+        ctx.stroke();
+        
+        // Left Claws
+        ctx.fillStyle = skinGrey;
+        ctx.beginPath();
+        ctx.moveTo(25, 25); ctx.lineTo(32, 40); ctx.lineTo(28, 30); ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(25, 25); ctx.lineTo(22, 42); ctx.lineTo(25, 30); ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(25, 25); ctx.lineTo(15, 35); ctx.lineTo(22, 28); ctx.fill();
+
+        // Arm crack lines
+        ctx.strokeStyle = blackLine;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(8, -2); ctx.lineTo(15, 5);
+        ctx.stroke();
+
+        // Main Body and Tail
+        ctx.fillStyle = skinGrey;
+        ctx.beginPath();
+        ctx.moveTo(-5, -25); // Top of head
+        ctx.quadraticCurveTo(10, -25, 12, -10); // Right head
+        ctx.quadraticCurveTo(15, 10, 10, 25); // Right body
+        ctx.quadraticCurveTo(5, 40, -10 + tailWag, 60); // Tail tapering right
+        ctx.quadraticCurveTo(-15 + tailWag, 65, -5 + tailWag * 1.5, 75); // Tail tip 1
+        ctx.quadraticCurveTo(-20 + tailWag * 1.2, 70, -20 + tailWag, 55); // Tail tapering left
+        ctx.quadraticCurveTo(-10, 25, -15, 0); // Left body
+        ctx.quadraticCurveTo(-15, -20, -5, -25); // Left head
+        ctx.fill();
+
+        // Body border/shading for depth
+        ctx.strokeStyle = '#8B898C';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Body cracks (Black lines)
+        ctx.strokeStyle = blackLine;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        // Eye track
+        ctx.moveTo(5, -20);
+        ctx.lineTo(7, -15);
+        ctx.lineTo(6, -8);
+        ctx.lineTo(2, 0);
+        ctx.lineTo(-10, 2);
+        // Chest crack
+        ctx.moveTo(2, 0);
+        ctx.lineTo(-2, 10);
+        ctx.lineTo(-12, 15);
+        // Lower crack
+        ctx.moveTo(-2, 10);
+        ctx.lineTo(5, 20);
+        ctx.lineTo(0, 35);
+        ctx.moveTo(5, 20);
+        ctx.lineTo(10, 25);
+        ctx.stroke();
+
+        // Chest Slit & Omnitrix Symbol
+        this.applyOmnitrixGlow(ctx, -2, 5);
+        ctx.beginPath();
+        ctx.ellipse(-2, 5, 2, 6, Math.PI / 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.moveTo(-4, 2); ctx.lineTo(1, 1); ctx.lineTo(-1, 5); ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(-3, 8); ctx.lineTo(0, 9); ctx.lineTo(-1, 5); ctx.fill();
+        ctx.strokeStyle = blackLine;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // Eye
+        ctx.fillStyle = '#000000'; // black track around eye
+        ctx.beginPath();
+        ctx.ellipse(7, -15, 3, 5, Math.PI/12, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#E000E0'; // purple pupil
+        ctx.beginPath();
+        ctx.arc(7, -15, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Right Arm (Front)
+        ctx.strokeStyle = skinGrey;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(-10, 0);
+        ctx.lineTo(-20, 15); // elbow
+        ctx.lineTo(-15, 35); // wrist
+        ctx.stroke();
+        
+        // Right Claws
+        ctx.fillStyle = skinGrey;
+        ctx.beginPath();
+        ctx.moveTo(-15, 35); ctx.lineTo(-8, 50); ctx.lineTo(-12, 40); ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(-15, 35); ctx.lineTo(-18, 52); ctx.lineTo(-16, 40); ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(-15, 35); ctx.lineTo(-25, 45); ctx.lineTo(-19, 38); ctx.fill();
+
+        // Right Arm crack lines
+        ctx.strokeStyle = blackLine;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(-15, 8); ctx.lineTo(-20, 15);
+        ctx.stroke();
+
+        ctx.restore();
+    }
+
+    drawGreyMatter(ctx) {
+        const cx = this.x + 8; // width is 16
+        const bottomY = this.y + 24;
+        const now = performance.now();
+        const walkBob = !this.grounded ? 0 : Math.sin(now / 100 + this.x / 10) * 1.5;
+
+        const scaleFactor = 0.60;
+
+        ctx.save();
+        ctx.translate(cx, bottomY - (10 * scaleFactor) + walkBob); // Center pivot for torso, adjusted for scale
+
+        // Hacking Wave Charging Aura
+        if (this.hackingTimer > 0) {
+            ctx.save();
+            const chargePct = this.hackingTimer / 2000;
+            ctx.beginPath();
+            ctx.arc(0, -10 * scaleFactor, 15 + chargePct * 20, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(57, 255, 20, ${0.1 + chargePct * 0.3})`;
+            ctx.fill();
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = `rgba(57, 255, 20, ${0.6 + chargePct * 0.4})`;
+            ctx.stroke();
+
+            // Particles
+            for (let i = 0; i < Math.floor(chargePct * 5); i++) {
+                ctx.fillStyle = '#FFF';
+                ctx.fillRect((Math.random()-0.5)*40, (-10 * scaleFactor) + (Math.random()-0.5)*40, 2, 2);
+            }
+            ctx.restore();
+        }
+
+        if (!this.facingRight) ctx.scale(-1, 1); // Flip horizontally for everything EXCEPT the aura
+        ctx.scale(scaleFactor, scaleFactor);
+
+        // White backpack element (draw before torso so it's behind)
+        // Omnitrix on back
+        this.applyOmnitrixGlow(ctx, -4, -18);
+        ctx.beginPath();
+        ctx.arc(-4, -18, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = '#000';
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // Webbed Feet (Grey)
+        ctx.fillStyle = '#848B8A';
+        ctx.lineWidth = 1.5;
+        // Back foot
+        ctx.beginPath();
+        ctx.moveTo(-2, 10); ctx.lineTo(-12, 10); ctx.lineTo(-14, 8); ctx.lineTo(-6, 6); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(-6, 10); ctx.lineTo(-8, 7); ctx.stroke(); // toe line
+        // Front foot
+        ctx.beginPath();
+        ctx.moveTo(2, 10); ctx.lineTo(12, 10); ctx.lineTo(14, 8); ctx.lineTo(6, 6); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(6, 10); ctx.lineTo(8, 7); ctx.stroke(); // toe line
+
+        // Legs (Bottom half black, top half green)
+        // Back leg
+        ctx.fillStyle = '#18B22A'; // bright lime-ish green
+        ctx.fillRect(-5, -4, 3, 6); // thigh
+        ctx.fillStyle = '#000';
+        ctx.fillRect(-5, 2, 3, 8); // calf
+        
+        // Front leg
+        ctx.fillStyle = '#18B22A';
+        ctx.fillRect(2, -4, 3, 6);
+        ctx.fillStyle = '#000';
+        ctx.fillRect(2, 2, 3, 8);
+
+        // Torso
+        // Belt
+        ctx.fillStyle = '#000';
+        ctx.fillRect(-4, -15, 8, 5); // Wide black belt
+        
+        // Shirt
+        ctx.fillStyle = '#18B22A';
+        ctx.fillRect(-4, -20, 8, 5);
+        
+        // Vertical black stripe and neck
+        ctx.fillStyle = '#000';
+        ctx.fillRect(-1.5, -23, 3, 8); // skinny long dark neck
+
+        // Arms (Very long, reaching below hips)
+        const armSwing = !this.grounded ? -0.5 : Math.sin(now / 150 + this.x / 10) * 0.4;
+        
+        // Back Arm
+        ctx.save();
+        ctx.translate(-3, -20); // shoulder joint
+        ctx.rotate(armSwing);
+        ctx.fillStyle = '#18B22A'; // Upper arm
+        ctx.fillRect(-1.5, 0, 3, 8);
+        ctx.fillStyle = '#000'; // Lower arm
+        ctx.fillRect(-2, 6, 4, 10);
+        ctx.fillStyle = '#18B22A'; // Green block on wrist/glove
+        ctx.fillRect(-1, 11, 2, 4);
+        // Grey Fingers
+        ctx.fillStyle = '#848B8A';
+        ctx.fillRect(-2, 16, 1.5, 7);
+        ctx.fillRect(0.5, 16, 1.5, 7);
+        ctx.restore();
+
+        // Front Arm
+        ctx.save();
+        ctx.translate(3, -20);
+        ctx.rotate(-armSwing);
+        ctx.fillStyle = '#18B22A';
+        ctx.fillRect(-1.5, 0, 3, 8);
+        ctx.fillStyle = '#000';
+        ctx.fillRect(-2, 6, 4, 10);
+        ctx.fillStyle = '#18B22A'; 
+        ctx.fillRect(-1, 11, 2, 4);
+        // Fingers (flat grey rectangles)
+        ctx.fillStyle = '#848B8A';
+        ctx.fillRect(-2, 16, 1.5, 7);
+        ctx.fillRect(0.5, 16, 1.5, 7);
+        ctx.restore();
+
+        // Head (Enormous, wide, grey)
+        ctx.save();
+        ctx.translate(2, -22); // base of neck
+        ctx.fillStyle = '#848B8A';
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 1.5;
+        
+        ctx.beginPath();
+        ctx.moveTo(0, 3); // chin
+        ctx.lineTo(-4, 3); 
+        ctx.quadraticCurveTo(-15, 0, -20, -6); // back cheek
+        ctx.quadraticCurveTo(-24, -14, -12, -15); // back top
+        ctx.quadraticCurveTo(0, -12, 10, -15); // middle dip
+        ctx.quadraticCurveTo(22, -14, 18, -6); // front top to cheek
+        ctx.quadraticCurveTo(12, 0, 2, 3);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Eyes
+        ctx.lineWidth = 2.5; 
+        
+        // Back Eye
+        ctx.fillStyle = '#A3E319';
+        ctx.beginPath();
+        ctx.ellipse(-11, -7, 6, 3.5, -0.1, 0, Math.PI * 2);
+        ctx.fill(); ctx.stroke();
+        // pupil
+        ctx.fillStyle = '#111';
+        ctx.fillRect(-14, -7.5, 6, 1.5);
+        
+        // Front Eye
+        ctx.fillStyle = '#A3E319';
+        ctx.beginPath();
+        ctx.ellipse(10, -7, 7, 4, 0.1, 0, Math.PI * 2);
+        ctx.fill(); ctx.stroke();
+        // pupil
+        ctx.fillStyle = '#111';
+        ctx.fillRect(7, -7.5, 7, 1.5);
+
+        // Mouth (frown)
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(-3, -1);
+        ctx.quadraticCurveTo(0, -2, 3, -1);
+        ctx.stroke();
+
+        ctx.restore(); // restore head
+
+        ctx.restore(); // restore global
+    }
+
+    drawDiamondhead(ctx) {
+        const centerX = this.x + 22;
+        const bottomY = this.y + 60;
+
+        ctx.save();
+        ctx.translate(centerX, bottomY);
+        ctx.scale(2, 2);
+
+        // Body
+        ctx.fillStyle = '#00AAAA'; // Dark cyan/teal body
+        ctx.fillRect(-6, -20, 12, 12);
+        
+        // Crystalline shards on back/shoulders
+        ctx.fillStyle = '#A0E6FF';
+        ctx.beginPath();
+        ctx.moveTo(-6, -20); ctx.lineTo(-10, -28); ctx.lineTo(-2, -20);
+        ctx.moveTo(6, -20); ctx.lineTo(10, -28); ctx.lineTo(2, -20);
+        ctx.fill();
+
+        // Chest/Omnitrix
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(-4, -18, 8, 8);
+        this.applyOmnitrixGlow(ctx, 0, -14);
+        ctx.beginPath(); ctx.arc(0, -14, 2, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // Head
+        ctx.fillStyle = '#00FFFF'; // Bright cyan crystal head
+        ctx.beginPath();
+        ctx.moveTo(-4, -20);
+        ctx.lineTo(-2, -26);
+        ctx.lineTo(2, -26);
+        ctx.lineTo(4, -20);
+        ctx.fill();
+
+        // Eyes
+        ctx.fillStyle = '#FFFF00';
+        ctx.fillRect(-2, -24, 1, 1);
+        ctx.fillRect(1, -24, 1, 1);
+
+        // Legs
+        ctx.fillStyle = '#008888';
+        ctx.fillRect(-5, -8, 4, 8);
+        ctx.fillRect(1, -8, 4, 8);
+
+        // Arms (thick crystal arms)
+        ctx.fillStyle = '#00FFFF';
+        ctx.fillRect(-12, -20, 6, 12);
+        ctx.fillRect(6, -20, 6, 12);
+
+        // Draw Dragonglass if equipped
+        if (this.hasDragonglass) {
+            ctx.fillStyle = '#1A1A1A'; // Obsidian / black
+            ctx.beginPath();
+            if (this.facingRight) {
+                // Right hand
+                ctx.moveTo(9, -8); // Hand pos
+                ctx.lineTo(25, -20); // Tip
+                ctx.lineTo(12, -4);
+            } else {
+                // Left hand
+                ctx.moveTo(-9, -8);
+                ctx.lineTo(-25, -20);
+                ctx.lineTo(-12, -4);
+            }
+            ctx.fill();
+        }
+
+        ctx.restore();
+    }
+
+    drawMario(ctx) {
+        let shirtColor = '#ff0000';
+        let overallsColor = '#0000ff';
+        let hatColor = '#ff0000';
+
+        if (this.hasWatch) {
+            shirtColor = '#000000';
+            overallsColor = '#004400';
+            hatColor = '#39FF14';
+        }
+
+        ctx.fillStyle = shirtColor;
+        ctx.fillRect(this.x, this.y, this.width, this.height);
+
+        ctx.fillStyle = overallsColor;
+        ctx.fillRect(this.x + 4, this.y + 20, 24, 12);
+        ctx.fillRect(this.x + 4, this.y + 14, 8, 10);
+        ctx.fillRect(this.x + 20, this.y + 14, 8, 10);
+
+        ctx.fillStyle = '#ffcc99';
+        ctx.fillRect(this.x + 6, this.y + 4, 20, 14);
+
+        ctx.fillStyle = hatColor;
+        ctx.fillRect(this.x, this.y, 32, 6);
+        ctx.fillRect(this.x + 8, this.y - 2, 16, 4);
+
+        ctx.fillStyle = 'black';
+        ctx.fillRect(this.x + 20, this.y + 8, 4, 4);
+        ctx.fillStyle = 'black';
+        ctx.fillRect(this.x + 18, this.y + 14, 10, 4);
+
+        if (!this.grounded) {
+            ctx.fillStyle = '#0000ff';
+            ctx.fillRect(this.x + 4, this.y + 24, 24, 8);
+        }
+    }
+
+    drawFourArms(ctx) {
+        const centerX = this.x + 24;
+        const bottomY = this.y + 64;
+
+        ctx.save();
+        ctx.translate(centerX, bottomY);
+        
+        // Flip horizontally if facing left
+        if (!this.facingRight) {
+            ctx.scale(-1, 1);
+        }
+        
+        ctx.scale(2, 2); // Maintain 2x scale for consistency with original layout
+
+        // --- PREMIUM 3D GRADIENTS & PALETTE ---
+        const skinRed = '#8b1d28';
+        const skinShadow = '#5a101c';
+        const skinHighlight = '#c0392b';
+        
+        const metalDark = '#1e293b';
+        const metalLight = '#64748b';
+        const metalHighlight = '#94a3b8';
+        
+        const armorWhite = '#f8fafc';
+        const armorShadow = '#cbd5e1';
+        
+        const energyOrange = '#ff6b00';
+        const energyGlow = '#ff8f00';
+        const energyCore = '#ffbb00';
+
+        // Stance modifier
+        let raiseHands = this.input.isDown('R');
+        let armYOffset = 0;
+        if (this.victory) { 
+            raiseHands = true; 
+            armYOffset = Math.sin(performance.now() / 150) * 3; 
+        }
+
+        // --- 1. LEGS, ARMORED BOOTS & KNEES ---
+        // Left Armored Boot
+        ctx.fillStyle = metalDark;
+        ctx.fillRect(-10, -3, 5, 3);
+        ctx.fillStyle = metalLight;
+        ctx.fillRect(-9, -3, 3, 1); // toe plate highlight
+        ctx.fillStyle = skinShadow;
+        ctx.fillRect(-10, -1, 3, 1); // stout exposed toes
+
+        // Right Armored Boot
+        ctx.fillStyle = metalDark;
+        ctx.fillRect(5, -3, 5, 3);
+        ctx.fillStyle = metalLight;
+        ctx.fillRect(6, -3, 3, 1); // toe plate highlight
+        ctx.fillStyle = skinShadow;
+        ctx.fillRect(7, -1, 3, 1); // stout exposed toes
+
+        // Tactical Dark Pants / Legs
+        ctx.fillStyle = '#0f172a'; // deep tactical blue/black
+        // Left leg
+        ctx.beginPath();
+        ctx.moveTo(-4, -10);
+        ctx.lineTo(-8, -3);
+        ctx.lineTo(-5, -3);
+        ctx.lineTo(-1, -8);
+        ctx.closePath();
+        ctx.fill();
+
+        // Right leg
+        ctx.beginPath();
+        ctx.moveTo(4, -10);
+        ctx.lineTo(8, -3);
+        ctx.lineTo(5, -3);
+        ctx.lineTo(1, -8);
+        ctx.closePath();
+        ctx.fill();
+
+        // Armored Knee Plates (Hexagonal layout)
+        ctx.fillStyle = armorWhite;
+        ctx.strokeStyle = metalLight;
+        ctx.lineWidth = 0.5;
+        // Left knee
+        ctx.beginPath();
+        ctx.moveTo(-7.5, -6.5); ctx.lineTo(-5.5, -7.5); ctx.lineTo(-4.5, -6.5);
+        ctx.lineTo(-4.5, -5); ctx.lineTo(-5.5, -4); ctx.lineTo(-7.5, -5);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+        // Right knee
+        ctx.beginPath();
+        ctx.moveTo(4.5, -6.5); ctx.lineTo(5.5, -7.5); ctx.lineTo(7.5, -6.5);
+        ctx.lineTo(7.5, -5); ctx.lineTo(5.5, -4); ctx.lineTo(4.5, -5);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+
+        // Pelvic Plate / Tech Belt
+        ctx.fillStyle = metalDark;
+        ctx.fillRect(-4.5, -11, 9, 3.5);
+        ctx.fillStyle = energyOrange;
+        ctx.fillRect(-1.5, -10.5, 3, 1); // glowing buckle indicator
+
+        // --- 2. BIOMECHANICAL RED TORSO ---
+        ctx.fillStyle = skinShadow;
+        ctx.fillRect(-6.5, -20, 13, 9);
+        ctx.fillStyle = skinRed;
+        ctx.fillRect(-5.5, -20, 11, 9);
+        
+        // Cybernetic rib markings
+        ctx.fillStyle = metalDark;
+        ctx.fillRect(-6, -17, 1.5, 1);
+        ctx.fillRect(4.5, -17, 1.5, 1);
+        ctx.fillRect(-5.5, -15, 1.2, 1);
+        ctx.fillRect(4.3, -15, 1.2, 1);
+
+        // --- 3. SEGMENTED TACTICAL CHEST PLATING (Avoiding Copyright) ---
+        // Left Breast Plate
+        ctx.fillStyle = armorWhite;
+        ctx.beginPath();
+        ctx.moveTo(-6.5, -22);
+        ctx.lineTo(-0.8, -22);
+        ctx.lineTo(-0.8, -12.5);
+        ctx.lineTo(-5.5, -12.5);
+        ctx.closePath();
+        ctx.fill();
+        // Left breast shadow
+        ctx.fillStyle = armorShadow;
+        ctx.beginPath();
+        ctx.moveTo(-5.5, -12.5); ctx.lineTo(-0.8, -12.5); ctx.lineTo(-0.8, -13.5); ctx.lineTo(-4.5, -13.5); ctx.closePath(); ctx.fill();
+
+        // Right Breast Plate
+        ctx.fillStyle = armorWhite;
+        ctx.beginPath();
+        ctx.moveTo(6.5, -22);
+        ctx.lineTo(0.8, -22);
+        ctx.lineTo(0.8, -12.5);
+        ctx.lineTo(5.5, -12.5);
+        ctx.closePath();
+        ctx.fill();
+        // Right breast shadow
+        ctx.fillStyle = armorShadow;
+        ctx.beginPath();
+        ctx.moveTo(5.5, -12.5); ctx.lineTo(0.8, -12.5); ctx.lineTo(0.8, -13.5); ctx.lineTo(4.5, -13.5); ctx.closePath(); ctx.fill();
+
+        // Central Dark Tech Track / Channel
+        ctx.fillStyle = metalDark;
+        ctx.fillRect(-0.8, -22, 1.6, 11);
+
+        // Armored Neck Collar
+        ctx.fillStyle = metalDark;
+        ctx.beginPath();
+        ctx.moveTo(-3.5, -23); ctx.lineTo(3.5, -23); ctx.lineTo(2, -21.5); ctx.lineTo(-2, -21.5);
+        ctx.closePath(); ctx.fill();
+
+        // Tech conduits (Orange power lanes along chest)
+        ctx.fillStyle = energyOrange;
+        ctx.fillRect(-4.5, -20.5, 1, 6);
+        ctx.fillRect(3.5, -20.5, 1, 6);
+
+        // --- 4. ORIGINAL HEXAGONAL ENERGY CORE (Chest Emblem) ---
+        const coreY = -18;
+        // Outer Hexagonal Frame
+        ctx.fillStyle = metalDark;
+        ctx.strokeStyle = metalHighlight;
+        ctx.lineWidth = 0.6;
+        ctx.beginPath();
+        ctx.moveTo(-3, coreY); ctx.lineTo(-1.5, coreY - 2.6); ctx.lineTo(1.5, coreY - 2.6);
+        ctx.lineTo(3, coreY); ctx.lineTo(1.5, coreY + 2.6); ctx.lineTo(-1.5, coreY + 2.6);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+
+        // Inner Hexagonal Core Glow
+        ctx.fillStyle = energyCore;
+        this.applyOmnitrixGlow(ctx, 0, coreY); // Re-use custom glow function
+        ctx.beginPath();
+        ctx.moveTo(-2, coreY); ctx.lineTo(-1, coreY - 1.7); ctx.lineTo(1, coreY - 1.7);
+        ctx.lineTo(2, coreY); ctx.lineTo(1, coreY + 1.7); ctx.lineTo(-1, coreY + 1.7);
+        ctx.closePath(); ctx.fill();
+
+        // Vertical split line to represent dual-cell battery
+        ctx.strokeStyle = metalDark;
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        ctx.moveTo(0, coreY - 1.7); ctx.lineTo(0, coreY + 1.7);
+        ctx.stroke();
+        ctx.shadowBlur = 0; // reset
+
+        // --- 5. BIOMECHANICAL GLADIATOR HEAD ---
+        // Base Red Head Dome
+        ctx.fillStyle = skinShadow;
+        ctx.beginPath();
+        ctx.arc(0, -25, 4.3, Math.PI, 0);
+        ctx.lineTo(4.1, -22);
+        ctx.lineTo(-4.1, -22);
+        ctx.closePath();
+        ctx.fill();
+        
+        ctx.fillStyle = skinRed;
+        ctx.beginPath();
+        ctx.arc(0, -25.2, 3.8, Math.PI, 0);
+        ctx.lineTo(3.6, -22.3);
+        ctx.lineTo(-3.6, -22.3);
+        ctx.closePath();
+        ctx.fill();
+
+        // Cybernetic Metal Neural Ridge (Instead of a plain stripe)
+        ctx.fillStyle = metalDark;
+        ctx.fillRect(-0.7, -29.2, 1.4, 7);
+        ctx.fillStyle = energyOrange;
+        ctx.fillRect(-0.3, -28.5, 0.6, 1); // tiny neural node indicators
+        ctx.fillRect(-0.3, -26.0, 0.6, 1);
+
+        // Segmented Chin / Jaw Protection Plates
+        ctx.fillStyle = metalDark;
+        ctx.fillRect(-3, -22.8, 6, 0.8);
+        ctx.fillRect(-2, -22, 4, 0.6);
+
+        // Four Cybernetic Ocular Implants (Symmetrically stacked)
+        // Draw metallic rim then bright glowing center
+        const drawCyberEye = (x, y) => {
+            ctx.fillStyle = metalDark;
+            ctx.beginPath();
+            ctx.arc(x, y, 0.7, 0, Math.PI*2);
+            ctx.fill();
+            ctx.fillStyle = energyCore;
+            ctx.shadowColor = energyGlow;
+            ctx.shadowBlur = 2;
+            ctx.beginPath();
+            ctx.arc(x, y, 0.45, 0, Math.PI*2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        };
+
+        drawCyberEye(-2.3, -26.2); // Upper Left
+        drawCyberEye(-1.8, -24.3); // Lower Left
+        drawCyberEye(2.3, -26.2);  // Upper Right
+        drawCyberEye(1.8, -24.3);  // Lower Right
+
+        // --- 6. QUAD POWER ARMS WITH TACTICAL GAUNTLETS ---
+        if (raiseHands) {
+            // == VICTORY / DEFENSE STATE (RAISED POSITIONS) ==
+            const yBaseUpper = -23 + armYOffset;
+            const yBaseLower = -17 + armYOffset;
+
+            // --- Upper Arms (Raised) ---
+            ctx.fillStyle = skinShadow;
+            ctx.beginPath();
+            ctx.moveTo(-6, -22); ctx.lineTo(-12, yBaseUpper - 10); ctx.lineTo(-8, yBaseUpper - 10); ctx.lineTo(-4, -20);
+            ctx.closePath(); ctx.fill();
+            
+            ctx.fillStyle = skinRed;
+            ctx.beginPath();
+            ctx.moveTo(-5.5, -21.5); ctx.lineTo(-11, yBaseUpper - 9.5); ctx.lineTo(-7.5, yBaseUpper - 9.5); ctx.lineTo(-4, -20.5);
+            ctx.closePath(); ctx.fill();
+
+            // Right Upper Arm
+            ctx.fillStyle = skinShadow;
+            ctx.beginPath();
+            ctx.moveTo(6, -22); ctx.lineTo(12, yBaseUpper - 10); ctx.lineTo(8, yBaseUpper - 10); ctx.lineTo(4, -20);
+            ctx.closePath(); ctx.fill();
+            
+            ctx.fillStyle = skinRed;
+            ctx.beginPath();
+            ctx.moveTo(5.5, -21.5); ctx.lineTo(11, yBaseUpper - 9.5); ctx.lineTo(7.5, yBaseUpper - 9.5); ctx.lineTo(4, -20.5);
+            ctx.closePath(); ctx.fill();
+
+            // White Segmented Armor Shoulder Plates (Raised)
+            ctx.fillStyle = armorWhite;
+            ctx.beginPath();
+            ctx.moveTo(-6, -22); ctx.lineTo(-9, yBaseUpper - 5); ctx.lineTo(-5, -20);
+            ctx.closePath(); ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(6, -22); ctx.lineTo(9, yBaseUpper - 5); ctx.lineTo(5, -20);
+            ctx.closePath(); ctx.fill();
+
+            // Dark trim/collar borders on shoulders
+            ctx.fillStyle = metalDark;
+            ctx.beginPath();
+            ctx.moveTo(-8.5, yBaseUpper - 5.5); ctx.lineTo(-9.5, yBaseUpper - 4); ctx.lineTo(-5.5, -19.5); ctx.lineTo(-5, -21);
+            ctx.closePath(); ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(8.5, yBaseUpper - 5.5); ctx.lineTo(9.5, yBaseUpper - 4); ctx.lineTo(5.5, -19.5); ctx.lineTo(5, -21);
+            ctx.closePath(); ctx.fill();
+
+            // Segmented Biomechanical Wrist Gauntlets (Raised upper)
+            ctx.fillStyle = metalDark;
+            ctx.fillRect(-13, yBaseUpper - 12, 6, 2.8);
+            ctx.fillRect(7, yBaseUpper - 12, 6, 2.8);
+            // Glowing gauntlet energy strip
+            ctx.fillStyle = energyOrange;
+            ctx.fillRect(-11, yBaseUpper - 11.5, 2, 0.8);
+            ctx.fillRect(9, yBaseUpper - 11.5, 2, 0.8);
+
+            // Red Clenched Fists (Raised upper)
+            ctx.fillStyle = skinHighlight;
+            ctx.fillRect(-12.5, yBaseUpper - 14, 5, 2.2);
+            ctx.fillRect(7.5, yBaseUpper - 14, 5, 2.2);
+
+            // --- Lower Arms (Raised) ---
+            ctx.fillStyle = skinShadow;
+            ctx.beginPath();
+            ctx.moveTo(-5.5, -16); ctx.lineTo(-11.5, yBaseLower - 5); ctx.lineTo(-8.5, yBaseLower - 5); ctx.lineTo(-3.5, -15);
+            ctx.closePath(); ctx.fill();
+            
+            ctx.fillStyle = skinRed;
+            ctx.beginPath();
+            ctx.moveTo(-5.0, -15.8); ctx.lineTo(-10.5, yBaseLower - 4.8); ctx.lineTo(-8.0, yBaseLower - 4.8); ctx.lineTo(-3.5, -14.8);
+            ctx.closePath(); ctx.fill();
+
+            // Right Lower Arm
+            ctx.fillStyle = skinShadow;
+            ctx.beginPath();
+            ctx.moveTo(5.5, -16); ctx.lineTo(11.5, yBaseLower - 5); ctx.lineTo(8.5, yBaseLower - 5); ctx.lineTo(3.5, -15);
+            ctx.closePath(); ctx.fill();
+            
+            ctx.fillStyle = skinRed;
+            ctx.beginPath();
+            ctx.moveTo(5.0, -15.8); ctx.lineTo(10.5, yBaseLower - 4.8); ctx.lineTo(8.0, yBaseLower - 4.8); ctx.lineTo(3.5, -14.8);
+            ctx.closePath(); ctx.fill();
+
+            // Segmented Biomechanical Wrist Gauntlets (Raised lower)
+            ctx.fillStyle = metalDark;
+            ctx.fillRect(-12, yBaseLower - 7.5, 5, 2.8);
+            ctx.fillRect(7, yBaseLower - 7.5, 5, 2.8);
+            // Glowing energy indicators
+            ctx.fillStyle = energyOrange;
+            ctx.fillRect(-10.5, -7.0, 1.5, 0.8);
+            ctx.fillRect(9, -7.0, 1.5, 0.8);
+
+            // Red Clenched Fists (Raised lower)
+            ctx.fillStyle = skinRed;
+            ctx.fillRect(-11.5, yBaseLower - 9.5, 4, 2.2);
+            ctx.fillRect(7.5, yBaseLower - 9.5, 4, 2.2);
+
+        } else {
+            // == STANDBY / NORMAL GLADIATOR POSITIONS ==
+            // --- Upper Arms ---
+            // Left Upper Bicep
+            ctx.fillStyle = skinShadow;
+            ctx.beginPath();
+            ctx.moveTo(-6, -22); ctx.bezierCurveTo(-14, -22, -15, -16, -12, -12); ctx.lineTo(-9, -13); ctx.bezierCurveTo(-11, -17, -10, -20, -5, -20);
+            ctx.closePath(); ctx.fill();
+
+            ctx.fillStyle = skinRed;
+            ctx.beginPath();
+            ctx.moveTo(-5.5, -21.5); ctx.bezierCurveTo(-13, -21.5, -14, -16.2, -11.5, -12.5); ctx.lineTo(-9, -13.2); ctx.bezierCurveTo(-10.5, -16.8, -9.5, -19.8, -4.5, -19.8);
+            ctx.closePath(); ctx.fill();
+
+            // Right Upper Bicep
+            ctx.fillStyle = skinShadow;
+            ctx.beginPath();
+            ctx.moveTo(6, -22); ctx.bezierCurveTo(14, -22, 15, -16, 12, -12); ctx.lineTo(9, -13); ctx.bezierCurveTo(11, -17, 10, -20, 5, -20);
+            ctx.closePath(); ctx.fill();
+
+            ctx.fillStyle = skinRed;
+            ctx.beginPath();
+            ctx.moveTo(5.5, -21.5); ctx.bezierCurveTo(13, -21.5, 14, -16.2, 11.5, -12.5); ctx.lineTo(9, -13.2); ctx.bezierCurveTo(10.5, -16.8, 9.5, -19.8, 4.5, -19.8);
+            ctx.closePath(); ctx.fill();
+
+            // White Segmented Armor Shoulder Plates
+            ctx.fillStyle = armorWhite;
+            ctx.beginPath();
+            ctx.moveTo(-6, -22); ctx.lineTo(-10.5, -20.5); ctx.lineTo(-9, -17.5); ctx.lineTo(-5.2, -20.2);
+            ctx.closePath(); ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(6, -22); ctx.lineTo(10.5, -20.5); ctx.lineTo(9, -17.5); ctx.lineTo(5.2, -20.2);
+            ctx.closePath(); ctx.fill();
+
+            // Dark trims on shoulders
+            ctx.fillStyle = metalDark;
+            ctx.beginPath();
+            ctx.moveTo(-10.5, -20.5); ctx.lineTo(-11.2, -19.5); ctx.lineTo(-9.8, -16.5); ctx.lineTo(-9, -17.5);
+            ctx.closePath(); ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(10.5, -20.5); ctx.lineTo(11.2, -19.5); ctx.lineTo(9.8, -16.5); ctx.lineTo(9, -17.5);
+            ctx.closePath(); ctx.fill();
+
+            // Biomechanical Gauntlets (Standby upper)
+            ctx.fillStyle = metalDark;
+            ctx.fillRect(-13.5, -12, 5, 2.8);
+            ctx.fillRect(8.5, -12, 5, 2.8);
+            // Glowing lines on gauntlets
+            ctx.fillStyle = energyOrange;
+            ctx.fillRect(-12.5, -11, 3, 0.8);
+            ctx.fillRect(9.5, -11, 3, 0.8);
+
+            // Red Clenched Fists (Standby upper)
+            ctx.fillStyle = skinRed;
+            ctx.fillRect(-13, -9.5, 4, 3);
+            ctx.fillRect(9, -9.5, 4, 3);
+
+            // --- Lower Arms ---
+            // Left Lower Arm
+            ctx.fillStyle = skinShadow;
+            ctx.beginPath();
+            ctx.moveTo(-5.5, -16); ctx.bezierCurveTo(-11, -16, -11, -10, -8, -6); ctx.lineTo(-5.5, -7); ctx.bezierCurveTo(-8, -10, -7, -13, -3.5, -13);
+            ctx.closePath(); ctx.fill();
+
+            ctx.fillStyle = skinRed;
+            ctx.beginPath();
+            ctx.moveTo(-5.2, -15.6); ctx.bezierCurveTo(-10.2, -15.6, -10.2, -10.2, -7.5, -6.4); ctx.lineTo(-5.5, -7.2); ctx.bezierCurveTo(-7.5, -10.2, -6.5, -12.8, -3.2, -12.8);
+            ctx.closePath(); ctx.fill();
+
+            // Right Lower Arm
+            ctx.fillStyle = skinShadow;
+            ctx.beginPath();
+            ctx.moveTo(5.5, -16); ctx.bezierCurveTo(11, -16, 11, -10, 8, -6); ctx.lineTo(5.5, -7); ctx.bezierCurveTo(8, -10, 7, -13, 3.5, -13);
+            ctx.closePath(); ctx.fill();
+
+            ctx.fillStyle = skinRed;
+            ctx.beginPath();
+            ctx.moveTo(5.2, -15.6); ctx.bezierCurveTo(10.2, -15.6, 10.2, -10.2, 7.5, -6.4); ctx.lineTo(5.5, -7.2); ctx.bezierCurveTo(7.5, -10.2, 7.5, -12.8, 3.2, -12.8);
+            ctx.closePath(); ctx.fill();
+
+            // Biomechanical Gauntlets (Standby lower)
+            ctx.fillStyle = metalDark;
+            ctx.fillRect(-9, -6, 4.5, 2.8);
+            ctx.fillRect(4.5, -6, 4.5, 2.8);
+            // Gauntlet glowing slots
+            ctx.fillStyle = energyOrange;
+            ctx.fillRect(-8, -5, 2.5, 0.8);
+            ctx.fillRect(5.5, -5, 2.5, 0.8);
+
+            // Red Clenched Fists (Standby lower)
+            ctx.fillStyle = skinRed;
+            ctx.fillRect(-8.5, -3.5, 3.5, 2.8);
+            ctx.fillRect(5, -3.5, 3.5, 2.8);
+        }
+
+        ctx.restore();
+    }
+
+    drawHeatblast(ctx) {
+        const centerX = this.x + 24;
+        const bottomY = this.y + 64;
+        const now = performance.now();
+
+        ctx.save();
+        ctx.translate(centerX, bottomY);
+        ctx.scale(2, 2);
+
+        // Legs — dark maroon
+        ctx.fillStyle = '#5C0000';
+        ctx.fillRect(-5, -8, 10, 8);
+        // Lava cracks on legs
+        ctx.strokeStyle = '#FFD700';
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        ctx.moveTo(-3, -6); ctx.lineTo(0, -2); ctx.lineTo(3, -5);
+        ctx.stroke();
+
+        // Body — dark crimson with lava crack pattern
+        ctx.fillStyle = '#7A0000';
+        ctx.fillRect(-6, -22, 12, 14);
+
+        // Lava crack lines on body
+        ctx.strokeStyle = '#FFD700';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(-5, -20); ctx.lineTo(-2, -16); ctx.lineTo(2, -18);
+        ctx.lineTo(5, -14); ctx.lineTo(3, -10);
+        ctx.moveTo(-4, -12); ctx.lineTo(0, -9);
+        ctx.stroke();
+
+        // Omnitrix on chest
+        ctx.fillStyle = '#000';
+        ctx.beginPath(); ctx.arc(0, -16, 3, 0, Math.PI * 2); ctx.fill();
+        
+        // Halo around chest watch (-16 is the local Y)
+        this.applyOmnitrixGlow(ctx, 0, -16);
+        
+        ctx.beginPath(); ctx.moveTo(-2, -16); ctx.lineTo(2, -18); ctx.lineTo(2, -14); ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // Head — dark red
+        ctx.fillStyle = '#7A0000';
+        ctx.fillRect(-4, -28, 8, 6);
+        // Lava crack on face
+        ctx.strokeStyle = '#FFD700';
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        ctx.moveTo(-2, -27); ctx.lineTo(0, -24); ctx.lineTo(2, -26);
+        ctx.stroke();
+
+        // Eyes — white/yellow glow
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(-3, -26, 2, 2);
+        ctx.fillRect(1, -26, 2, 2);
+
+        // Flame crown (animated)
+        const flames = [
+            { dx: -3, h: 6 + Math.sin(now / 100) * 2 },
+            { dx: -1, h: 8 + Math.sin(now / 80 + 1) * 3 },
+            { dx: 1,  h: 7 + Math.sin(now / 90 + 2) * 2 },
+            { dx: 3,  h: 5 + Math.sin(now / 110 + 3) * 2 },
+        ];
+        for (const f of flames) {
+            // Outer flame (orange)
+            ctx.fillStyle = '#FF6600';
+            ctx.fillRect(f.dx - 1, -28 - f.h, 2, f.h);
+            // Inner flame (yellow)
+            ctx.fillStyle = '#FFCC00';
+            ctx.fillRect(f.dx, -28 - f.h + 2, 1, f.h - 3);
+        }
+
+        // Arms — two arms
+        ctx.fillStyle = '#7A0000';
+        ctx.fillRect(-10, -20, 4, 10);
+        ctx.fillRect(6, -20, 4, 10);
+        // Lava cracks on arms
+        ctx.strokeStyle = '#FFD700';
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        ctx.moveTo(-9, -18); ctx.lineTo(-8, -13);
+        ctx.moveTo(7, -17); ctx.lineTo(9, -12);
+        ctx.stroke();
+
+        // Hands — yellow/golden
+        ctx.fillStyle = '#FFD700';
+        ctx.fillRect(-11, -10, 5, 3);
+        ctx.fillRect(6, -10, 5, 3);
+
+        // Fire aura glow (subtle)
+        ctx.globalAlpha = 0.15;
+        ctx.fillStyle = '#FF4400';
+        ctx.beginPath();
+        ctx.arc(0, -15, 14, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1.0;
+
+        ctx.restore();
+    }
+
+    drawXLR8(ctx) {
+        const centerX = this.x + 20;
+        const bottomY = this.y + 56;
+        const now = performance.now();
+
+        // Draw speed trail afterimages
+        for (const trail of this.dashTrail) {
+            ctx.save();
+            ctx.globalAlpha = trail.alpha * 0.35;
+            ctx.translate(trail.x + 20, trail.y + 56);
+            ctx.scale(2, 2);
+            // Silhouette afterimage
+            ctx.fillStyle = '#00CCCC';
+            ctx.beginPath();
+            ctx.ellipse(0, -14, 6, 12, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+
+        ctx.save();
+        ctx.translate(centerX, bottomY);
+        ctx.scale(2, 2);
+
+        // === BALL WHEELS (feet) ===
+        // Large distinct roller spheres
+        ctx.fillStyle = '#666677';
+        ctx.beginPath(); ctx.arc(-5, 0, 4, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(5, 0, 4, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#111'; // Wheel hub/axle
+        ctx.beginPath(); ctx.arc(-5, 0, 1.5, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(5, 0, 1.5, 0, Math.PI * 2); ctx.fill();
+
+        // === LEGS ===
+        // Thin digitigrade legs
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.strokeStyle = '#111116';
+        ctx.beginPath();
+        // Back leg
+        ctx.moveTo(-5, 0); ctx.lineTo(-8, -6); ctx.lineTo(-4, -12);
+        // Front leg
+        ctx.moveTo(5, 0); ctx.lineTo(2, -6); ctx.lineTo(4, -12);
+        ctx.stroke();
+
+        // === TAIL ===
+        // Thick at base, tapering out long and low
+        ctx.fillStyle = '#111116';
+        ctx.beginPath();
+        ctx.moveTo(-6, -14);
+        ctx.lineTo(-20, -18);
+        ctx.lineTo(-22, -17);
+        ctx.lineTo(-6, -10);
+        ctx.closePath();
+        ctx.fill();
+        // Tail cyan stripes
+        ctx.strokeStyle = '#00E5FF';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(-16, -14); ctx.lineTo(-14, -16);
+        ctx.moveTo(-10, -12); ctx.lineTo(-8, -14);
+        ctx.stroke();
+
+        // === BODY/TORSO ===
+        // Sharp forward arched posture
+        ctx.fillStyle = '#111116';
+        ctx.beginPath();
+        ctx.moveTo(-7, -13);
+        ctx.lineTo(3, -11); // waist
+        ctx.lineTo(8, -22); // chest jutting forward
+        ctx.lineTo(-4, -22); // back
+        ctx.closePath();
+        ctx.fill();
+
+        // Cyan torso stripes
+        ctx.strokeStyle = '#00E5FF';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(0, -13); ctx.lineTo(6, -16); // lower stripe
+        ctx.moveTo(2, -16); ctx.lineTo(7, -19); // upper stripe
+        ctx.stroke();
+
+        // === OMNITRIX ===
+        this.applyOmnitrixGlow(ctx, 4, -18);
+        ctx.beginPath();
+        ctx.arc(4, -18, 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#111';
+        ctx.fillRect(3, -19, 2, 2);
+
+        // === ARMS & CLAWS ===
+        ctx.strokeStyle = '#111116';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        // Front arm reaching forward
+        ctx.moveTo(6, -20); ctx.lineTo(12, -18); ctx.lineTo(16, -16);
+        ctx.stroke();
+        // Claws (Cyan/Silver)
+        ctx.fillStyle = '#00E5FF';
+        ctx.fillRect(16, -17, 3, 1);
+        ctx.fillRect(15, -15, 3, 1);
+
+        // === HEAD & HELMET ===
+        // The most iconic part — cone shape sweeping back, visor covering face
+        ctx.fillStyle = '#111116';
+        ctx.beginPath();
+        ctx.moveTo(1, -22); // neck base
+        ctx.lineTo(10, -25); // forehead
+        ctx.lineTo(-4, -32); // tip of helmet in back
+        ctx.lineTo(-5, -28);
+        ctx.lineTo(-12, -31); // lower spike
+        ctx.lineTo(-6, -26); 
+        ctx.lineTo(-4, -22); // back of neck
+        ctx.closePath();
+        ctx.fill();
+
+        // White Face Plate (jaw area)
+        ctx.fillStyle = '#DDDDDD';
+        ctx.beginPath();
+        ctx.moveTo(2, -22);
+        ctx.lineTo(8, -25);
+        ctx.lineTo(7, -21);
+        ctx.lineTo(4, -20);
+        ctx.closePath();
+        ctx.fill();
+
+        // Cyan Visor mask
+        ctx.fillStyle = '#00E5FF';
+        ctx.beginPath();
+        ctx.moveTo(0, -25);
+        ctx.lineTo(10, -25);
+        ctx.lineTo(9, -23);
+        ctx.lineTo(1, -22);
+        ctx.closePath();
+        ctx.fill();
+
+        // Eye glow
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(5, -24, 2, 1);
+
+        // === SPEED EFFECTS ===
+        if (this.dashActive) {
+            ctx.strokeStyle = '#00FFFF';
+            ctx.lineWidth = 0.6;
+            for (let i = 0; i < 6; i++) {
+                const ly = -28 + i * 5;
+                const lx = -14 - Math.random() * 10;
+                ctx.beginPath();
+                ctx.moveTo(lx, ly);
+                ctx.lineTo(lx - 10, ly);
+                ctx.stroke();
+            }
+            // Glow aura
+            ctx.globalAlpha = 0.15;
+            ctx.fillStyle = '#00FFFF';
+            ctx.beginPath();
+            ctx.ellipse(1, -16, 10, 14, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1.0;
+        } else if (this.vx !== 0) {
+            // Subtle speed lines when running
+            ctx.strokeStyle = 'rgba(0,255,255,0.2)';
+            ctx.lineWidth = 0.4;
+            for (let i = 0; i < 3; i++) {
+                const ly = -22 + i * 6;
+                ctx.beginPath();
+                ctx.moveTo(-10, ly);
+                ctx.lineTo(-14, ly);
+                ctx.stroke();
+            }
+        }
+
+        ctx.restore();
+    }
+
+    drawStinkfly(ctx) {
+        const cx = this.x + this.width / 2;
+        const cy = this.y + this.height / 2;
+        const now = performance.now();
+
+        ctx.save();
+        ctx.translate(cx, cy);
+        
+        const facingFlip = this.facingRight ? 1 : -1;
+        ctx.scale(facingFlip, 1);
+
+        // Hover bobbing
+        if (!this.grounded) {
+            ctx.translate(0, Math.sin(now / 150) * 3);
+        }
+
+        // --- Blocky Stinkfly Design ---
+        const bX = -this.width / 2;
+        const bY = -this.height / 2;
+
+        // Wings (behind body)
+        ctx.fillStyle = 'rgba(200, 255, 200, 0.6)';
+        const flapOffset = this.grounded ? 0 : Math.sin(now / 20) * 5;
+        
+        // Back Wing
+        ctx.fillRect(bX - 15, bY + 5 - flapOffset, 30, 8);
+        ctx.fillRect(bX - 25, bY + 8 - flapOffset, 10, 5);
+        // Front Wing
+        ctx.fillRect(bX - 10, bY + 15 + flapOffset/2, 25, 6);
+
+        // Body (Dark greenish)
+        ctx.fillStyle = '#115511';
+        ctx.fillRect(bX + 5, bY + 10, 30, 25);
+        ctx.fillRect(bX, bY + 15, 40, 15);
+        
+        // Stripes (White/Pale green)
+        ctx.fillStyle = '#88FF88';
+        ctx.fillRect(bX + 15, bY + 10, 4, 25);
+        ctx.fillRect(bX + 25, bY + 12, 4, 18);
+
+        // Tail
+        ctx.fillStyle = '#0a220a';
+        ctx.fillRect(bX - 15, bY + 20, 15, 8);
+        ctx.fillRect(bX - 25, bY + 22, 10, 4);
+
+        // Head (Black dome with orange eyes)
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(bX + 30, bY + 5, 20, 15); // head box
+        
+        // Eye Stalks
+        ctx.fillStyle = '#115511';
+        ctx.fillRect(bX + 45, bY - 5, 4, 10);
+        ctx.fillRect(bX + 38, bY + 0, 4, 5);
+        
+        // Eyes (Orange squares)
+        ctx.fillStyle = '#FF6600';
+        ctx.fillRect(bX + 44, bY - 8, 6, 6);
+        ctx.fillRect(bX + 37, bY - 3, 6, 6);
+        
+        // Pupils
+        ctx.fillStyle = '#000';
+        ctx.fillRect(bX + 46, bY - 6, 2, 4);
+        ctx.fillRect(bX + 39, bY - 1, 2, 4);
+
+        // Omnitrix symbol
+        ctx.fillStyle = '#000';
+        ctx.fillRect(bX + 15, bY + 18, 10, 10);
+        this.applyOmnitrixGlow(ctx, bX + 20, bY + 23); // Centered halo
+        ctx.fillRect(bX + 17, bY + 20, 6, 6);
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#000';
+        ctx.fillRect(bX + 19, bY + 20, 2, 6); 
+
+        // Legs (Spindly, bent)
+        ctx.fillStyle = '#111';
+        // Legs front
+        ctx.fillRect(bX + 25, bY + 35, 4, 15);
+        ctx.fillRect(bX + 27, bY + 45, 6, 4);
+        // Legs back
+        ctx.fillRect(bX + 10, bY + 35, 4, 15);
+        ctx.fillRect(bX + 8, bY + 45, -6, 4);
+
+        ctx.restore();
+    }
+
+    drawUpgrade(ctx) {
+        const cx = this.x + this.width / 2;
+        const cy = this.y + this.height; // anchor at bottom
+        const now = performance.now();
+        const immune = this.upgradeElectricImmunity;
+        const circuitColor = immune ? '#B6FFD1' : '#00FF44';
+
+        // Jelly physics scale based on velocity
+        let scaleX = 1.0;
+        let scaleY = 1.0;
+        if (!this.grounded) {
+            scaleY = 1.0 + Math.abs(this.vy) * 0.03; // stretch vertical
+            scaleX = 1.0 - Math.abs(this.vy) * 0.015; // squash horizontal
+        } else if (this.vx !== 0) {
+            scaleX = 1.0 + Math.abs(this.vx) * 0.05; // stretch horizontal
+            scaleY = 1.0 - Math.abs(this.vx) * 0.02; // squash vertical
+            // liquid wobble
+            scaleY += Math.sin(now / 50) * 0.08;
+            scaleX += Math.cos(now / 50) * 0.04;
+        }
+
+        ctx.save();
+        ctx.translate(cx, cy);
+        
+        const facingFlip = this.facingRight ? 1 : -1;
+        ctx.scale(facingFlip * scaleX, scaleY);
+        ctx.translate(0, -this.height);
+
+        // --- GLOW EFFECT ---
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = circuitColor;
+
+        // --- MAIN BODY (PITCH BLACK) ---
+        ctx.fillStyle = '#111';
+        ctx.beginPath();
+        // Slime/gel shaped body (more liquid)
+        ctx.moveTo(0, 0); // top head
+        ctx.bezierCurveTo(-15, 0, -20, 10, -18, 25); // left shoulder
+        ctx.bezierCurveTo(-20, 40, -18, 55, -12, 56); // left leg
+        ctx.lineTo(12, 56); // feet base
+        ctx.bezierCurveTo(18, 55, 20, 40, 18, 25); // right shoulder
+        ctx.bezierCurveTo(20, 10, 15, 0, 0, 0); // head back
+        ctx.fill();
+
+        // --- WHITE INNER PART (Chest/Face) ---
+        ctx.shadowBlur = 0; // No glow on white
+        ctx.fillStyle = '#FFFFFF';
+        ctx.beginPath();
+        ctx.moveTo(0, 5); 
+        ctx.bezierCurveTo(-8, 5, -12, 15, -10, 30); 
+        ctx.bezierCurveTo(-12, 45, -5, 52, 0, 52); 
+        ctx.bezierCurveTo(5, 52, 12, 45, 10, 30); 
+        ctx.bezierCurveTo(8, 15, 8, 5, 0, 5); 
+        ctx.fill();
+
+        // --- CIRCUIT PATTERNS (Neon Green) ---
+        ctx.strokeStyle = circuitColor;
+        ctx.lineWidth = 1.5;
+        const pulseAlpha = 0.5 + Math.sin(now / 200) * 0.3;
+        ctx.globalAlpha = pulseAlpha;
+        
+        const drawCircuit = (sx, sy, dots) => {
+            ctx.beginPath();
+            ctx.moveTo(sx, sy);
+            dots.forEach(d => ctx.lineTo(d.x, d.y));
+            ctx.stroke();
+            // Tiny glow tip
+            const last = dots[dots.length-1];
+            ctx.fillStyle = circuitColor;
+            ctx.beginPath(); ctx.arc(last.x, last.y, 1.5, 0, Math.PI*2); ctx.fill();
+        };
+
+        // Left side circuits
+        drawCircuit(-12, 15, [{x: -8, y: 18}, {x: -12, y: 25}, {x: -10, y: 35}]);
+        drawCircuit(-14, 30, [{x: -16, y: 40}, {x: -13, y: 48}]);
+        
+        // Right side circuits
+        drawCircuit(12, 15, [{x: 8, y: 18}, {x: 12, y: 25}, {x: 10, y: 35}]);
+        drawCircuit(14, 30, [{x: 16, y: 40}, {x: 13, y: 48}]);
+        
+        ctx.globalAlpha = 1.0;
+
+        // --- EYE (Glowing Green) ---
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = circuitColor;
+        ctx.strokeStyle = circuitColor;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(0, 10, 5, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        ctx.fillStyle = '#111';
+        ctx.beginPath();
+        ctx.arc(0, 10, 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // --- OMNITRIX (Chest) ---
+        ctx.translate(0, 25);
+        ctx.fillStyle = '#000';
+        ctx.beginPath(); ctx.arc(0, 0, 5, 0, Math.PI * 2); ctx.fill();
+        
+        this.applyOmnitrixGlow(ctx, 0, 0);
+        // Hourglass shape
+        ctx.beginPath();
+        ctx.moveTo(-3, -3); ctx.lineTo(3, 3);
+        ctx.arc(0, 0, 4, Math.PI/4, (3*Math.PI)/4);
+        ctx.lineTo(-3, 3); ctx.lineTo(3, -3);
+        ctx.arc(0, 0, 4, (5*Math.PI)/4, (7*Math.PI)/4);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        ctx.restore();
+    }
+
+    drawWildMutt(ctx) {
+        // We draw in a local coordinate system then translate to world.
+        // LOCAL SPACE: beast is drawn around origin (0,0) = bottom-centre of body hump.
+        // Scale is 2px per "unit" so the beast is large and visible.
+        // Total footprint: ~110px wide, ~80px tall — bigger than the 52x48 hitbox (that's fine).
+
+        const now = performance.now();
+        const dir = this.facingRight ? 1 : -1;
+
+        // World anchor: feet touch the ground at (this.x + this.width/2, this.y + this.height)
+        const wx = this.x + this.width / 2;
+        const wy = this.y + this.height;
+
+        // Running/bounce animation
+        let bounce = 0;
+        let runPhase = 0;
+        if (!this.grounded) {
+            bounce = -8;
+        } else if (Math.abs(this.vx) > 0.5) {
+            runPhase = now / 85;
+            bounce = Math.sin(runPhase) * 4;
+        }
+
+        const BASE  = '#E8820C'; // bright orange
+        const DARK  = '#9C4F00'; // deep shadow orange
+        const MID   = '#C46000'; // mid-shadow
+        const CLAW  = '#3A3820'; // charcoal claws
+        const BLACK = '#080808';
+
+        ctx.save();
+        ctx.translate(wx, wy);
+        ctx.scale(dir, 1); // flip for facing direction — all local coords assume facing right
+
+        const b = bounce; // shorthand
+
+        // ══════════════════════════════════════════════════════
+        // DRAW ORDER (back to front):
+        // tail → back legs → body → fur lines → front legs → neck/head → face → omnitrix
+        // ══════════════════════════════════════════════════════
+
+        // ── 1. TAIL (thin, curled upward at rear) ─────────────
+        ctx.fillStyle = DARK;
+        ctx.beginPath();
+        ctx.moveTo(-44, -8 + b);
+        ctx.bezierCurveTo(-60, -14 + b, -65, -36 + b, -52, -46 + b);
+        ctx.bezierCurveTo(-46, -52 + b, -38, -44 + b, -42, -36 + b);
+        ctx.bezierCurveTo(-44, -28 + b, -50, -22 + b, -44, -14 + b);
+        ctx.fill();
+
+        // ── 2. BACK LEFT LEG (fully visible, bent like a spring) ─────
+        // Thigh — angled back and down
+        ctx.fillStyle = DARK;
+        ctx.beginPath();
+        ctx.moveTo(-34, -16 + b);
+        ctx.quadraticCurveTo(-50, -8 + b, -46, 0);
+        ctx.lineTo(-34, 0);
+        ctx.quadraticCurveTo(-24, -6 + b, -28, -18 + b);
+        ctx.fill();
+        // paw
+        ctx.fillStyle = MID;
+        ctx.beginPath();
+        ctx.ellipse(-40, 0, 10, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // 4 claws
+        ctx.fillStyle = CLAW;
+        for (let i = 0; i < 4; i++) {
+            ctx.beginPath();
+            ctx.moveTo(-49 + i * 6, 0);
+            ctx.lineTo(-51 + i * 6, 9);
+            ctx.lineTo(-45 + i * 6, 9);
+            ctx.fill();
+        }
+
+        // ── 3. BACK RIGHT LEG (slightly behind, lighter) ─────
+        ctx.fillStyle = MID;
+        ctx.beginPath();
+        ctx.moveTo(-22, -14 + b);
+        ctx.quadraticCurveTo(-36, -4 + b, -32, 0);
+        ctx.lineTo(-22, 0);
+        ctx.quadraticCurveTo(-14, -4 + b, -18, -16 + b);
+        ctx.fill();
+        ctx.fillStyle = MID;
+        ctx.beginPath();
+        ctx.ellipse(-27, 0, 8, 5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = CLAW;
+        for (let i = 0; i < 3; i++) {
+            ctx.beginPath();
+            ctx.moveTo(-33 + i * 6, 0);
+            ctx.lineTo(-35 + i * 6, 7);
+            ctx.lineTo(-29 + i * 6, 7);
+            ctx.fill();
+        }
+
+        // ── 4. MAIN BODY ──────────────────────────────────────
+        // Key to NOT looking like a turtle: body is LONG horizontally (-44 to +20)
+        // and the dorsal ridge is TALL and centered, not a symmetric dome.
+        ctx.fillStyle = BASE;
+        ctx.beginPath();
+        // Start at rear hip
+        ctx.moveTo(-44, -10 + b);
+        // Spine ridge climbs steeply to peaked apex over shoulder blades
+        ctx.bezierCurveTo(
+            -44, -58 + b,   // rear spine going very high
+             -4, -70 + b,   // apex of the arch (tilted forward)
+             18, -44 + b    // front shoulder, lower
+        );
+        // Front shoulder slope down to belly
+        ctx.bezierCurveTo(28, -24 + b,  22, 0 + b,  10, 2 + b);
+        // Belly back to rear
+        ctx.bezierCurveTo(-8, 6 + b,  -36, 4 + b,  -44, -10 + b);
+        ctx.fill();
+
+        // Belly shading (slightly darker to give depth)
+        ctx.fillStyle = MID;
+        ctx.beginPath();
+        ctx.moveTo(-40, -6 + b);
+        ctx.bezierCurveTo(-38, 4 + b, -8, 8 + b, 10, 2 + b);
+        ctx.bezierCurveTo(22, -4 + b, 20, -14 + b, 14, -18 + b);
+        ctx.bezierCurveTo(0, -8 + b, -20, -4 + b, -40, -6 + b);
+        ctx.fill();
+
+        // ── 5. FUR / MUSCLE SCRATCH LINES ────────────────────
+        ctx.strokeStyle = DARK;
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        // Shoulder blade slashes (right side of body, near front)
+        ctx.moveTo(10, -50 + b);  ctx.lineTo(18, -38 + b);
+        ctx.moveTo( 6, -54 + b);  ctx.lineTo(14, -42 + b);
+        ctx.moveTo( 2, -58 + b);  ctx.lineTo(10, -46 + b);
+        // Mid-back slashes
+        ctx.moveTo(-14, -62 + b); ctx.lineTo(-6, -50 + b);
+        ctx.moveTo(-18, -58 + b); ctx.lineTo(-10, -48 + b);
+        // Lower rib/belly
+        ctx.moveTo(-32, -14 + b); ctx.lineTo(-24, -6 + b);
+        ctx.moveTo(-28, -10 + b); ctx.lineTo(-20, -4 + b);
+        ctx.stroke();
+
+        // ── 6. FRONT RIGHT ARM (behind — slightly darker) ────
+        // Long, lean reaching arm planted on ground far forward
+        ctx.fillStyle = MID;
+        ctx.beginPath();
+        ctx.moveTo(14, -30 + b);
+        ctx.quadraticCurveTo(24, -16 + b, 42, -12);
+        ctx.lineTo(50, -4);
+        ctx.lineTo(36, -4);
+        ctx.quadraticCurveTo(18, -8 + b, 8, -22 + b);
+        ctx.fill();
+        // paw
+        ctx.fillStyle = MID;
+        ctx.beginPath();
+        ctx.ellipse(44, -4, 9, 5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // 4 claws
+        ctx.fillStyle = CLAW;
+        for (let i = 0; i < 4; i++) {
+            ctx.beginPath();
+            ctx.moveTo(37 + i * 6, -4);
+            ctx.lineTo(36 + i * 6, 6);
+            ctx.lineTo(41 + i * 6, 6);
+            ctx.fill();
+        }
+
+        // ── 7. NECK ───────────────────────────────────────────
+        // Neck thrusts forward and downward from front of body
+        ctx.fillStyle = BASE;
+        ctx.beginPath();
+        ctx.moveTo(16, -44 + b);
+        ctx.quadraticCurveTo(30, -40 + b, 38, -30 + b);
+        ctx.quadraticCurveTo(44, -20 + b, 40, -10 + b);
+        ctx.quadraticCurveTo(28, -6 + b, 18, -12 + b);
+        ctx.quadraticCurveTo(10, -22 + b, 16, -44 + b);
+        ctx.fill();
+
+        // Neck gill slits (diagonal slashes)
+        ctx.strokeStyle = DARK;
+        ctx.lineWidth = 2.2;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(20, -38 + b); ctx.lineTo(28, -26 + b);
+        ctx.moveTo(24, -34 + b); ctx.lineTo(32, -22 + b);
+        ctx.moveTo(28, -30 + b); ctx.lineTo(36, -20 + b);
+        ctx.stroke();
+
+        // ── 8. HEAD / SNOUT (long, thrust forward and slightly down) ─
+        // Upper snout
+        ctx.fillStyle = BASE;
+        ctx.beginPath();
+        ctx.moveTo(26, -34 + b);  // base of forehead
+        ctx.bezierCurveTo(36, -36 + b, 56, -32 + b, 64, -24 + b); // top lip line
+        ctx.lineTo(64, -18 + b);   // front of face
+        ctx.bezierCurveTo(56, -16 + b, 36, -16 + b, 26, -20 + b); // under snout
+        ctx.closePath();
+        ctx.fill();
+
+        // Lower jaw (slightly darker)
+        ctx.fillStyle = MID;
+        ctx.beginPath();
+        ctx.moveTo(26, -20 + b);
+        ctx.bezierCurveTo(36, -20 + b, 56, -20 + b, 64, -18 + b);
+        ctx.bezierCurveTo(62, -10 + b, 44, -8 + b, 28, -10 + b);
+        ctx.closePath();
+        ctx.fill();
+
+        // ── 9. MOUTH SLIT (the single most important feature) ─
+        ctx.fillStyle = BLACK;
+        ctx.beginPath();
+        ctx.moveTo(28, -22 + b);
+        ctx.bezierCurveTo(44, -19 + b, 58, -19 + b, 64, -22 + b);
+        ctx.bezierCurveTo(58, -16 + b, 44, -16 + b, 28, -18 + b);
+        ctx.fill();
+
+        // White teeth on UPPER jaw edge
+        ctx.fillStyle = '#DDDDB8';
+        const ty = -22 + b; // top of mouth
+        // 4 triangular teeth pointing downward
+        const teeth = [32, 40, 48, 56];
+        teeth.forEach(tx => {
+            ctx.beginPath();
+            ctx.moveTo(tx - 3, ty);
+            ctx.lineTo(tx, ty + 8);
+            ctx.lineTo(tx + 3, ty);
+            ctx.fill();
+        });
+
+        // ── 10. FRONT-LEFT ARM (closest, brightest — dominant arm) ──
+        ctx.fillStyle = BASE;
+        ctx.beginPath();
+        ctx.moveTo(16, -34 + b);
+        ctx.quadraticCurveTo(30, -22 + b, 52, -14);
+        ctx.lineTo(62, -6);
+        ctx.lineTo(46, -6);
+        ctx.quadraticCurveTo(26, -10 + b, 12, -24 + b);
+        ctx.fill();
+        // paw
+        ctx.fillStyle = BASE;
+        ctx.beginPath();
+        ctx.ellipse(54, -5, 11, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // 4 long claws
+        ctx.fillStyle = CLAW;
+        for (let i = 0; i < 4; i++) {
+            ctx.beginPath();
+            ctx.moveTo(45 + i * 7, -5);
+            ctx.lineTo(44 + i * 7, 7);
+            ctx.lineTo(50 + i * 7, 7);
+            ctx.fill();
+        }
+
+        // ── 11. OMNITRIX (green flashing hourglass on collar/neck-base) ─
+        ctx.fillStyle = '#111';
+        ctx.beginPath();
+        ctx.ellipse(20, -28 + b, 7, 9, 0.3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#000';
+        ctx.beginPath(); ctx.arc(20, -29 + b, 5, 0, Math.PI * 2); ctx.fill();
+        this.applyOmnitrixGlow(ctx, 20, -28 + b);
+        ctx.beginPath();
+        ctx.moveTo(17, -33 + b); ctx.lineTo(23, -28 + b); ctx.lineTo(17, -28 + b); ctx.lineTo(23, -33 + b);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // ── 12. PUNCH SWIPE EFFECT ────────────────────────────────────
+        if (this.punchActive) {
+            const ext = Math.min(1, (now - this.punchTimer) / 150);
+            const sweep = ext * 28;
+            ctx.fillStyle = 'rgba(232, 130, 12, 0.45)';
+            ctx.beginPath();
+            ctx.ellipse(70 + sweep, -5, 22 + sweep, 13, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        ctx.restore();
+
+        // ── Punch hit-rect ─────────────────────────────────────────────
+        if (this.punchActive) {
+            const punchOffsetX = this.facingRight ? this.width + 5 : -55;
+            this.punchRect = {
+                x: this.x + punchOffsetX,
+                y: this.y + 10,
+                width: 50,
+                height: 30
+            };
+        } else {
+            this.punchRect = null;
+        }
+    }
+
+    /** Returns active punch rect in world coords (for game.js collision), or null */
+    getPunchRect() {
+        return this.punchRect;
+    }
+
+    getRipjawsLightPosition() {
+        const cx = this.x + this.width / 2;
+        const cy = this.y + this.height / 2;
+
+        if (this.state !== 'RIPJAWS') {
+            return { x: cx, y: cy };
+        }
+
+        if (this.inWater) {
+            return this.facingRight
+                ? { x: cx + 10, y: cy + 18 }
+                : { x: cx - 10, y: cy + 18 };
+        }
+
+        return this.facingRight
+            ? { x: cx + 18, y: this.y + 8 }
+            : { x: cx - 18, y: this.y + 8 };
+    }
+
+    drawRipjaws(ctx) {
+        const cx = this.x + this.width / 2;
+        const cy = this.y + this.height / 2;
+        const flip = this.facingRight ? 1 : -1;
+        const now = performance.now();
+
+        ctx.save();
+        ctx.translate(cx, cy);
+        
+        // Swim horizontal pose if in water
+        if (this.inWater) {
+            ctx.rotate(this.facingRight ? Math.PI/2 : -Math.PI/2);
+        }
+        
+        ctx.scale(flip, 1);
+        ctx.translate(0, -this.height/2);
+
+        const skinColor = '#8FBC8F'; // Pale grey-green
+        const suitColor = '#111';
+        const finColor = '#6B8E23';
+
+        // Dorsal Fin
+        ctx.fillStyle = finColor;
+        ctx.beginPath();
+        ctx.moveTo(-10, 10);
+        ctx.lineTo(-20, 30);
+        ctx.lineTo(-5, 40);
+        ctx.fill();
+
+        // Legs
+        ctx.fillStyle = skinColor;
+        ctx.fillRect(-10, 40, 6, 15);
+        ctx.fillRect(4, 40, 6, 15);
+        // Feet claws
+        ctx.fillStyle = '#222';
+        ctx.beginPath(); ctx.moveTo(-10, 55); ctx.lineTo(-15, 60); ctx.lineTo(-4, 55); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(4, 55); ctx.lineTo(-1, 60); ctx.lineTo(10, 55); ctx.fill();
+
+        // Body (Black suit)
+        ctx.fillStyle = suitColor;
+        ctx.beginPath();
+        ctx.moveTo(-12, 15);
+        ctx.lineTo(12, 15);
+        ctx.lineTo(8, 45);
+        ctx.lineTo(-8, 45);
+        ctx.fill();
+
+        // Omnitrix Belt
+        ctx.fillStyle = '#FFF';
+        ctx.fillRect(-8, 30, 16, 4);
+        ctx.fillStyle = '#000';
+        ctx.beginPath(); ctx.arc(0, 32, 4, 0, Math.PI*2); ctx.fill();
+        this.applyOmnitrixGlow(ctx, 0, 32);
+        ctx.beginPath(); ctx.moveTo(-3,30); ctx.lineTo(3,34); ctx.lineTo(-3,34); ctx.lineTo(3,30); ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // Arms
+        ctx.fillStyle = skinColor;
+        ctx.fillRect(8, 15, 6, 15); // right arm
+        ctx.fillRect(-14, 15, 6, 15); // left arm
+        // Gloves/Claws
+        ctx.fillStyle = suitColor;
+        ctx.fillRect(8, 30, 6, 10);
+        ctx.fillRect(-14, 30, 6, 10);
+        ctx.fillStyle = skinColor;
+        ctx.beginPath(); ctx.moveTo(11, 40); ctx.lineTo(14, 48); ctx.lineTo(8, 40); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(-11, 40); ctx.lineTo(-8, 48); ctx.lineTo(-14, 40); ctx.fill();
+
+        // Head
+        ctx.fillStyle = skinColor;
+        // Massive jaw shape protruding forward
+        ctx.beginPath();
+        ctx.moveTo(-10, 15);
+        ctx.lineTo(-5, -5);
+        ctx.lineTo(15, -2);
+        ctx.lineTo(25, 5); // snout tip
+        ctx.lineTo(20, 15);
+        ctx.lineTo(5, 18);
+        ctx.fill();
+
+        // Angler light
+        ctx.strokeStyle = finColor;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-2, -5);
+        ctx.quadraticCurveTo(5, -15, 18, -10);
+        ctx.stroke();
+        // Light bulb
+        ctx.fillStyle = '#FFFFCC';
+        ctx.shadowColor = '#FFFFCC';
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.arc(18, -10, 4, 0, Math.PI*2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // Eye
+        ctx.fillStyle = '#39FF14'; // Green glowing eye
+        ctx.beginPath();
+        ctx.arc(8, 4, 2.5, 0, Math.PI*2);
+        ctx.fill();
+
+        // Mouth & Teeth
+        ctx.fillStyle = '#111';
+        ctx.beginPath();
+        ctx.moveTo(8, 12);
+        ctx.lineTo(24, 8);
+        ctx.lineTo(15, 15);
+        ctx.fill();
+
+        ctx.fillStyle = '#FFF'; // Sharp teeth
+        ctx.beginPath(); ctx.moveTo(10, 12); ctx.lineTo(12, 16); ctx.lineTo(14, 12); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(16, 10); ctx.lineTo(18, 14); ctx.lineTo(20, 10); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(20, 8);  ctx.lineTo(22, 12); ctx.lineTo(24, 8);  ctx.fill();
+
+        // Sound Waves Animation
+        if (this.soundWaveActive) {
+            ctx.strokeStyle = 'rgba(0, 255, 255, 0.7)';
+            ctx.lineWidth = 2;
+            const t = (now % 500) / 500;
+            for (let i = 0; i < 3; i++) {
+                const r = (t + i/3) * 400; // Much larger visuals
+                ctx.beginPath();
+                ctx.arc(24, 10, r, -Math.PI/3, Math.PI/3);
+                ctx.stroke();
+            }
+        }
+
+        ctx.restore();
+    }
+}
+
+

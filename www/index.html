@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Super Mario Clone</title>
+    <link rel="stylesheet" href="style.css?v=20260522b">
+</head>
+
+<body>
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+        <div id="ui-layer">
+        </div>
+
+        <!-- TEMPORARY DEV LEVEL SWITCHER -->
+        <div id="dev-level-switcher" style="pointer-events: auto; position: absolute; top: 70px; right: 10px; background: rgba(0,0,0,0.8); padding: 5px 10px; border-radius: 5px; color: #0f0; font-family: monospace; z-index: 1000;">
+            <b>DEV: Switch Level</b><br>
+            <button onclick="window.devWarp(1)" style="margin: 2px;">L1</button>
+            <button onclick="window.devWarp(2)" style="margin: 2px;">L2</button>
+            <button onclick="window.devWarp(3)" style="margin: 2px;">L3</button>
+            <button onclick="window.devWarp(4)" style="margin: 2px;">L4</button>
+            <button onclick="window.devWarp(5)" style="margin: 2px;">L5</button>
+            <button onclick="window.devWarp(6)" style="margin: 2px;">L6</button>
+            <button onclick="window.devWarp(7)" style="margin: 2px;">L7</button>
+            <button onclick="window.devWarp(8)" style="margin: 2px;">L8</button>
+            <button onclick="window.devWarp(9)" style="margin: 2px;">L9</button>
+            <button onclick="window.devWarp(10)" style="margin: 2px;">L10</button>
+            <button onclick="window.devWarp(11)" style="margin: 2px;">L11</button>
+        </div>
+
+        <!-- Controls Instructions Modal -->
+        <div id="controls-modal" class="modal-overlay">
+            <div class="modal-content">
+                <h2>🎮 GAME CONTROLS</h2>
+                <ul style="text-align: left; list-style: none; padding: 0; line-height: 1.6;">
+                    <li><b>Move:</b> Arrow Keys / WASD</li>
+                    <li><b>Jump:</b> W / Space / ↑</li>
+                    <li><b>Omnitrix:</b> C (Toggle Watch)</li>
+                    <li><b>Power:</b> F key (Ground Pound, Fire, Dash, etc.)</li>
+                </ul>
+                <button id="btn-start-game" class="btn btn-primary">Start Game! ▶</button>
+            </div>
+        </div>
+        <div id="level-complete-modal">
+            <h1 id="modal-title">LEVEL COMPLETE!</h1>
+            <p id="modal-message">You are the chosen one.</p>
+            <button id="btn-next-level" class="btn btn-primary">Next Level ▶</button>
+            <button id="btn-restart" class="btn">↺ Restart Level</button>
+        </div>
+        <!-- Omnitrix Intro Popup (shows on watch collect) -->
+        <div id="omnitrix-intro">
+            <div id="omnitrix-intro-inner">
+                <div class="omnitrix-logo">⌚</div>
+                <h2>OMNITRIX ACQUIRED</h2>
+                <p id="omnitrix-intro-text">You are in the very first steps to save the universe!<br>Keep going... or
+                    quit if you're a pu$$y.</p>
+                <button id="btn-omnitrix-ok" class="btn btn-primary">Let's Go! ▶</button>
+            </div>
+        </div>
+
+        <!-- Omnitrix Watch Panel (toggle with C) -->
+        <div id="omnitrix-panel">
+            <div id="alien-grid">
+                <!-- 10 slots, filled by JS in a circle -->
+            </div>
+            <div id="omnitrix-controls-wrapper">
+                <div id="omnitrix-controls">
+                    <div id="omnitrix-status"></div>
+                    <button id="btn-random-transform" class="btn btn-primary">Random</button>
+                    <button id="btn-buy-manual" class="btn">Buy Manual</button>
+                    <button id="btn-open-shop" class="btn">Shop</button>
+                    <div id="panel-hint-bar">Press <b>0–9</b> to transform</div>
+                </div>
+            </div>
+            <div id="omnitrix-shop-screen">
+                <h3 id="omnitrix-shop-title">Watch Shop</h3>
+                <div id="omnitrix-shop-message">Spend score to boost this level.</div>
+                <button id="btn-shop-jump" class="btn">+1 Jump (200)</button>
+                <button id="btn-shop-time" class="btn">+1 Min Time (2000)</button>
+                <button id="btn-shop-continuous-manual" class="btn">Continuous Manual (25000)</button>
+                <button id="btn-close-shop" class="btn btn-primary">Back</button>
+            </div>
+        </div>
+
+    </div>
+    <script type="module" src="game.js?v=20260522b"></script>
+</body>
+
+</html>
