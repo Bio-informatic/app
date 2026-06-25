@@ -86,6 +86,27 @@ const btnShopContinuousManual = document.getElementById('btn-shop-continuous-man
 const btnCloseShop = document.getElementById('btn-close-shop');
 const controlsModal = document.getElementById('controls-modal');
 const btnStartGame = document.getElementById('btn-start-game');
+const devLevelSwitcher = document.getElementById('dev-level-switcher');
+const devHotspot = document.getElementById('dev-hotspot');
+
+if (devLevelSwitcher && devHotspot) {
+    let devHotspotTaps = 0;
+    let devHotspotResetTimer = null;
+    devHotspot.addEventListener('pointerup', (event) => {
+        event.preventDefault();
+        devHotspotTaps++;
+        clearTimeout(devHotspotResetTimer);
+        devHotspotResetTimer = setTimeout(() => {
+            devHotspotTaps = 0;
+        }, 1800);
+
+        if (devHotspotTaps >= 5) {
+            devHotspotTaps = 0;
+            const isVisible = devLevelSwitcher.classList.toggle('is-visible');
+            devLevelSwitcher.setAttribute('aria-hidden', String(!isVisible));
+        }
+    });
+}
 
 // ─── Alien Roster Definition ─────────────────
 const ALIENS = [
@@ -2990,17 +3011,31 @@ function gameLoop(timestamp) {
         }
 
         // ── HUD ───────────────────────────────
-        ctx.fillStyle = 'rgba(0,0,0,0.45)';
-        ctx.fillRect(8, 8, 520, 32);
+        const hudX = 14;
+        const hudY = 14;
+        const hudLineHeight = 18;
+        const hudPanelW = Math.min(360, GAME_WIDTH - 28);
+        const hudPanelH = 94;
+        ctx.fillStyle = 'rgba(0,0,0,0.48)';
+        ctx.fillRect(8, 8, hudPanelW, hudPanelH);
         ctx.fillStyle = 'white';
-        ctx.font = 'bold 14px sans-serif';
+        ctx.font = '600 13px Arial, Helvetica, sans-serif';
         ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
         const hudWatch = mario.hasWatch ? ' ⌚[C]' : '';
-        let hudAlien = '';
-        if (mario.state === 'FOURARMS') hudAlien = ' 💪';
-        else if (mario.state === 'HEATBLAST') hudAlien = ' 🔥';
-        else if (mario.state === 'XLR8') hudAlien = ' ⚡';
-        else if (mario.state === 'STINKFLY') hudAlien = ' 🪰';
+        const hudAlienByState = {
+            FOURARMS: ALIENS[0],
+            HEATBLAST: ALIENS[1],
+            XLR8: ALIENS[2],
+            STINKFLY: ALIENS[3],
+            UPGRADE: ALIENS[4],
+            WILDMUTT: ALIENS[5],
+            DIAMONDHEAD: ALIENS[6],
+            RIPJAWS: ALIENS[7],
+            GREYMATTER: ALIENS[8],
+            GHOSTFREAK: ALIENS[9],
+        };
+        const activeAlien = hudAlienByState[mario.state];
         const gpReady = mario.state === 'FOURARMS' && (performance.now() - mario.groundPoundCooldown > 1500);
         const dashReady = mario.state === 'XLR8' && (performance.now() - mario.dashCooldown > mario.dashCooldownMs);
         let hudAction = '';
@@ -3016,6 +3051,8 @@ function gameLoop(timestamp) {
         else if (mario.state === 'XLR8') hudAction = dashReady ? ' [F]⚡DASH' : (mario.dashActive ? ' ⚡DASHING!' : ' [F]⏳');
         else if (mario.state === 'STINKFLY') hudAction = ' [F]💧Slime | [Up]Hover';
         const hudDoubleJump = mario.doubleJumpsRemaining > 0 ? ` ⬆⬆×${mario.doubleJumpsRemaining}` : '';
+        const hudLives = activeAlien ? `${activeAlien.name}: ${activeAlien.lives}` : 'Ben: Ready';
+        const hudStatus = activeAlien ? `${activeAlien.icon} ${activeAlien.name}${hudAction}${hudDoubleJump}` : `Human${hudWatch}`;
         let controlMode = 'RANDOM';
         if (hasContinuousManualForLevel(currentLevelIndex)) {
             controlMode = 'MANUAL∞';
@@ -3023,7 +3060,10 @@ function gameLoop(timestamp) {
             const manualUses = getManualUsesForLevel(currentLevelIndex);
             if (manualUses > 0) controlMode = `MANUAL x${manualUses}`;
         }
-        ctx.fillText(`Level ${currentLevelIndex}${hudWatch}${hudAlien}${hudAction}${hudDoubleJump} | Score ${score} | ${controlMode}`, 18, 30);
+        ctx.fillText(`Level ${currentLevelIndex}  ${hudStatus}`, hudX, hudY);
+        ctx.fillText(`Lives ${hudLives}`, hudX, hudY + hudLineHeight);
+        ctx.fillText(`Score ${score}  ${controlMode}`, hudX, hudY + hudLineHeight * 2);
+        ctx.textBaseline = 'alphabetic';
 
         // ── Alien Countdown Timer HUD ───────── (HIDDEN)
         /*
@@ -3065,7 +3105,7 @@ function gameLoop(timestamp) {
             const staminaBarW = 160;
             const staminaBarH = 6;
             const sx = 8;
-            const sy = 65; // just below the alien timer
+            const sy = 112; // below the top-left HUD and mission timer
             const sRatio = mario.wingStamina / mario.maxWingStamina;
 
             // Background
@@ -3197,7 +3237,7 @@ function gameLoop(timestamp) {
             const barW = 180;
             const barH = 10;
             const barX = 18;
-            const barY = 56; // Beneath the main top-left HUD (32 + 24)
+            const barY = 82; // Beneath the stacked top-left HUD text
 
             // Bar Background Sheet
             ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';

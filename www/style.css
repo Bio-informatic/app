@@ -126,6 +126,43 @@ canvas.level10-theme.fixed {
     text-shadow: 2px 2px 0 #000;
 }
 
+#dev-hotspot {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: max(44px, env(safe-area-inset-right));
+    height: max(44px, env(safe-area-inset-top));
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    opacity: 0;
+    pointer-events: auto;
+    touch-action: manipulation;
+    z-index: 1100;
+}
+
+#dev-level-switcher {
+    pointer-events: auto;
+    position: absolute;
+    top: calc(54px + env(safe-area-inset-top));
+    right: calc(10px + env(safe-area-inset-right));
+    display: none;
+    max-width: min(280px, calc(100vw - 20px));
+    padding: 6px 10px;
+    border: 1px solid rgba(57, 255, 20, 0.45);
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.82);
+    color: #39ff14;
+    font: 600 12px/1.35 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    z-index: 1090;
+}
+
+#dev-level-switcher.is-visible {
+    display: block;
+}
+
 #level-complete-modal {
     position: absolute;
     top: 50%;
