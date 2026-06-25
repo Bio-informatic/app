@@ -1429,93 +1429,98 @@ window.addEventListener('contextmenu', (e) => {
 });
 
 // ─── Main Game Loop ───────────────────────────
+let gameAccumulator = 0;
+const FIXED_TIME_STEP = 1000 / 60; // 16.666 ms
+let clampedCamCX = 0, clampedCamCY = 0, camX = 0, halfW = 0, halfH = 0;
+let shakeX = 0, shakeY = 0;
+
 function gameLoop(timestamp) {
     try {
-        let deltaTime = Math.min(timestamp - lastTime, 50);
-        if (mario.transforming) deltaTime *= 0.3; // Cinematic slow-mo during transformation
+        let frameTime = timestamp - lastTime;
+        if (frameTime > 250) frameTime = 250; // max frame time
         lastTime = timestamp;
 
-        if (screenFlashOpacity > 0) {
-            screenFlashOpacity -= deltaTime / 500;
-            if (screenFlashOpacity < 0) screenFlashOpacity = 0;
-        }
+        gameAccumulator += frameTime;
 
-        // --- Level Timer Logic ---
-        if (gameState === 'PLAYING' && !levelRestartFlashActive && !bossCutsceneActive) {
-            levelTimeRemaining -= deltaTime / 1000;
-            if (levelTimeRemaining <= 0) {
-                levelTimeRemaining = 0;
-                levelRestartFlashActive = true;
-                levelRestartFlashTimer = performance.now();
-                sfx.stopMusic();
-                // Play a failure sound if available, else death
-                if (sfx.death) sfx.death(); 
+        while (gameAccumulator >= FIXED_TIME_STEP) {
+            let deltaTime = FIXED_TIME_STEP;
+            if (mario.transforming) deltaTime *= 0.3; // Cinematic slow-mo during transformation
+
+            if (screenFlashOpacity > 0) {
+                screenFlashOpacity -= deltaTime / 500;
+                if (screenFlashOpacity < 0) screenFlashOpacity = 0;
             }
-        }
-        
-        // Handle Auto-Restart after 2s of red flash
-        if (levelRestartFlashActive && performance.now() - levelRestartFlashTimer > 2000) {
-            score = levelStartScore;
-            loadLevel(currentLevelIndex, { hasWatch: mario.hasWatch });
-        }
 
-        ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-
-        // --- Camera Interpolation & Target Calculation ---
-        let targetCamScale = 1.0;
-        let targetCamCX = mario.x + mario.width / 2;
-        let targetCamCY = level.height - GAME_HEIGHT / 2;
-
-        if (bossCutsceneActive) {
-            if (bossCutscenePhase === 'effect' || bossCutscenePhase === 'zoom_in' || bossCutscenePhase === 'dialog') {
-                targetCamScale = 2.2;
-                if (bossCutsceneTarget) {
-                    targetCamCX = bossCutsceneTarget.x + bossCutsceneTarget.width / 2;
-                    targetCamCY = bossCutsceneTarget.y + bossCutsceneTarget.height / 2;
+            // --- Level Timer Logic ---
+            if (gameState === 'PLAYING' && !levelRestartFlashActive && !bossCutsceneActive) {
+                levelTimeRemaining -= deltaTime / 1000;
+                if (levelTimeRemaining <= 0) {
+                    levelTimeRemaining = 0;
+                    levelRestartFlashActive = true;
+                    levelRestartFlashTimer = performance.now();
+                    sfx.stopMusic();
+                    // Play a failure sound if available, else death
+                    if (sfx.death) sfx.death(); 
                 }
-            } else if (bossCutscenePhase === 'zoom_out') {
-                targetCamScale = 1.0;
-                targetCamCX = mario.x + mario.width / 2;
-                targetCamCY = level.height - GAME_HEIGHT / 2;
             }
-        }
+            
+            // Handle Auto-Restart after 2s of red flash
+            if (levelRestartFlashActive && performance.now() - levelRestartFlashTimer > 2000) {
+                score = levelStartScore;
+                loadLevel(currentLevelIndex, { hasWatch: mario.hasWatch });
+            }
 
-        // Smoothly interpolate current values using lerp
-        const lerpSpeed = bossCutsceneActive ? 0.08 : 0.12;
-        currentCamScale += (targetCamScale - currentCamScale) * lerpSpeed;
-        currentCamCX += (targetCamCX - currentCamCX) * lerpSpeed;
-        currentCamCY += (targetCamCY - currentCamCY) * lerpSpeed;
+            // --- Camera Interpolation & Target Calculation ---
+            let targetCamScale = 1.0;
+            let targetCamCX = mario.x + mario.width / 2;
+            let targetCamCY = level.height - GAME_HEIGHT / 2;
 
-        // Calculate the visible half-dimensions at current zoom
-        const halfW = (GAME_WIDTH / 2) / currentCamScale;
-        const halfH = (GAME_HEIGHT / 2) / currentCamScale;
+            if (bossCutsceneActive) {
+                if (bossCutscenePhase === 'effect' || bossCutscenePhase === 'zoom_in' || bossCutscenePhase === 'dialog') {
+                    targetCamScale = 2.2;
+                    if (bossCutsceneTarget) {
+                        targetCamCX = bossCutsceneTarget.x + bossCutsceneTarget.width / 2;
+                        targetCamCY = bossCutsceneTarget.y + bossCutsceneTarget.height / 2;
+                    }
+                } else if (bossCutscenePhase === 'zoom_out') {
+                    targetCamScale = 1.0;
+                    targetCamCX = mario.x + mario.width / 2;
+                    targetCamCY = level.height - GAME_HEIGHT / 2;
+                }
+            }
 
-        // Clamp X: keep camera within level width
-        const clampedCamCX = Math.max(halfW, Math.min(level.width - halfW, currentCamCX));
+            // Smoothly interpolate current values using lerp
+            const lerpSpeed = bossCutsceneActive ? 0.08 : 0.12;
+            currentCamScale += (targetCamScale - currentCamScale) * lerpSpeed;
+            currentCamCX += (targetCamCX - currentCamCX) * lerpSpeed;
+            currentCamCY += (targetCamCY - currentCamCY) * lerpSpeed;
 
-        // Clamp Y normally to the bottom, but center the boss during the intro zoom.
-        const shouldCenterBossCamera = bossCutsceneActive &&
-            (bossCutscenePhase === 'effect' || bossCutscenePhase === 'zoom_in' || bossCutscenePhase === 'dialog');
-        const clampedCamCY = shouldCenterBossCamera
-            ? Math.max(halfH, Math.min(level.height - halfH, currentCamCY))
-            : level.height - halfH;
+            // Calculate the visible half-dimensions at current zoom
+            halfW = (GAME_WIDTH / 2) / currentCamScale;
+            halfH = (GAME_HEIGHT / 2) / currentCamScale;
 
-        // For parallax or other game elements that need camX
-        const camX = clampedCamCX - halfW;
+            // Clamp X: keep camera within level width
+            clampedCamCX = Math.max(halfW, Math.min(level.width - halfW, currentCamCX));
 
-        ctx.save();
-        
-        // Screen shake offset
-        let shakeX = 0, shakeY = 0;
-        if (screenShake > 0) {
-            shakeX = (Math.random() - 0.5) * screenShake;
-            shakeY = (Math.random() - 0.5) * screenShake;
-            screenShake -= 0.5;
-        }
+            // Clamp Y normally to the bottom, but center the boss during the intro zoom.
+            const shouldCenterBossCamera = bossCutsceneActive &&
+                (bossCutscenePhase === 'effect' || bossCutscenePhase === 'zoom_in' || bossCutscenePhase === 'dialog');
+            clampedCamCY = shouldCenterBossCamera
+                ? Math.max(halfH, Math.min(level.height - halfH, currentCamCY))
+                : level.height - halfH;
 
-        ctx.translate(GAME_WIDTH / 2 + shakeX, GAME_HEIGHT / 2 + shakeY);
-        ctx.scale(currentCamScale, currentCamScale);
-        ctx.translate(-clampedCamCX, -clampedCamCY);
+            // For parallax or other game elements that need camX
+            camX = clampedCamCX - halfW;
+
+            // Screen shake offset
+            if (screenShake > 0) {
+                shakeX = (Math.random() - 0.5) * screenShake;
+                shakeY = (Math.random() - 0.5) * screenShake;
+                screenShake -= 0.5;
+            } else {
+                shakeX = 0;
+                shakeY = 0;
+            }
 
         // ─── Update Boss Cutscene Phase ───
         if (bossCutsceneActive) {
@@ -2856,6 +2861,15 @@ function gameLoop(timestamp) {
                 loadLevel(currentLevelIndex, { hasWatch: mario.hasWatch });
             }
         }
+
+            gameAccumulator -= FIXED_TIME_STEP;
+        }
+
+        ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+        ctx.save();
+        ctx.translate(GAME_WIDTH / 2 + shakeX, GAME_HEIGHT / 2 + shakeY);
+        ctx.scale(currentCamScale, currentCamScale);
+        ctx.translate(-clampedCamCX, -clampedCamCY);
 
         // ── Draw ──────────────────────────────
         level.draw(ctx, mario, camX);
