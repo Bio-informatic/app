@@ -17,6 +17,34 @@
         <div id="ui-layer">
         </div>
 
+        <div id="touch-controls" aria-label="Touch controls">
+            <div class="touch-cluster touch-cluster-left" aria-label="Movement controls">
+                <button class="touch-button touch-button-dpad" type="button" data-touch-key="ArrowLeft" aria-label="Move left">&lt;</button>
+                <button class="touch-button touch-button-dpad" type="button" data-touch-key="ArrowRight" aria-label="Move right">&gt;</button>
+            </div>
+
+            <div class="touch-omnitrix" aria-label="Omnitrix touch controls">
+                <button class="touch-button touch-button-watch" type="button" data-touch-key="KeyC" aria-label="Open Omnitrix">OMNI</button>
+                <div class="touch-alien-select" aria-label="Alien selection">
+                    <button class="touch-alien-button" type="button" data-touch-key="Digit1" data-touch-key-value="1" aria-label="Select alien 1">1</button>
+                    <button class="touch-alien-button" type="button" data-touch-key="Digit2" data-touch-key-value="2" aria-label="Select alien 2">2</button>
+                    <button class="touch-alien-button" type="button" data-touch-key="Digit3" data-touch-key-value="3" aria-label="Select alien 3">3</button>
+                    <button class="touch-alien-button" type="button" data-touch-key="Digit4" data-touch-key-value="4" aria-label="Select alien 4">4</button>
+                    <button class="touch-alien-button" type="button" data-touch-key="Digit5" data-touch-key-value="5" aria-label="Select alien 5">5</button>
+                    <button class="touch-alien-button" type="button" data-touch-key="Digit6" data-touch-key-value="6" aria-label="Select alien 6">6</button>
+                    <button class="touch-alien-button" type="button" data-touch-key="Digit7" data-touch-key-value="7" aria-label="Select alien 7">7</button>
+                    <button class="touch-alien-button" type="button" data-touch-key="Digit8" data-touch-key-value="8" aria-label="Select alien 8">8</button>
+                    <button class="touch-alien-button" type="button" data-touch-key="Digit9" data-touch-key-value="9" aria-label="Select alien 9">9</button>
+                    <button class="touch-alien-button" type="button" data-touch-key="Digit0" data-touch-key-value="0" aria-label="Select alien 10">0</button>
+                </div>
+            </div>
+
+            <div class="touch-cluster touch-cluster-right" aria-label="Jump and action controls">
+                <button class="touch-button touch-button-action" type="button" data-touch-key="Space" data-touch-key-value=" " aria-label="Jump">JUMP</button>
+                <button class="touch-button touch-button-action" type="button" data-touch-key="KeyF" aria-label="Action">ACT</button>
+            </div>
+        </div>
+
         <!-- TEMPORARY DEV LEVEL SWITCHER -->
         <div id="dev-level-switcher" style="pointer-events: auto; position: absolute; top: 70px; right: 10px; background: rgba(0,0,0,0.8); padding: 5px 10px; border-radius: 5px; color: #0f0; font-family: monospace; z-index: 1000;">
             <b>DEV: Switch Level</b><br>
