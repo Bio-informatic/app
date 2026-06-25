@@ -682,18 +682,18 @@ canvas.level10-theme.fixed {
 }
 
 .touch-cluster-left {
-    left: max(18px, env(safe-area-inset-left));
-    bottom: max(22px, env(safe-area-inset-bottom));
+    left: calc(26px + env(safe-area-inset-left, 0px));
+    bottom: calc(26px + env(safe-area-inset-bottom, 0px));
 }
 
 .touch-cluster-right {
-    right: max(18px, env(safe-area-inset-right));
-    bottom: max(22px, env(safe-area-inset-bottom));
+    right: calc(26px + env(safe-area-inset-right, 0px));
+    bottom: calc(26px + env(safe-area-inset-bottom, 0px));
 }
 
 .touch-omnitrix {
     left: 50%;
-    bottom: max(18px, env(safe-area-inset-bottom));
+    bottom: calc(26px + env(safe-area-inset-bottom, 0px));
     transform: translateX(-50%);
     flex-direction: column-reverse;
     gap: 8px;
@@ -777,11 +777,11 @@ canvas.level10-theme.fixed {
 @media (orientation: portrait) and (max-width: 700px) {
     .touch-cluster-left,
     .touch-cluster-right {
-        bottom: max(92px, env(safe-area-inset-bottom));
+        bottom: calc(92px + env(safe-area-inset-bottom, 0px));
     }
 
     .touch-omnitrix {
-        bottom: max(10px, env(safe-area-inset-bottom));
+        bottom: calc(16px + env(safe-area-inset-bottom, 0px));
     }
 
     .touch-alien-select {
