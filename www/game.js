@@ -3241,7 +3241,7 @@ function gameLoop(timestamp) {
         // --- Level Timer HUD (Bar) ---
         if (gameState === 'PLAYING' || levelRestartFlashActive) {
             ctx.save();
-            ctx.resetTransform();
+            // Removed ctx.resetTransform() so the High-DPI scaling (DPR) remains active!
             
             const barW = 180;
             const barH = 10;

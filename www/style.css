@@ -769,6 +769,8 @@ canvas.level10-theme.fixed {
     border-color: rgba(57, 255, 20, 0.85);
     background: rgba(0, 0, 0, 0.5);
     box-shadow: 0 0 18px rgba(57, 255, 20, 0.32), inset 0 0 14px rgba(57, 255, 20, 0.18);
+    /* Forces the OMNI font size down so it fits completely inside the circle */
+    font-size: clamp(10px, 2.2vw, 13px) !important;
 }
 
 .touch-alien-select {
@@ -836,5 +838,27 @@ canvas.level10-theme.fixed {
 
     .touch-alien-select {
         display: none;
+    }
+}
+
+/* ===== LANDSCAPE ONLY ROTATION COVER ===== */
+#orientation-lock {
+    position: fixed;
+    inset: 0;
+    background: #0d0e15;
+    z-index: 10000;
+    display: none; /* Hidden by default */
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    color: #fff;
+    font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* Automatically display the cover screen ONLY when the phone is held vertically (portrait) */
+@media (orientation: portrait) {
+    #orientation-lock {
+        display: flex;
     }
 }
