@@ -1029,6 +1029,11 @@ function drawBossCutsceneOverlay(ctx) {
 
     // ── 3. Cinematic motion accents in zoom/dialog phases ──
     if (bossCutscenePhase === 'zoom_in' || bossCutscenePhase === 'dialog') {
+        ctx.save();
+        ctx.translate(GAME_WIDTH / 2, GAME_HEIGHT / 2);
+        ctx.scale(0.65, 0.65);
+        ctx.translate(-GAME_WIDTH / 2, -GAME_HEIGHT / 2);
+        
         const sweepProgress = (motionTime % 1600) / 1600;
         const sweepX = -GAME_WIDTH * 0.25 + sweepProgress * GAME_WIDTH * 1.5;
         const shimmer = 0.55 + Math.sin(motionTime / 150) * 0.25;
@@ -1174,10 +1179,16 @@ function drawBossCutsceneOverlay(ctx) {
             ctx.fillText(bossDetails.className, GAME_WIDTH / 2, GAME_HEIGHT - 10 - titleRise);
             ctx.restore();
         }
+        ctx.restore();
     }
 
     // ── 4. Dialogue Box in 'dialog' phase ──
     if (bossCutscenePhase === 'dialog') {
+        ctx.save();
+        ctx.translate(GAME_WIDTH / 2, GAME_HEIGHT / 2);
+        ctx.scale(0.65, 0.65);
+        ctx.translate(-GAME_WIDTH / 2, -GAME_HEIGHT / 2);
+
         const boxWidth = Math.min(680, GAME_WIDTH - 40);
         const boxHeight = 120;
         const boxX = (GAME_WIDTH - boxWidth) / 2;
@@ -1236,6 +1247,7 @@ function drawBossCutsceneOverlay(ctx) {
                 ctx.fillText('PRESS SPACE TO FIGHT', boxX + boxWidth - 170, boxY + boxHeight - 15);
             }
         }
+        ctx.restore();
     }
 }
 
