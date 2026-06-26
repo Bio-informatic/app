@@ -689,6 +689,24 @@ canvas.level10-theme.fixed {
 .touch-cluster-right {
     right: calc(26px + env(safe-area-inset-right, 0px));
     bottom: calc(26px + env(safe-area-inset-bottom, 0px));
+    display: grid;
+    grid-template-areas:
+        "omni omni"
+        "jump act";
+    gap: 12px;
+    justify-items: center;
+}
+
+.touch-button-watch {
+    grid-area: omni;
+}
+
+.touch-jump {
+    grid-area: jump;
+}
+
+.touch-act {
+    grid-area: act;
 }
 
 .touch-omnitrix {
