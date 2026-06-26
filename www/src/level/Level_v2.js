@@ -33,7 +33,8 @@ export class Level {
             const treeBrickChar = 'T'; // tile 14
 
             const MAX_GAP_TILES = 5;
-            const GROUND_Y = ROWS - 6;
+            // Lower physical ground to 3 blocks high (Y-row 17 instead of 14)
+            const GROUND_Y = ROWS - 3;
 
             // 1. Initialize empty map
             for (let y = 0; y < ROWS; y++) {
@@ -817,7 +818,8 @@ export class Level {
         const t = this.getTheme();
         const ts = this.tileSize;
         const now = performance.now();
-        const groundY = this.height - 192;
+        // Lower background anchor to match the 3-block-high ground (3 blocks * 32px = 96px)
+        const groundY = this.height - 96;
 
         // Sky
         if (this.levelIndex === 3) {
@@ -954,7 +956,8 @@ export class Level {
 
         // Level 9: deep sea background on the second half
         if (this.levelIndex === 4) {
-            const seamY = this.height - 192;
+            // Lower Level 4 mist line to match 3-block-high ground
+            const seamY = this.height - 96;
             const seamBand = ctx.createLinearGradient(0, seamY - 80, 0, this.height);
             seamBand.addColorStop(0, 'rgba(50, 18, 90, 0)');
             seamBand.addColorStop(1, 'rgba(35, 10, 72, 0.55)');
@@ -1468,7 +1471,8 @@ export class Level {
             ctx.arc(sunX, 72, 54, 0, Math.PI * 2);
             ctx.fill();
 
-            const desertGroundY = (this.rows - 6) * this.tileSize;
+            // Lower desert ground dunes calculations to 3 blocks high
+            const desertGroundY = (this.rows - 3) * this.tileSize;
             for (let i = 0; i < 8; i++) {
                 const pyramidWidth = 260 + (i % 4) * 85 + (i % 2) * 40;
                 const pyramidHeight = 120 + (i % 5) * 32;
@@ -1567,7 +1571,8 @@ export class Level {
             }
         } else if (this.levelIndex === 2) {
             // ── Spooky forest background ──────────────────────
-            const groundY = (this.rows - 6) * ts;
+            // Lower Level 2 trees and fog layers to match 3-block-high ground
+            const groundY = (this.rows - 3) * ts;
 
             // Large glowing moon (parallax — moves at 20% cam speed)
             const moonX = 600 + camX * 0.2;
