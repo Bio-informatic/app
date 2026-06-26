@@ -33,7 +33,7 @@ export class Level {
             const treeBrickChar = 'T'; // tile 14
 
             const MAX_GAP_TILES = 5;
-            const GROUND_Y = ROWS - 6;
+            const GROUND_Y = ROWS - 3;
 
             // 1. Initialize empty map
             for (let y = 0; y < ROWS; y++) {
@@ -817,7 +817,7 @@ export class Level {
         const t = this.getTheme();
         const ts = this.tileSize;
         const now = performance.now();
-        const groundY = this.height - 192;
+        const groundY = this.height - 96;
 
         // Sky
         if (this.levelIndex === 3) {
@@ -954,7 +954,7 @@ export class Level {
 
         // Level 9: deep sea background on the second half
         if (this.levelIndex === 4) {
-            const seamY = this.height - 192;
+            const seamY = this.height - 96;
             const seamBand = ctx.createLinearGradient(0, seamY - 80, 0, this.height);
             seamBand.addColorStop(0, 'rgba(50, 18, 90, 0)');
             seamBand.addColorStop(1, 'rgba(35, 10, 72, 0.55)');
@@ -1154,12 +1154,12 @@ export class Level {
             }
             ctx.globalAlpha = 1.0;
 
-            // Adjusted coordinates to align with the ground line (192px tall)
-            const seamGlow = ctx.createLinearGradient(0, this.height - 192, 0, this.height);
+            // Adjusted coordinates to align with the ground line (96px tall)
+            const seamGlow = ctx.createLinearGradient(0, this.height - 96, 0, this.height);
             seamGlow.addColorStop(0, 'rgba(80, 20, 120, 0)');
             seamGlow.addColorStop(1, 'rgba(40, 10, 80, 0.45)');
             ctx.fillStyle = seamGlow;
-            ctx.fillRect(0, this.height - 192, this.width, 192);
+            ctx.fillRect(0, this.height - 96, this.width, 96);
 
             // Magenta floating clouds
             ctx.fillStyle = t.cloud;
