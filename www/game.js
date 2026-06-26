@@ -3038,14 +3038,15 @@ function gameLoop(timestamp) {
 
         // ── HUD ───────────────────────────────
         const hudX = 14;
-        const hudY = 14;
-        const hudLineHeight = 18;
-        const hudPanelW = Math.min(360, GAME_WIDTH - 28);
-        const hudPanelH = 94;
-        ctx.fillStyle = 'rgba(0,0,0,0.48)';
-        ctx.fillRect(8, 8, hudPanelW, hudPanelH);
+        const hudY = 38;
+        const hudLineHeight = 16;
+        
         ctx.fillStyle = 'white';
-        ctx.font = '600 13px Arial, Helvetica, sans-serif';
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+        ctx.shadowOffsetX = 2;
+        ctx.shadowOffsetY = 2;
+        ctx.shadowBlur = 3;
+        ctx.font = '600 11.5px Arial, Helvetica, sans-serif';
         ctx.textAlign = 'left';
         ctx.textBaseline = 'top';
         const hudWatch = mario.hasWatch ? ' ⌚[C]' : '';
@@ -3089,6 +3090,11 @@ function gameLoop(timestamp) {
         ctx.fillText(`Level ${currentLevelIndex}  ${hudStatus}`, hudX, hudY);
         ctx.fillText(`Lives ${hudLives}`, hudX, hudY + hudLineHeight);
         ctx.fillText(`Score ${score}  ${controlMode}`, hudX, hudY + hudLineHeight * 2);
+        
+        ctx.shadowColor = 'transparent';
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+        ctx.shadowBlur = 0;
         ctx.textBaseline = 'alphabetic';
 
         // ── Alien Countdown Timer HUD ───────── (HIDDEN)
