@@ -33,7 +33,7 @@ body {
     align-items: center;
     height: 100vh;
     height: 100dvh;
-    font-family: 'Press Start 2P', cursive, sans-serif;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     /* Fallback to sans-serif */
     color: white;
     user-select: none;
@@ -187,7 +187,7 @@ canvas.level10-theme.fixed {
 
 .btn {
     padding: 15px 30px;
-    font-family: 'Press Start 2P', cursive, sans-serif;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     font-size: 16px;
     cursor: pointer;
     border: 2px solid white;
@@ -708,7 +708,7 @@ canvas.level10-theme.fixed {
     color: #fff;
     text-shadow: 1px 1px 0 #000;
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.38), inset 0 0 14px rgba(255, 255, 255, 0.08);
-    font-family: 'Press Start 2P', cursive, sans-serif;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     cursor: pointer;
     touch-action: none;
     -webkit-tap-highlight-color: transparent;

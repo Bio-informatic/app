@@ -1022,7 +1022,7 @@ function drawBossCutsceneOverlay(ctx) {
         }
 
         ctx.fillStyle = '#00FF66';
-        ctx.font = 'bold 16px monospace';
+        ctx.font = 'bold 16px system-ui, -apple-system, sans-serif';
         ctx.fillText('WARNING: IMMINENT THREAT DETECTED...', 50, 45);
         ctx.fillText('OMNITRIX SYSTEM ANALYSING...', 50, 75);
     }
@@ -1106,26 +1106,26 @@ function drawBossCutsceneOverlay(ctx) {
             ctx.arc(x + w - 22, y + 16, 10, -Math.PI / 2, -Math.PI / 2 + Math.PI * 1.45);
             ctx.stroke();
             ctx.fillStyle = bossDetails.color;
-            ctx.font = 'bold 10px monospace';
+            ctx.font = 'bold 10px system-ui, -apple-system, sans-serif';
             ctx.fillText(title, x + 18, y + 20);
         };
         const drawDataRow = (x, y, label, value, color = 'rgba(255, 255, 255, 0.82)') => {
             ctx.fillStyle = 'rgba(0, 255, 102, 0.18)';
             ctx.fillRect(x, y - 10, 4, 12);
             ctx.fillStyle = 'rgba(0, 255, 102, 0.72)';
-            ctx.font = 'bold 10px monospace';
+            ctx.font = 'bold 10px system-ui, -apple-system, sans-serif';
             ctx.fillText(label, x + 10, y);
             ctx.fillStyle = color;
-            ctx.font = 'bold 11px monospace';
+            ctx.font = 'bold 11px system-ui, -apple-system, sans-serif';
             ctx.fillText(value, x + 92, y);
         };
 
         drawPanelShell(leftPanelX, panelY, panelW, panelH, 'OMNITRIX SCAN');
         ctx.fillStyle = '#FFFFFF';
-        ctx.font = 'bold 20px monospace';
+        ctx.font = 'bold 20px system-ui, -apple-system, sans-serif';
         ctx.fillText(bossCutsceneName, leftPanelX + 18, panelY + 48);
         ctx.fillStyle = bossDetails.color;
-        ctx.font = 'bold 11px monospace';
+        ctx.font = 'bold 11px system-ui, -apple-system, sans-serif';
         ctx.fillText(bossDetails.className, leftPanelX + 18, panelY + 67);
         drawDataRow(leftPanelX + 18, panelY + 88, 'ID', bossDetails.threatId, bossDetails.color);
         drawDataRow(leftPanelX + 18, panelY + 107, 'ZONE', bossDetails.domain.toUpperCase());
@@ -1135,7 +1135,7 @@ function drawBossCutsceneOverlay(ctx) {
         drawDataRow(rightPanelX + 18, panelY + 48, 'PATTERN', bossDetails.behavior.toUpperCase());
         drawDataRow(rightPanelX + 18, panelY + 67, 'COUNTER', bossDetails.counter.toUpperCase(), bossDetails.color);
         ctx.fillStyle = 'rgba(0, 255, 102, 0.72)';
-        ctx.font = 'bold 10px monospace';
+        ctx.font = 'bold 10px system-ui, -apple-system, sans-serif';
         ctx.fillText('DANGER', rightPanelX + 18, panelY + 91);
         for (let i = 0; i < 5; i++) {
             const barX = rightPanelX + 80 + i * 28;
@@ -1151,7 +1151,7 @@ function drawBossCutsceneOverlay(ctx) {
         ctx.fillStyle = bossDetails.color;
         ctx.fillRect(rightPanelX + 18, panelY + 108, scanWidth, 12);
         ctx.fillStyle = '#00170C';
-        ctx.font = 'bold 10px monospace';
+        ctx.font = 'bold 10px system-ui, -apple-system, sans-serif';
         ctx.fillText('DNA LOCK // ACTIVE', rightPanelX + 24, panelY + 118);
         ctx.restore();
 
@@ -1161,16 +1161,16 @@ function drawBossCutsceneOverlay(ctx) {
             ctx.globalAlpha = introProgress;
             ctx.textAlign = 'center';
             ctx.fillStyle = bossDetails.color;
-            ctx.font = 'bold 14px monospace';
+            ctx.font = 'bold 14px system-ui, -apple-system, sans-serif';
             ctx.shadowColor = bossDetails.color;
             ctx.shadowBlur = 9;
             ctx.fillText('THREAT DETECTED', GAME_WIDTH / 2, 34 + titleRise);
             ctx.fillStyle = '#FFFFFF';
-            ctx.font = 'bold 30px monospace';
+            ctx.font = 'bold 30px system-ui, -apple-system, sans-serif';
             ctx.shadowBlur = 16;
             ctx.fillText(bossCutsceneName, GAME_WIDTH / 2, GAME_HEIGHT - 28 - titleRise);
             ctx.fillStyle = bossDetails.color;
-            ctx.font = 'bold 12px monospace';
+            ctx.font = 'bold 12px system-ui, -apple-system, sans-serif';
             ctx.fillText(bossDetails.className, GAME_WIDTH / 2, GAME_HEIGHT - 10 - titleRise);
             ctx.restore();
         }
@@ -1218,12 +1218,12 @@ function drawBossCutsceneOverlay(ctx) {
 
         // Boss Name Header
         ctx.fillStyle = '#00FF66';
-        ctx.font = 'bold 18px monospace';
+        ctx.font = 'bold 18px system-ui, -apple-system, sans-serif';
         ctx.fillText(`[ ${bossCutsceneName} ]`, boxX + 20, boxY + 32);
 
         // Typewriter Message
         ctx.fillStyle = '#FFFFFF';
-        ctx.font = '16px monospace';
+        ctx.font = '16px system-ui, -apple-system, sans-serif';
         const visibleText = bossCutsceneText.substring(0, bossCutsceneTextProgress);
         wrapText(ctx, visibleText, boxX + 20, boxY + 62, boxWidth - 40, 24);
 
@@ -1232,7 +1232,7 @@ function drawBossCutsceneOverlay(ctx) {
             const blink = Math.floor(performance.now() / 450) % 2 === 0;
             if (blink) {
                 ctx.fillStyle = '#00FF66';
-                ctx.font = 'bold 12px monospace';
+                ctx.font = 'bold 12px system-ui, -apple-system, sans-serif';
                 ctx.fillText('PRESS SPACE TO FIGHT', boxX + boxWidth - 170, boxY + boxHeight - 15);
             }
         }
@@ -3026,11 +3026,11 @@ function gameLoop(timestamp) {
             ctx.fillStyle = titleBg;
             ctx.fillRect(GAME_WIDTH / 2 - 230, GAME_HEIGHT / 3 - 38, 460, 80);
             ctx.fillStyle = titleColor;
-            ctx.font = 'bold 16px sans-serif';
+            ctx.font = 'bold 16px system-ui, -apple-system, sans-serif';
             ctx.textAlign = 'center';
             ctx.fillText(`LEVEL ${currentLevelIndex}`, GAME_WIDTH / 2, GAME_HEIGHT / 3 - 10);
             ctx.fillStyle = '#FFFFFF';
-            ctx.font = 'bold 26px sans-serif';
+            ctx.font = 'bold 26px system-ui, -apple-system, sans-serif';
             ctx.fillText(subtitle, GAME_WIDTH / 2, GAME_HEIGHT / 3 + 24);
             ctx.textAlign = 'left';
             ctx.restore();
@@ -3046,7 +3046,7 @@ function gameLoop(timestamp) {
         ctx.shadowOffsetX = 2;
         ctx.shadowOffsetY = 2;
         ctx.shadowBlur = 3;
-        ctx.font = '600 11.5px Arial, Helvetica, sans-serif';
+        ctx.font = '600 11.5px system-ui, -apple-system, sans-serif';
         ctx.textAlign = 'left';
         ctx.textBaseline = 'top';
         const hudWatch = mario.hasWatch ? ' ⌚[C]' : '';
@@ -3127,7 +3127,7 @@ function gameLoop(timestamp) {
 
             // Text
             ctx.fillStyle = mario.alienTimerRemaining <= 3 ? '#FF4444' : '#FFD700';
-            ctx.font = 'bold 11px sans-serif';
+            ctx.font = 'bold 11px system-ui, -apple-system, sans-serif';
             ctx.fillText(`🔄 ${mario.alienTimerRemaining}s`, timerX + timerBarW + 10, timerY + 13);
         }
         */
@@ -3159,7 +3159,7 @@ function gameLoop(timestamp) {
 
             // Text
             ctx.fillStyle = '#00FFCC';
-            ctx.font = 'bold 11px sans-serif';
+            ctx.font = 'bold 11px system-ui, -apple-system, sans-serif';
             ctx.fillText(`WING`, sx + staminaBarW + 10, sy + 11);
         }
 
@@ -3207,7 +3207,7 @@ function gameLoop(timestamp) {
                 ctx.lineWidth = 1;
 
                 ctx.fillStyle = bossData.color;
-                ctx.font = 'bold 12px sans-serif';
+                ctx.font = 'bold 12px system-ui, -apple-system, sans-serif';
                 ctx.textAlign = 'center';
                 ctx.fillText(bossData.name, GAME_WIDTH / 2, barY + barH + 14);
                 ctx.textAlign = 'left';
@@ -3229,7 +3229,7 @@ function gameLoop(timestamp) {
 
         if (defeatedMsg) {
             ctx.fillStyle = defeatedMsg.color;
-            ctx.font = 'bold 20px sans-serif';
+            ctx.font = 'bold 20px system-ui, -apple-system, sans-serif';
             ctx.textAlign = 'center';
             ctx.fillText(defeatedMsg.text, GAME_WIDTH / 2, 80);
             ctx.textAlign = 'left';
@@ -3239,7 +3239,7 @@ function gameLoop(timestamp) {
         if (currentLevelIndex === 4 && level.slowZoneStart > 0 && turtumba && !turtumba.dead) {
             if (mario.x >= level.slowZoneStart && mario.state !== 'XLR8') {
                 ctx.fillStyle = '#00FF00';
-                ctx.font = 'bold 16px sans-serif';
+                ctx.font = 'bold 16px system-ui, -apple-system, sans-serif';
                 ctx.textAlign = 'center';
                 ctx.fillText('⚠️ SLOW ZONE — Transform to XLR8 to move freely!', GAME_WIDTH / 2, 110);
                 ctx.textAlign = 'left';
@@ -3251,11 +3251,11 @@ function gameLoop(timestamp) {
             ctx.fillStyle = 'rgba(0,0,0,0.65)';
             ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
             ctx.fillStyle = '#FF4444';
-            ctx.font = 'bold 60px sans-serif';
+            ctx.font = 'bold 60px system-ui, -apple-system, sans-serif';
             ctx.textAlign = 'center';
             ctx.fillText('GAME OVER', GAME_WIDTH / 2, GAME_HEIGHT / 2);
             ctx.fillStyle = 'white';
-            ctx.font = '22px sans-serif';
+            ctx.font = '22px system-ui, -apple-system, sans-serif';
             ctx.fillText('Press Space to Restart', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 50);
         }
 
@@ -3277,7 +3277,7 @@ function gameLoop(timestamp) {
 
             // Label
             ctx.fillStyle = '#FFD700';
-            ctx.font = 'bold 11px sans-serif';
+            ctx.font = 'bold 11px system-ui, -apple-system, sans-serif';
             ctx.fillText('MISSION TIME', barX, barY - 5);
             
             // Bar Track
@@ -3309,11 +3309,11 @@ function gameLoop(timestamp) {
                 ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
                 
                 ctx.fillStyle = '#FFFFFF';
-                ctx.font = 'bold 50px sans-serif';
+                ctx.font = 'bold 50px system-ui, -apple-system, sans-serif';
                 ctx.textAlign = 'center';
                 ctx.shadowBlur = 20;
                 ctx.fillText('LEVEL TIME EXCEEDED!', GAME_WIDTH / 2, GAME_HEIGHT / 2);
-                ctx.font = '24px sans-serif';
+                ctx.font = '24px system-ui, -apple-system, sans-serif';
                 ctx.fillText('Restarting Level & Resetting Local Score...', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 50);
             }
             ctx.restore();
@@ -3322,7 +3322,7 @@ function gameLoop(timestamp) {
         console.error(e);
         ctx.resetTransform();
         ctx.fillStyle = 'red';
-        ctx.font = '20px monospace';
+        ctx.font = '20px system-ui, -apple-system, sans-serif';
         ctx.fillText('Error: ' + e.message, 50, 50);
         ctx.fillText('Check console for details', 50, 80);
     }
