@@ -52,10 +52,20 @@ let GAME_HEIGHT = window.innerHeight;
 var level, mario;
 
 function resizeCanvas() {
+    // Detect your phone's physical pixel density ratio (DPR)
+    const dpr = window.devicePixelRatio || 1;
     GAME_WIDTH = window.innerWidth;
     GAME_HEIGHT = window.innerHeight;
-    canvas.width = GAME_WIDTH;
-    canvas.height = GAME_HEIGHT;
+    
+    // Scale the canvas's physical backing store up by the pixel density ratio
+    canvas.width = GAME_WIDTH * dpr;
+    canvas.height = GAME_HEIGHT * dpr;
+
+    // Explicitly tell the canvas context to keep pixel art textures completely sharp
+    ctx.imageSmoothingEnabled = false;
+    ctx.mozImageSmoothingEnabled = false;
+    ctx.webkitImageSmoothingEnabled = false;
+    ctx.msImageSmoothingEnabled = false;
 }
 resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
@@ -2903,7 +2913,14 @@ function gameLoop(timestamp) {
             gameAccumulator -= FIXED_TIME_STEP;
         }
 
-        ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+        // Clear the entire physical canvas boundaries
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.save();
+        // Scale the canvas drawings to your phone's native physical resolution (e.g. 2x or 3x)
+        const dpr = window.devicePixelRatio || 1;
+        ctx.scale(dpr, dpr);
+
         ctx.save();
         ctx.translate(GAME_WIDTH / 2 + shakeX, GAME_HEIGHT / 2 + shakeY);
         ctx.scale(currentCamScale, currentCamScale);
@@ -3279,6 +3296,9 @@ function gameLoop(timestamp) {
             }
             ctx.restore();
         }
+        
+        // Restore the device pixel ratio scaling state
+        ctx.restore();
     } catch (e) {
         console.error(e);
         ctx.resetTransform();

@@ -59,8 +59,12 @@ canvas {
     display: block;
     background-color: #5c94fc;
     /* Mario Sky Blue */
+    image-rendering: crisp-edges;
     image-rendering: pixelated;
-    /* Sharp pixels */
+    image-rendering: -moz-crisp-edges;
+    image-rendering: -webkit-crisp-edges;
+    image-rendering: -webkit-optimize-contrast;
+    /* Sharp pixels across all browsers and WebViews */
     width: 100%;
     height: 100%;
     max-width: 100%;
