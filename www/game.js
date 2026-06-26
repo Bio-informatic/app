@@ -3075,47 +3075,12 @@ function gameLoop(timestamp) {
         ctx.font = '600 11.5px system-ui, -apple-system, sans-serif';
         ctx.textAlign = 'left';
         ctx.textBaseline = 'top';
-        const hudWatch = mario.hasWatch ? ' ⌚[C]' : '';
-        const hudAlienByState = {
-            FOURARMS: ALIENS[0],
-            HEATBLAST: ALIENS[1],
-            XLR8: ALIENS[2],
-            STINKFLY: ALIENS[3],
-            UPGRADE: ALIENS[4],
-            WILDMUTT: ALIENS[5],
-            DIAMONDHEAD: ALIENS[6],
-            RIPJAWS: ALIENS[7],
-            GREYMATTER: ALIENS[8],
-            GHOSTFREAK: ALIENS[9],
-        };
-        const activeAlien = hudAlienByState[mario.state];
-        const gpReady = mario.state === 'FOURARMS' && (performance.now() - mario.groundPoundCooldown > 1500);
-        const dashReady = mario.state === 'XLR8' && (performance.now() - mario.dashCooldown > mario.dashCooldownMs);
-        let hudAction = '';
-        if (mario.state === 'FOURARMS') {
-            if (mario._gpCharging) {
-                const pct = Math.floor(mario.gpChargePercent * 100);
-                hudAction = ` [F] CHARGING ${pct}%`;
-            } else {
-                hudAction = gpReady ? ' [F]🥊 (Hold to Charge)' : ' [F]⏳';
-            }
-        }
-        else if (mario.state === 'HEATBLAST') hudAction = ` [F]🔥×${mario.fireballPower}`;
-        else if (mario.state === 'XLR8') hudAction = dashReady ? ' [F]⚡DASH' : (mario.dashActive ? ' ⚡DASHING!' : ' [F]⏳');
-        else if (mario.state === 'STINKFLY') hudAction = ' [F]💧Slime | [Up]Hover';
-        const hudDoubleJump = mario.doubleJumpsRemaining > 0 ? ` ⬆⬆×${mario.doubleJumpsRemaining}` : '';
-        const hudLives = activeAlien ? `${activeAlien.name}: ${activeAlien.lives}` : 'Ben: Ready';
-        const hudStatus = activeAlien ? `${activeAlien.icon} ${activeAlien.name}${hudAction}${hudDoubleJump}` : `Human${hudWatch}`;
-        let controlMode = 'RANDOM';
-        if (hasContinuousManualForLevel(currentLevelIndex)) {
-            controlMode = 'MANUAL∞';
-        } else {
-            const manualUses = getManualUsesForLevel(currentLevelIndex);
-            if (manualUses > 0) controlMode = `MANUAL x${manualUses}`;
-        }
-        ctx.fillText(`Level ${currentLevelIndex}  ${hudStatus}`, hudX, hudY);
-        ctx.fillText(`Lives ${hudLives}`, hudX, hudY + hudLineHeight);
-        ctx.fillText(`Score ${score}  ${controlMode}`, hudX, hudY + hudLineHeight * 2);
+
+        // Line 1: Only displays the Level number
+        ctx.fillText(`Level ${currentLevelIndex}`, hudX, hudY);
+        
+        // Line 2: Only displays the Score
+        ctx.fillText(`Score ${score}`, hudX, hudY + hudLineHeight);
         
         ctx.shadowColor = 'transparent';
         ctx.shadowOffsetX = 0;
@@ -3157,37 +3122,6 @@ function gameLoop(timestamp) {
             ctx.fillText(`🔄 ${mario.alienTimerRemaining}s`, timerX + timerBarW + 10, timerY + 13);
         }
         */
-
-        // ── Stinkfly Wing Stamina HUD ─────────
-        if (mario.state === 'STINKFLY') {
-            const staminaBarW = 160;
-            const staminaBarH = 6;
-            const sx = 8;
-            const sy = 112; // below the top-left HUD and mission timer
-            const sRatio = mario.wingStamina / mario.maxWingStamina;
-
-            // Background
-            ctx.fillStyle = 'rgba(0,0,0,0.5)';
-            ctx.fillRect(sx, sy, staminaBarW + 50, staminaBarH + 8);
-
-            // Bar track
-            ctx.fillStyle = '#333';
-            ctx.fillRect(sx + 4, sy + 4, staminaBarW, staminaBarH);
-
-            // Colored bar (cyan -> blue)
-            ctx.fillStyle = '#00FFCC';
-            ctx.fillRect(sx + 4, sy + 4, staminaBarW * Math.max(0, sRatio), staminaBarH);
-
-            // Border
-            ctx.strokeStyle = '#888';
-            ctx.lineWidth = 1;
-            ctx.strokeRect(sx + 4, sy + 4, staminaBarW, staminaBarH);
-
-            // Text
-            ctx.fillStyle = '#00FFCC';
-            ctx.font = 'bold 11px system-ui, -apple-system, sans-serif';
-            ctx.fillText(`WING`, sx + staminaBarW + 10, sy + 11);
-        }
 
         // ── Boss HP Bar (screen-space) ────────
         let bossData = null;
@@ -3294,17 +3228,18 @@ function gameLoop(timestamp) {
             
             const barW = 180;
             const barH = 10;
-            const barX = 18;
-            const barY = 82; // Beneath the stacked top-left HUD text
+            // Aligned perfectly to X = 14px to match text HUD
+            const barX = 14;
+            // Bar sits nicely at Y = 84px right below the label
+            const barY = 84; 
 
-            // Bar Background Sheet
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-            ctx.fillRect(barX - 10, barY - 18, barW + 20, barH + 28);
+            // Removed the Bar Background Sheet entirely
 
-            // Label
+            // Label drawn exactly at X = 14px and Y = 70px
             ctx.fillStyle = '#FFD700';
             ctx.font = 'bold 11px system-ui, -apple-system, sans-serif';
-            ctx.fillText('MISSION TIME', barX, barY - 5);
+            ctx.textBaseline = 'top';
+            ctx.fillText('MISSION TIME', barX, 70);
             
             // Bar Track
             ctx.fillStyle = '#222';

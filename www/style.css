@@ -124,6 +124,17 @@ canvas.level10-theme.fixed {
     left: 10px;
     pointer-events: none;
     text-shadow: 2px 2px 0 #000;
+    /* Defensive styles to completely remove the Large Dark Background Box */
+    background: none !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* Strips background & borders from any sub-containers inside the HUD layer */
+#ui-layer * {
+    background: none !important;
+    border: none !important;
+    box-shadow: none !important;
 }
 
 #dev-hotspot {
