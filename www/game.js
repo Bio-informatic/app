@@ -86,12 +86,13 @@ const btnShopContinuousManual = document.getElementById('btn-shop-continuous-man
 const btnCloseShop = document.getElementById('btn-close-shop');
 const controlsModal = document.getElementById('controls-modal');
 const btnStartGame = document.getElementById('btn-start-game');
-const devLevelSwitcher = document.getElementById('dev-level-switcher');
 const devHotspot = document.getElementById('dev-hotspot');
 
-if (devLevelSwitcher && devHotspot) {
+if (devHotspot) {
     let devHotspotTaps = 0;
     let devHotspotResetTimer = null;
+    let devLevelSwitcher = null;
+
     devHotspot.addEventListener('pointerup', (event) => {
         event.preventDefault();
         devHotspotTaps++;
@@ -102,6 +103,19 @@ if (devLevelSwitcher && devHotspot) {
 
         if (devHotspotTaps >= 5) {
             devHotspotTaps = 0;
+
+            // Create the panel on first activation
+            if (!devLevelSwitcher) {
+                devLevelSwitcher = document.createElement('div');
+                devLevelSwitcher.id = 'dev-level-switcher';
+                devLevelSwitcher.setAttribute('aria-hidden', 'true');
+                devLevelSwitcher.innerHTML = '<b>DEV: Switch Level</b><br>' +
+                    Array.from({ length: 11 }, (_, i) =>
+                        `<button style="margin:2px;" onclick="window.devWarp(${i + 1})">L${i + 1}</button>`
+                    ).join('');
+                document.getElementById('game-container').appendChild(devLevelSwitcher);
+            }
+
             const isVisible = devLevelSwitcher.classList.toggle('is-visible');
             devLevelSwitcher.setAttribute('aria-hidden', String(!isVisible));
         }
