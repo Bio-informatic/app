@@ -178,27 +178,6 @@ canvas.level10-theme.fixed {
     display: block;
 }
 
-#level-complete-modal {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: rgba(0, 0, 0, 0.85);
-    padding: 40px;
-    border: 4px solid white;
-    text-align: center;
-    display: none;
-    /* Hidden by default */
-    flex-direction: column;
-    gap: 20px;
-    z-index: 100;
-}
-
-#level-complete-modal h1 {
-    margin: 0 0 20px 0;
-    color: #FFD700;
-    font-size: 24px;
-}
 
 .btn {
     padding: 15px 30px;
@@ -223,26 +202,6 @@ canvas.level10-theme.fixed {
     background: #ff0000;
 }
 
-/* ===== OMNITRIX INTRO POPUP ===== */
-#omnitrix-intro {
-    position: absolute;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.88);
-    display: none;
-    justify-content: center;
-    align-items: center;
-    z-index: 200;
-}
-
-#omnitrix-intro-inner {
-    background: #0a0a0a;
-    border: 3px solid #39FF14;
-    border-radius: 12px;
-    padding: 40px 50px;
-    text-align: center;
-    box-shadow: 0 0 40px #39FF14aa;
-    max-width: 520px;
-}
 
 .omnitrix-logo {
     font-size: 64px;
@@ -640,40 +599,104 @@ canvas.level10-theme.fixed {
     font-weight: normal;
 }
 
-/* ===== CONTROLS MODAL ===== */
+/* ============================================================ */
+/* MODAL SIZING CONTROLS - ADJUST THESE VALUES TO RESIZE MANUALLY */
+/* ============================================================ */
+:root {
+    --modal-max-width: 380px;      /* The overall horizontal width of the popups */
+    --modal-padding: 18px;         /* Internal space/padding inside popups */
+    --modal-border-glow: 20px;     /* Glow intensity of the green borders */
+    --modal-font-size-title: 16px; /* Font size of popup headers */
+    --modal-font-size-text: 11px;  /* Font size of regular text inside popups */
+}
+/* ============================================================ */
+
+/* Unified Glassmorphic Dark Overlay Background */
 .modal-overlay {
     position: absolute;
     inset: 0;
-    background: rgba(0, 0, 0, 0.9);
-    display: none;
+    background: rgba(4, 8, 6, 0.72) !important;
+    display: none; /* Hidden by default */
     justify-content: center;
     align-items: center;
-    z-index: 500;
+    z-index: 5000; /* High z-index to be on top of everything */
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
 }
 
+/* Unified Omnitrix Glassmorphic Modal Box */
 .modal-content {
-    background: #0a0a0a;
-    border: 3px solid #ff0;
+    background: rgba(10, 16, 12, 0.95) !important;
+    border: 2px solid rgba(57, 255, 20, 0.8) !important;
     border-radius: 12px;
-    padding: 30px 40px;
+    padding: var(--modal-padding) !important;
     text-align: center;
-    box-shadow: 0 0 30px #ffff0066;
-    max-width: 500px;
+    box-shadow: 0 0 var(--modal-border-glow) rgba(57, 255, 20, 0.3) !important;
+    max-width: var(--modal-max-width);
+    width: calc(100% - 40px);
+    max-height: 85vh; /* Prevents stretching outside short mobile screens */
+    overflow-y: auto;
+    box-sizing: border-box;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 .modal-content h2 {
-    color: #ff0;
-    font-size: 20px;
-    margin-bottom: 20px;
+    color: #39FF14 !important;
+    font-size: var(--modal-font-size-title) !important;
+    margin: 0 0 14px 0 !important;
+    letter-spacing: 1.5px;
 }
 
-.modal-content ul li {
-    margin-bottom: 10px;
-    font-size: 14px;
+/* Row-based layout to align buttons side-by-side (saves critical mobile height) */
+.modal-btn-row {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    width: 100%;
 }
 
-.modal-content b {
-    color: #0f0;
+/* Sleek cybernetic buttons for menus */
+.btn-modal {
+    padding: 8px 16px !important;
+    font-size: var(--modal-font-size-text) !important;
+    border-radius: 6px !important;
+    border: 1.5px solid rgba(57, 255, 20, 0.7) !important;
+    background: #050a06 !important;
+    color: #39FF14 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 0 8px rgba(57, 255, 20, 0.15) !important;
+    transition: transform 0.1s ease, box-shadow 0.1s ease !important;
+}
+
+.btn-modal:active {
+    transform: scale(0.95) !important;
+    box-shadow: 0 0 15px rgba(57, 255, 20, 0.5) !important;
+}
+
+/* Compact layout grid for controls instructions */
+.controls-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 18px;
+    text-align: left;
+    font-size: var(--modal-font-size-text);
+}
+
+.controls-row {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px dashed rgba(57, 255, 20, 0.15);
+    padding-bottom: 4px;
+}
+
+.controls-row b {
+    color: #39FF14;
+}
+
+.controls-row span {
+    color: #FFFFFF;
 }
 /* ===== TOUCH CONTROLS ===== */
 #touch-controls {

@@ -41,29 +41,35 @@
         <div id="controls-modal" class="modal-overlay">
             <div class="modal-content">
                 <h2>🎮 GAME CONTROLS</h2>
-                <ul style="text-align: left; list-style: none; padding: 0; line-height: 1.7; max-width: 440px; margin: 0 auto 24px;">
-                    <li><b>Move:</b> Use Left (&lt;) and Right (&gt;) buttons</li>
-                    <li><b>Jump:</b> Tap JUMP button</li>
-                    <li><b>Omnitrix:</b> Tap OMNI to select an alien form</li>
-                    <li><b>Power:</b> Tap ACT button to use your powers</li>
-                </ul>
-                <button id="btn-start-game" class="btn btn-primary">Start Game! ▶</button>
+                <div class="controls-grid">
+                    <div class="controls-row"><b>Move:</b> <span>Left ◀ / Right ▶</span></div>
+                    <div class="controls-row"><b>Jump:</b> <span>Tap JUMP</span></div>
+                    <div class="controls-row"><b>Watch:</b> <span>Tap WATCH</span></div>
+                    <div class="controls-row"><b>Power:</b> <span>Tap ACT</span></div>
+                </div>
+                <button id="btn-start-game" class="btn btn-primary btn-modal">Start Game! ▶</button>
             </div>
         </div>
-        <div id="level-complete-modal">
-            <h1 id="modal-title">LEVEL COMPLETE!</h1>
-            <p id="modal-message">You are the chosen one.</p>
-            <button id="btn-next-level" class="btn btn-primary">Next Level ▶</button>
-            <button id="btn-restart" class="btn">↺ Restart Level</button>
+
+        <!-- Level Complete Modal (Re-structured to use uniform overlays and side-by-side buttons) -->
+        <div id="level-complete-modal" class="modal-overlay">
+            <div class="modal-content">
+                <h2 id="modal-title">LEVEL COMPLETE!</h2>
+                <p id="modal-message" style="color: #ccc; font-size: var(--modal-font-size-text); margin: 0 0 16px;">You are the chosen one.</p>
+                <div class="modal-btn-row">
+                    <button id="btn-next-level" class="btn btn-primary btn-modal">Next Level ▶</button>
+                    <button id="btn-restart" class="btn btn-modal">↺ Restart</button>
+                </div>
+            </div>
         </div>
-        <!-- Omnitrix Intro Popup (shows on watch collect) -->
-        <div id="omnitrix-intro">
-            <div id="omnitrix-intro-inner">
-                <div class="omnitrix-logo">⌚</div>
-                <h2>OMNITRIX ACQUIRED</h2>
-                <p id="omnitrix-intro-text">You are in the very first steps to save the universe!<br>Keep going... or
-                    quit if you're a pu$$y.</p>
-                <button id="btn-omnitrix-ok" class="btn btn-primary">Let's Go! ▶</button>
+
+        <!-- Omnitrix Intro Popup (Re-structured to be compact for landscape heights) -->
+        <div id="omnitrix-intro" class="modal-overlay">
+            <div class="modal-content">
+                <div class="omnitrix-logo" style="font-size: 32px; margin-bottom: 6px;">⌚</div>
+                <h2>WATCH ACQUIRED</h2>
+                <p id="omnitrix-intro-text" style="color: #ccc; font-size: var(--modal-font-size-text); line-height: 1.6; margin: 0 0 16px;">You are in the very first steps to save the universe!<br>Keep going... or quit if you're a pu$$y.</p>
+                <button id="btn-omnitrix-ok" class="btn btn-primary btn-modal">Let's Go! ▶</button>
             </div>
         </div>
 

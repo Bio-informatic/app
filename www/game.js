@@ -770,7 +770,7 @@ function loadLevel(index, carryOverState = null) {
 
     const startY = (level.rows - 7) * level.tileSize;
     // Shifted starting X-coordinate from 100 to 250 so Ben spawns in front of/to the right of the D-pad
-    mario = new Mario(250, startY, input);
+    mario = new Mario(300, startY, input);
 
     if (carryOverState && carryOverState.hasWatch) {
         mario.hasWatch = true;
