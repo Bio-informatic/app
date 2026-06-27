@@ -769,7 +769,8 @@ function loadLevel(index, carryOverState = null) {
     levelRestartFlashActive = false;
 
     const startY = (level.rows - 7) * level.tileSize;
-    mario = new Mario(100, startY, input);
+    // Shifted starting X-coordinate from 100 to 250 so Ben spawns in front of/to the right of the D-pad
+    mario = new Mario(250, startY, input);
 
     if (carryOverState && carryOverState.hasWatch) {
         mario.hasWatch = true;
@@ -1177,7 +1178,7 @@ function drawBossCutsceneOverlay(ctx) {
             ctx.fillText(value, x + 92, y);
         };
 
-        // Shift background panels up by 17 pixels (Y = letterboxH + 5 instead of +22)
+        // Shift background panels up by 17 pixels to clear the bottom text box
         const adjustedPanelY = letterboxH + 5;
 
         drawPanelShell(leftPanelX, adjustedPanelY, panelW, panelH, 'OMNITRIX SCAN');
@@ -1242,12 +1243,12 @@ function drawBossCutsceneOverlay(ctx) {
         ctx.save();
         ctx.translate(GAME_WIDTH / 2, GAME_HEIGHT / 2);
         ctx.scale(0.65, 0.65);
+        ctx.translate(-GAME_WIDTH / 2, -GAME_HEIGHT / 2);
 
         const boxWidth = Math.min(680, GAME_WIDTH - 40);
-        // Reduced the height of the speech box to 95px to take up less vertical space
+        // Reduced speech box height to 95px and shifted it lower down to solve overlaps completely
         const boxHeight = 95;
         const boxX = (GAME_WIDTH - boxWidth) / 2;
-        // Shifted dialogue speech box lower down to sit near the bottom letterbox border
         const boxY = GAME_HEIGHT - boxHeight - 20;
 
         // Draw glowing command box
@@ -3121,27 +3122,36 @@ function gameLoop(timestamp) {
         }
 
         // ── HUD ───────────────────────────────
-        const hudX = 14;
+        const hudX = 18; // Slightly indented to sit cleanly beside the neon framing line
         const hudY = 38;
         const hudLineHeight = 16;
         
+        // Draw a vertical neon-green laser bar on the left (instantly frames the stats like a sci-fi console)
+        ctx.fillStyle = '#39ff14'; // Neon Green
+        ctx.fillRect(8, 38, 3, 28);
+
         ctx.fillStyle = 'white';
         ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
         ctx.shadowOffsetX = 2;
         ctx.shadowOffsetY = 2;
         ctx.shadowBlur = 3;
-        ctx.font = '600 11.5px system-ui, -apple-system, sans-serif';
+        // Clean, futuristic developer monospaced font
+        ctx.font = 'bold 12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace';
         ctx.textAlign = 'left';
         ctx.textBaseline = 'top';
 
-        // Line 1: Only displays the Level number
-        ctx.fillText(`Level ${currentLevelIndex}`, hudX, hudY);
+        // Line 1: Displays the Level number
+        ctx.fillText(`LVL. ${currentLevelIndex}`, hudX, hudY);
         
-        // Line 2: Only displays the Score
-        ctx.fillText(`Score ${score}`, hudX, hudY + hudLineHeight);
+        // Line 2: Displays the Score, zero-padded like a professional retro arcade cabinet (e.g. SCORE. 03100)
+        const paddedScore = String(score).padStart(5, '0');
+        ctx.fillText(`SCORE. ${paddedScore}`, hudX, hudY + hudLineHeight);
         
         ctx.shadowColor = 'transparent';
         ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+        ctx.shadowBlur = 0;
+        ctx.textBaseline = 'alphabetic';
         ctx.shadowOffsetY = 0;
         ctx.shadowBlur = 0;
         ctx.textBaseline = 'alphabetic';
@@ -3285,19 +3295,17 @@ function gameLoop(timestamp) {
             // Removed ctx.resetTransform() so the High-DPI scaling (DPR) remains active!
             
             const barW = 180;
-            const barH = 10;
-            // Aligned perfectly to X = 14px to match text HUD
-            const barX = 14;
-            // Bar sits nicely at Y = 84px right below the label
-            const barY = 84; 
+            const barH = 8;
+            const barX = 18; // Indented to match our left alignment
+            const barY = 82; 
 
             // Removed the Bar Background Sheet entirely
 
-            // Label drawn exactly at X = 14px and Y = 70px
+            // Label styled with a clock icon and monospace font
             ctx.fillStyle = '#FFD700';
-            ctx.font = 'bold 11px system-ui, -apple-system, sans-serif';
+            ctx.font = 'bold 11px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace';
             ctx.textBaseline = 'top';
-            ctx.fillText('MISSION TIME', barX, 70);
+            ctx.fillText('⏱ MISSION TIME', barX, 70);
             
             // Bar Track
             ctx.fillStyle = '#222';

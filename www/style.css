@@ -705,9 +705,9 @@ canvas.level10-theme.fixed {
     /* ============================================================ */
     /* DPAD SIZING CONTROLS - ADJUST THESE VALUES TO RESIZE MANUALLY */
     /* ============================================================ */
-    --dpad-size: 150px;      /* The overall width/height of the circular D-pad plate */
-    --dpad-btn-size: 44px;  /* The width/height of each individual arrow button */
-    --dpad-gap: 6px;        /* Spacing between the D-pad buttons */
+    --dpad-size: 154px;      /* Total diameter of the D-pad container plate */
+    --dpad-btn-size: 44px;  /* Sizing of each directional button inside */
+    --dpad-gap: 8px;        /* Spacing between the directional buttons */
     /* ============================================================ */
 
     display: grid;
@@ -717,13 +717,15 @@ canvas.level10-theme.fixed {
     justify-content: center;
     align-items: center;
 
-    /* Give the D-pad its clean circular controller shape */
+    /* Circular glassmorphic controller backing */
     width: var(--dpad-size);
     height: var(--dpad-size);
     border-radius: 50%;
-    background: rgba(0, 0, 0, 0.35);
-    border: 2px solid rgba(255, 255, 255, 0.15);
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+    background: rgba(10, 16, 12, 0.58) !important;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    border: 2px solid rgba(57, 255, 20, 0.32) !important;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5), inset 0 0 16px rgba(57, 255, 20, 0.12) !important;
 }
 
 /* Coordinate slots for D-pad buttons to prevent layout shifting */
@@ -732,7 +734,7 @@ canvas.level10-theme.fixed {
     grid-row: 1;
     width: var(--dpad-btn-size) !important;
     height: var(--dpad-btn-size) !important;
-    font-size: clamp(14px, 3vw, 20px) !important;
+    font-size: clamp(14px, 3.2vw, 18px) !important;
 }
 
 .touch-left-btn {
@@ -740,7 +742,7 @@ canvas.level10-theme.fixed {
     grid-row: 2;
     width: var(--dpad-btn-size) !important;
     height: var(--dpad-btn-size) !important;
-    font-size: clamp(14px, 3vw, 20px) !important;
+    font-size: clamp(14px, 3.2vw, 18px) !important;
 }
 
 .touch-right-btn {
@@ -748,7 +750,7 @@ canvas.level10-theme.fixed {
     grid-row: 2;
     width: var(--dpad-btn-size) !important;
     height: var(--dpad-btn-size) !important;
-    font-size: clamp(14px, 3vw, 20px) !important;
+    font-size: clamp(14px, 3.2vw, 18px) !important;
 }
 
 .touch-down-btn {
@@ -756,40 +758,65 @@ canvas.level10-theme.fixed {
     grid-row: 3;
     width: var(--dpad-btn-size) !important;
     height: var(--dpad-btn-size) !important;
-    font-size: clamp(14px, 3vw, 20px) !important;
+    font-size: clamp(14px, 3.2vw, 18px) !important;
 }
 
 .touch-cluster-right {
     right: calc(26px + env(safe-area-inset-right, 0px));
     bottom: calc(26px + env(safe-area-inset-bottom, 0px));
+    position: absolute;
     display: grid;
-    grid-template-columns: repeat(2, auto);
+    /* Clean 3-column system to align WATCH, JUMP, and ACT in a perfect triangle */
+    grid-template-columns: repeat(3, auto);
+    grid-template-rows: repeat(2, auto);
     gap: 12px;
     justify-items: center;
     align-items: center;
 }
 
-.touch-omnitrix {
-    left: 50%;
-    bottom: calc(26px + env(safe-area-inset-bottom, 0px));
-    transform: translateX(-50%);
-    flex-direction: column-reverse;
-    gap: 8px;
+/* Clean 2-row layout coordinates for right-side action buttons:
+   Row 1: [Empty], [WATCH], [Empty]
+   Row 2: [JUMP], [Empty], [ACT]
+*/
+.touch-button-watch {
+    grid-column: 2;
+    grid-row: 1;
 }
 
+.touch-jump {
+    grid-column: 1;
+    grid-row: 2;
+}
+
+.touch-act {
+    grid-column: 3;
+    grid-row: 2;
+}
+
+/* Professional, high-end neon cyber-gaming override for buttons */
 .touch-button,
 .touch-alien-button {
     display: grid;
     place-items: center;
-    border: 2px solid rgba(255, 255, 255, 0.78);
-    background: rgba(0, 0, 0, 0.42);
-    color: #fff;
-    text-shadow: 1px 1px 0 #000;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.38), inset 0 0 14px rgba(255, 255, 255, 0.08);
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    cursor: pointer;
-    touch-action: none;
-    -webkit-tap-highlight-color: transparent;
+    border: 2px solid rgba(57, 255, 20, 0.65) !important;
+    background: rgba(10, 16, 12, 0.72) !important;
+    color: #39FF14 !important;
+    font-weight: bold;
+    text-shadow: 0 0 4px rgba(57, 255, 20, 0.4);
+    box-shadow: 0 0 15px rgba(57, 255, 20, 0.15), inset 0 0 10px rgba(57, 255, 20, 0.08) !important;
+    transition: transform 0.1s ease, box-shadow 0.1s ease !important;
+}
+
+/* Satisfying reactive glowing compression when tapped */
+.touch-button.is-pressed,
+.touch-alien-button.is-pressed,
+.touch-button:active,
+.touch-alien-button:active {
+    transform: scale(0.92) !important;
+    background: rgba(57, 255, 20, 0.45) !important;
+    color: #FFFFFF !important;
+    box-shadow: 0 0 25px rgba(57, 255, 20, 0.8), inset 0 0 12px rgba(57, 255, 20, 0.3) !important;
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.8) !important;
 }
 
 .touch-button {
