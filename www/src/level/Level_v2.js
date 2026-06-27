@@ -18,7 +18,8 @@ export class Level {
 
         // LEVEL GENERATION
         if (levelIndex >= 1 && levelIndex <= 11) {
-            const ROWS = 20;
+            // Trim 3 rows of empty sky to magnify/enlarge all mobile game elements
+            const ROWS = 17;
             const COLS = levelIndex >= 5 ? 200 : (levelIndex === 4 ? 250 : (levelIndex === 3 ? 200 : 150));
             const TS = this.tileSize;
             const skyChar = '.';

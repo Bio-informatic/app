@@ -7,8 +7,9 @@ export class Mario {
         this.vx = 0;
         this.vy = 0;
         this.speed = 5;
-        this.jumpForce = -12;
-        this.gravity = 0.5;
+        // Tuned to match the high-definition layout and prevent floaty jumps
+        this.jumpForce = -13;
+        this.gravity = 0.6;
         this.grounded = false;
         this.input = input;
         this.state = 'SMALL'; // SMALL, FOURARMS, HEATBLAST, DIAMONDHEAD
@@ -366,14 +367,14 @@ export class Mario {
             }
         } else {
             if (jumpPressed && this.grounded) {
-                // Upgrade has higher floaty jump
-                this.vy = this.state === 'FOURARMS' ? -14 : (this.state === 'UPGRADE' ? -15 : -12);
+                // Jumps scaled slightly higher to match the snappy gravity of 0.6
+                this.vy = this.state === 'FOURARMS' ? -15 : (this.state === 'UPGRADE' ? -16 : -13);
                 this.grounded = false;
                 this.canDoubleJump = true;
                 this._justJumped = true;
             } else if (jumpJustPressed && !this.grounded && this.canDoubleJump && this.doubleJumpsRemaining > 0) {
-                // Double jump — higher boost
-                this.vy = this.state === 'FOURARMS' ? -18 : (this.state === 'UPGRADE' ? -19 : -16);
+                // Double jumps scaled to prevent hitting the new ceiling limit too easily
+                this.vy = this.state === 'FOURARMS' ? -19 : (this.state === 'UPGRADE' ? -20 : -17);
                 this.canDoubleJump = false;
                 this.doubleJumpsRemaining--;
                 this._justJumped = true;

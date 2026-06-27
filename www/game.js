@@ -1519,19 +1519,22 @@ function gameLoop(timestamp) {
             }
 
             // --- Camera Interpolation & Target Calculation ---
-            let targetCamScale = 1.0;
+            // Calculate a base scale factor so the 640px level height fits perfectly on the screen
+            const baseHeightScale = GAME_HEIGHT / level.height;
+            let targetCamScale = baseHeightScale;
             let targetCamCX = mario.x + mario.width / 2;
             let targetCamCY = level.height - GAME_HEIGHT / 2;
 
             if (bossCutsceneActive) {
                 if (bossCutscenePhase === 'effect' || bossCutscenePhase === 'zoom_in' || bossCutscenePhase === 'dialog') {
-                    targetCamScale = 2.2;
+                    // Zoom in proportionally relative to your device's height scale
+                    targetCamScale = baseHeightScale * 2.2;
                     if (bossCutsceneTarget) {
                         targetCamCX = bossCutsceneTarget.x + bossCutsceneTarget.width / 2;
                         targetCamCY = bossCutsceneTarget.y + bossCutsceneTarget.height / 2;
                     }
                 } else if (bossCutscenePhase === 'zoom_out') {
-                    targetCamScale = 1.0;
+                    targetCamScale = baseHeightScale;
                     targetCamCX = mario.x + mario.width / 2;
                     targetCamCY = level.height - GAME_HEIGHT / 2;
                 }
@@ -1662,6 +1665,12 @@ function gameLoop(timestamp) {
                 octumba.update(deltaTime, level, mario.x, mario.y);
             }
             mario.update(deltaTime, level);
+
+            // Ceiling Physical Boundary: prevents the player from jumping off-screen at the top
+            if (mario.y < 0) {
+                mario.y = 0;
+                mario.vy = 0;
+            }
             const currentOmnitrixLockState = isTransformationLocked();
             if (currentOmnitrixLockState !== lastOmnitrixLockedState) {
                 lastOmnitrixLockedState = currentOmnitrixLockState;
