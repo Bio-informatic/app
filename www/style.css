@@ -699,29 +699,30 @@ canvas.level10-theme.fixed {
 .touch-cluster-left {
     left: calc(26px + env(safe-area-inset-left, 0px));
     bottom: calc(26px + env(safe-area-inset-bottom, 0px));
+    display: grid;
+    /* Rigid 3x3 Grid for Plus-Sign D-pad shape */
+    grid-template-columns: repeat(3, auto);
+    grid-template-rows: repeat(3, auto);
+    gap: 8px;
+    justify-items: center;
+    align-items: center;
 }
 
 .touch-cluster-right {
     right: calc(26px + env(safe-area-inset-right, 0px));
     bottom: calc(26px + env(safe-area-inset-bottom, 0px));
     display: grid;
-    grid-template-areas:
-        "omni omni"
-        "jump act";
+    /* Clean 2-column layout for action buttons on the right side */
+    grid-template-columns: repeat(2, auto);
     gap: 12px;
     justify-items: center;
+    align-items: center;
 }
 
-.touch-button-watch {
-    grid-area: omni;
-}
-
-.touch-jump {
-    grid-area: jump;
-}
-
-.touch-act {
-    grid-area: act;
+/* Re-defined DOWN button styles to sit on the right side in Levels 5 and 11 */
+.touch-down {
+    background: rgba(40, 10, 10, 0.42);
+    border-color: rgba(255, 60, 60, 0.65);
 }
 
 .touch-omnitrix {

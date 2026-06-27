@@ -71,6 +71,40 @@ resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
 
 
+// ─── Touch Controls UI Dynamic Mapping ───
+function updateTouchUI() {
+    const watchBtn = document.getElementById('touch-watch-btn');
+    const jumpBtn = document.getElementById('touch-jump-btn');
+    const downBtn = document.getElementById('touch-down-btn');
+    const leftUpBtn = document.getElementById('touch-up-left-btn');
+    const leftDownBtn = document.getElementById('touch-down-left-btn');
+    
+    if (!mario) return;
+
+    // 1. Hide the WATCH button until the watch is acquired
+    if (watchBtn) {
+        watchBtn.style.display = mario.hasWatch ? 'grid' : 'none';
+    }
+
+    // 2. We moved UP and DOWN movement to the left-side D-Pad (only visible in Levels 5 & 11)
+    const isFlyingLevel = currentLevelIndex === 5 || currentLevelIndex === 11;
+    if (leftUpBtn) {
+        leftUpBtn.style.display = isFlyingLevel ? 'grid' : 'none';
+    }
+    if (leftDownBtn) {
+        leftDownBtn.style.display = isFlyingLevel ? 'grid' : 'none';
+    }
+
+    // 3. Keep right-side JUMP button consistently labeled as "JUMP"
+    if (jumpBtn) {
+        jumpBtn.textContent = 'JUMP';
+    }
+
+    // 4. Ensure right-side DOWN button remains hidden (since it's now on the left)
+    if (downBtn) {
+        downBtn.style.display = 'none';
+    }
+}
 
 // ─── UI Elements ─────────────────────────────
 const modal = document.getElementById('level-complete-modal');
@@ -1149,18 +1183,21 @@ function drawBossCutsceneOverlay(ctx) {
             ctx.fillText(value, x + 92, y);
         };
 
-        drawPanelShell(leftPanelX, panelY, panelW, panelH, 'OMNITRIX SCAN');
+        // Shift background panels up by 17 pixels (Y = letterboxH + 5 instead of +22)
+        const adjustedPanelY = letterboxH + 5;
+
+        drawPanelShell(leftPanelX, adjustedPanelY, panelW, panelH, 'OMNITRIX SCAN');
         ctx.fillStyle = '#FFFFFF';
         ctx.font = 'bold 20px system-ui, -apple-system, sans-serif';
-        ctx.fillText(bossCutsceneName, leftPanelX + 18, panelY + 48);
+        ctx.fillText(bossCutsceneName, leftPanelX + 18, adjustedPanelY + 48);
         ctx.fillStyle = bossDetails.color;
         ctx.font = 'bold 11px system-ui, -apple-system, sans-serif';
-        ctx.fillText(bossDetails.className, leftPanelX + 18, panelY + 67);
-        drawDataRow(leftPanelX + 18, panelY + 88, 'ID', bossDetails.threatId, bossDetails.color);
-        drawDataRow(leftPanelX + 18, panelY + 107, 'ZONE', bossDetails.domain.toUpperCase());
-        drawDataRow(leftPanelX + 18, panelY + 126, 'TYPE', bossDetails.signature.toUpperCase());
+        ctx.fillText(bossDetails.className, leftPanelX + 18, adjustedPanelY + 67);
+        drawDataRow(leftPanelX + 18, adjustedPanelY + 88, 'ID', bossDetails.threatId, bossDetails.color);
+        drawDataRow(leftPanelX + 18, adjustedPanelY + 107, 'ZONE', bossDetails.domain.toUpperCase());
+        drawDataRow(leftPanelX + 18, adjustedPanelY + 126, 'TYPE', bossDetails.signature.toUpperCase());
 
-        drawPanelShell(rightPanelX, panelY, panelW, panelH, 'BATTLE READOUT');
+        drawPanelShell(rightPanelX, adjustedPanelY, panelW, panelH, 'BATTLE READOUT');
         drawDataRow(rightPanelX + 18, panelY + 48, 'PATTERN', bossDetails.behavior.toUpperCase());
         drawDataRow(rightPanelX + 18, panelY + 67, 'COUNTER', bossDetails.counter.toUpperCase(), bossDetails.color);
         ctx.fillStyle = 'rgba(0, 255, 102, 0.72)';
@@ -1211,12 +1248,13 @@ function drawBossCutsceneOverlay(ctx) {
         ctx.save();
         ctx.translate(GAME_WIDTH / 2, GAME_HEIGHT / 2);
         ctx.scale(0.65, 0.65);
-        ctx.translate(-GAME_WIDTH / 2, -GAME_HEIGHT / 2);
 
         const boxWidth = Math.min(680, GAME_WIDTH - 40);
-        const boxHeight = 120;
+        // Reduced the height of the speech box to 95px to take up less vertical space
+        const boxHeight = 95;
         const boxX = (GAME_WIDTH - boxWidth) / 2;
-        const boxY = GAME_HEIGHT - boxHeight - 75;
+        // Shifted dialogue speech box lower down to sit near the bottom letterbox border
+        const boxY = GAME_HEIGHT - boxHeight - 20;
 
         // Draw glowing command box
         ctx.save();
