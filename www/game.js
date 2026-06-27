@@ -75,7 +75,6 @@ window.addEventListener('resize', resizeCanvas);
 function updateTouchUI() {
     const watchBtn = document.getElementById('touch-watch-btn');
     const jumpBtn = document.getElementById('touch-jump-btn');
-    const downBtn = document.getElementById('touch-down-btn');
     const leftUpBtn = document.getElementById('touch-up-left-btn');
     const leftDownBtn = document.getElementById('touch-down-left-btn');
     
@@ -86,7 +85,7 @@ function updateTouchUI() {
         watchBtn.style.display = mario.hasWatch ? 'grid' : 'none';
     }
 
-    // 2. We moved UP and DOWN movement to the left-side D-Pad (only visible in Levels 5 & 11)
+    // 2. Display the Left-Side D-Pad UP and DOWN buttons only in flying levels (5 and 11)
     const isFlyingLevel = currentLevelIndex === 5 || currentLevelIndex === 11;
     if (leftUpBtn) {
         leftUpBtn.style.display = isFlyingLevel ? 'grid' : 'none';
@@ -98,11 +97,6 @@ function updateTouchUI() {
     // 3. Keep right-side JUMP button consistently labeled as "JUMP"
     if (jumpBtn) {
         jumpBtn.textContent = 'JUMP';
-    }
-
-    // 4. Ensure right-side DOWN button remains hidden (since it's now on the left)
-    if (downBtn) {
-        downBtn.style.display = 'none';
     }
 }
 

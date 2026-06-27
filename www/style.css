@@ -699,30 +699,74 @@ canvas.level10-theme.fixed {
 .touch-cluster-left {
     left: calc(26px + env(safe-area-inset-left, 0px));
     bottom: calc(26px + env(safe-area-inset-bottom, 0px));
+    position: absolute;
+    pointer-events: auto;
+
+    /* ============================================================ */
+    /* DPAD SIZING CONTROLS - ADJUST THESE VALUES TO RESIZE MANUALLY */
+    /* ============================================================ */
+    --dpad-size: 150px;      /* The overall width/height of the circular D-pad plate */
+    --dpad-btn-size: 44px;  /* The width/height of each individual arrow button */
+    --dpad-gap: 6px;        /* Spacing between the D-pad buttons */
+    /* ============================================================ */
+
     display: grid;
-    /* Rigid 3x3 Grid for Plus-Sign D-pad shape */
-    grid-template-columns: repeat(3, auto);
-    grid-template-rows: repeat(3, auto);
-    gap: 8px;
-    justify-items: center;
+    grid-template-columns: repeat(3, var(--dpad-btn-size));
+    grid-template-rows: repeat(3, var(--dpad-btn-size));
+    gap: var(--dpad-gap);
+    justify-content: center;
     align-items: center;
+
+    /* Give the D-pad its clean circular controller shape */
+    width: var(--dpad-size);
+    height: var(--dpad-size);
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.35);
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+}
+
+/* Coordinate slots for D-pad buttons to prevent layout shifting */
+.touch-up-btn {
+    grid-column: 2;
+    grid-row: 1;
+    width: var(--dpad-btn-size) !important;
+    height: var(--dpad-btn-size) !important;
+    font-size: clamp(14px, 3vw, 20px) !important;
+}
+
+.touch-left-btn {
+    grid-column: 1;
+    grid-row: 2;
+    width: var(--dpad-btn-size) !important;
+    height: var(--dpad-btn-size) !important;
+    font-size: clamp(14px, 3vw, 20px) !important;
+}
+
+.touch-right-btn {
+    grid-column: 3;
+    grid-row: 2;
+    width: var(--dpad-btn-size) !important;
+    height: var(--dpad-btn-size) !important;
+    font-size: clamp(14px, 3vw, 20px) !important;
+}
+
+.touch-down-btn {
+    grid-column: 2;
+    grid-row: 3;
+    width: var(--dpad-btn-size) !important;
+    height: var(--dpad-btn-size) !important;
+    font-size: clamp(14px, 3vw, 20px) !important;
 }
 
 .touch-cluster-right {
     right: calc(26px + env(safe-area-inset-right, 0px));
     bottom: calc(26px + env(safe-area-inset-bottom, 0px));
     display: grid;
-    /* Clean 2-column layout for action buttons on the right side */
     grid-template-columns: repeat(2, auto);
     gap: 12px;
     justify-items: center;
     align-items: center;
-}
-
-/* Re-defined DOWN button styles to sit on the right side in Levels 5 and 11 */
-.touch-down {
-    background: rgba(40, 10, 10, 0.42);
-    border-color: rgba(255, 60, 60, 0.65);
 }
 
 .touch-omnitrix {

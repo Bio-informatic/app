@@ -19,13 +19,15 @@
 
         <div id="touch-controls" aria-label="Touch controls">
             <div class="touch-cluster touch-cluster-left" aria-label="Movement controls">
-                <!-- Configured Left & Right buttons, and placed the Down button in the markup so it can be arranged -->
-                <button class="touch-button touch-button-dpad" type="button" data-touch-key="ArrowLeft" aria-label="Move left">&lt;</button>
-                <button class="touch-button touch-button-dpad" type="button" data-touch-key="ArrowRight" aria-label="Move right">&gt;</button>
+                <!-- Circular D-pad layout: UP, LEFT, RIGHT, DOWN (UP & DOWN are dynamically toggled in game.js) -->
+                <button class="touch-button touch-button-dpad touch-up-btn" type="button" id="touch-up-left-btn" data-touch-key="ArrowUp" aria-label="Move up">^</button>
+                <button class="touch-button touch-button-dpad touch-left-btn" type="button" data-touch-key="ArrowLeft" aria-label="Move left">&lt;</button>
+                <button class="touch-button touch-button-dpad touch-right-btn" type="button" data-touch-key="ArrowRight" aria-label="Move right">&gt;</button>
+                <button class="touch-button touch-button-dpad touch-down-btn" type="button" id="touch-down-left-btn" data-touch-key="ArrowDown" aria-label="Move down">v</button>
             </div>
 
             <div class="touch-cluster touch-cluster-right" aria-label="Jump and action controls">
-                <!-- Removed the DOWN button from this side. Keeping only JUMP, WATCH, and ACT -->
+                <!-- Restructured right-side layout: JUMP, WATCH, ACT (Removed the DOWN button) -->
                 <button class="touch-button touch-button-action touch-jump" type="button" id="touch-jump-btn" data-touch-key="Space" data-touch-key-value=" " aria-label="Jump">JUMP</button>
                 <button class="touch-button touch-button-watch" type="button" id="touch-watch-btn" data-touch-key="KeyC" aria-label="Open Omnitrix">WATCH</button>
                 <button class="touch-button touch-button-action touch-act" type="button" data-touch-key="KeyF" aria-label="Action">ACT</button>
