@@ -2438,14 +2438,13 @@ export class Level {
         ctx.restore();
     }
 
-    drawLevel9WaterDarkness(ctx, mario, camX = 0) { // Added camX parameter
+    drawLevel9WaterDarkness(ctx, mario, camX = 0) {
         if (this.levelIndex !== 9 || !this.waterStartX) return;
 
         const overlayTop = -100;
         const overlayHeight = this.height + 200;
         
         // CRITICAL OPTIMIZATION: Only draw water darkness on the visible screen!
-        // (Assuming screen width is never greater than 2500px)
         const drawX = Math.max(this.waterStartX, camX - 200);
         const drawW = 2500; 
 
@@ -2462,7 +2461,8 @@ export class Level {
             visibilityMask.addColorStop(0.75, 'rgba(0, 8, 20, 0.16)');
             visibilityMask.addColorStop(1, 'rgba(0, 8, 20, 0.42)');
             ctx.fillStyle = visibilityMask;
-            ctx.fillRect(this.waterStartX, overlayTop, overlayWidth, overlayHeight);
+            // Replaced overlayWidth with drawW and this.waterStartX with drawX
+            ctx.fillRect(drawX, overlayTop, drawW, overlayHeight);
 
             const frontBiasX = light.x + (mario.facingRight ? 120 : -120);
             const coneMask = ctx.createRadialGradient(frontBiasX, light.y + 10, 16, frontBiasX, light.y + 10, 320);
@@ -2470,7 +2470,7 @@ export class Level {
             coneMask.addColorStop(0.45, 'rgba(0, 8, 20, 0.045)');
             coneMask.addColorStop(1, 'rgba(0, 8, 20, 0.16)');
             ctx.fillStyle = coneMask;
-            ctx.fillRect(this.waterStartX, overlayTop, overlayWidth, overlayHeight);
+            ctx.fillRect(drawX, overlayTop, drawW, overlayHeight);
 
             ctx.globalCompositeOperation = 'screen';
             const glow = ctx.createRadialGradient(light.x, light.y, 6, light.x, light.y, 240);
@@ -2478,7 +2478,7 @@ export class Level {
             glow.addColorStop(0.35, 'rgba(140, 220, 255, 0.2)');
             glow.addColorStop(1, 'rgba(140, 220, 255, 0)');
             ctx.fillStyle = glow;
-            ctx.fillRect(this.waterStartX, overlayTop, overlayWidth, overlayHeight);
+            ctx.fillRect(drawX, overlayTop, drawW, overlayHeight);
         }
         else {
             const darkSea = ctx.createLinearGradient(this.waterStartX, 0, this.waterStartX, this.height);
@@ -2486,7 +2486,7 @@ export class Level {
             darkSea.addColorStop(0.5, 'rgba(0, 8, 20, 0.34)');
             darkSea.addColorStop(1, 'rgba(0, 8, 20, 0.5)');
             ctx.fillStyle = darkSea;
-            ctx.fillRect(this.waterStartX, overlayTop, overlayWidth, overlayHeight);
+            ctx.fillRect(drawX, overlayTop, drawW, overlayHeight);
         }
 
         ctx.restore();

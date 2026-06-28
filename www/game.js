@@ -3041,7 +3041,7 @@ function gameLoop(timestamp) {
         });
         mario.draw(ctx);
         if (currentLevelIndex === 9) {
-            level.drawLevel9WaterDarkness(ctx, camX);
+            level.drawLevel9WaterDarkness(ctx, mario, camX); // <-- Added camX here!
         }
 
         // ── Draw Shockwaves ───────────────────
