@@ -3015,6 +3015,11 @@ function gameLoop(timestamp) {
         level.draw(ctx, mario, camX);
 
         entities.forEach(entity => {
+            // CRITICAL OPTIMIZATION: Entity Frustum Culling
+            // Only draw enemies and items if they are actually visible on the screen!
+            const isVisible = (entity.x + (entity.width || 50) > camX - 300) && (entity.x < camX + (halfW * 2) + 300);
+            if (!isVisible) return; 
+
             if (entity.type === 'gorillomba' && !entity.dead) {
                 const wildMuttActive = mario.state === 'WILDMUTT';
                 entity.draw(ctx, wildMuttActive);
@@ -3036,7 +3041,7 @@ function gameLoop(timestamp) {
         });
         mario.draw(ctx);
         if (currentLevelIndex === 9) {
-            level.drawLevel9WaterDarkness(ctx, mario);
+            level.drawLevel9WaterDarkness(ctx, camX);
         }
 
         // ── Draw Shockwaves ───────────────────

@@ -1217,19 +1217,31 @@ export class Level {
             }
             ctx.globalAlpha = 1.0;
 
+            // OPTIMIZATION: Cache the expensive radial gradient once!
+            if (!this.cachedGasGrad) {
+                this.cachedGasGrad = ctx.createRadialGradient(0, 0, 10, 0, 0, 100);
+                this.cachedGasGrad.addColorStop(0, 'rgba(120, 255, 50, 0.2)');
+                this.cachedGasGrad.addColorStop(1, 'rgba(50, 150, 20, 0)');
+            }
+
             // The very first fog and gasses of level 5
             for (let i = 0; i < 35; i++) {
                 const cx = ((i * 220 + now / 25) % (this.width + 300)) - 150;
+                
+                // CULLING: Skip drawing fog that is off-screen
+                if (cx < camX - 300 || cx > camX + 2500) continue;
+
                 const cy = groundY - 40 + Math.sin(now / 1500 + i) * 50;
                 const r = 40 + (i % 4) * 20;
                 
-                const gasGrad = ctx.createRadialGradient(cx, cy, r * 0.1, cx, cy, r);
-                gasGrad.addColorStop(0, 'rgba(120, 255, 50, 0.2)');
-                gasGrad.addColorStop(1, 'rgba(50, 150, 20, 0)');
-                ctx.fillStyle = gasGrad;
+                ctx.save();
+                ctx.translate(cx, cy);
+                ctx.scale(r / 100, r / 100);
+                ctx.fillStyle = this.cachedGasGrad;
                 ctx.beginPath();
-                ctx.arc(cx, cy, r, 0, Math.PI * 2);
+                ctx.arc(0, 0, 100, 0, Math.PI * 2);
                 ctx.fill();
+                ctx.restore();
             }
         } else if (this.levelIndex === 6) {
             // Layer 1: Damaged buildings (very far layer)
@@ -1901,8 +1913,17 @@ export class Level {
         }
 
         // ── Tiles ──
-        for (let y = 0; y < this.tiles.length; y++) {
-            for (let x = 0; x < this.tiles[y].length; x++) {
+        const l2Grads = {};
+        
+        // CRITICAL OPTIMIZATION: CAMERA FRUSTUM CULLING
+        // Calculate which columns are actually visible on the screen.
+        // We add a safe buffer of a few tiles (250px to 2000px) so things don't pop in abruptly.
+        const startCol = Math.max(0, Math.floor((camX - 250) / ts));
+        const endCol = Math.min(this.cols - 1, Math.ceil((camX + 2000) / ts));
+
+        for (let y = 0; y < this.rows; y++) {
+            // Loop ONLY through the visible columns on the screen!
+            for (let x = startCol; x <= endCol; x++) {
                 const tile = this.tiles[y][x];
                 if (tile === 0) continue;
 
@@ -1912,15 +1933,18 @@ export class Level {
                 switch (tile) {
                     case 1: // Ground
                         if (this.levelIndex === 2) {
-                            // Spooky forest ground with dirt gradient
-                            const gGrad = ctx.createLinearGradient(px, py, px, py + ts);
-                            gGrad.addColorStop(0, '#1e1530');
-                            gGrad.addColorStop(1, '#120c20');
-                            ctx.fillStyle = gGrad;
+                            // OPTIMIZATION: Cache the dirt gradient per row instead of creating it per tile
+                            if (!l2Grads[py]) {
+                                l2Grads[py] = ctx.createLinearGradient(0, py, 0, py + ts);
+                                l2Grads[py].addColorStop(0, '#1e1530');
+                                l2Grads[py].addColorStop(1, '#120c20');
+                            }
+                            ctx.fillStyle = l2Grads[py];
                             ctx.fillRect(px, py, ts, ts);
                             ctx.strokeStyle = '#0d0a18';
                             ctx.lineWidth = 1;
                             ctx.strokeRect(px, py, ts, ts);
+                            
                             // Top edge grass tufts on topmost ground row
                             if (y > 0 && this.tiles[y - 1] && this.tiles[y - 1][x] === 0) {
                                 ctx.fillStyle = 'rgba(30, 80, 45, 0.55)';
@@ -2414,16 +2438,20 @@ export class Level {
         ctx.restore();
     }
 
-    drawLevel9WaterDarkness(ctx, mario) {
+    drawLevel9WaterDarkness(ctx, mario, camX = 0) { // Added camX parameter
         if (this.levelIndex !== 9 || !this.waterStartX) return;
 
-        const overlayTop = -1000;
-        const overlayHeight = this.height + 2000;
-        const overlayWidth = this.width - this.waterStartX;
+        const overlayTop = -100;
+        const overlayHeight = this.height + 200;
+        
+        // CRITICAL OPTIMIZATION: Only draw water darkness on the visible screen!
+        // (Assuming screen width is never greater than 2500px)
+        const drawX = Math.max(this.waterStartX, camX - 200);
+        const drawW = 2500; 
 
         ctx.save();
         ctx.fillStyle = 'rgba(0, 8, 20, 0.38)';
-        ctx.fillRect(this.waterStartX, overlayTop, overlayWidth, overlayHeight);
+        ctx.fillRect(drawX, overlayTop, drawW, overlayHeight);
 
         if (mario && mario.state === 'RIPJAWS' && mario.inWater) {
             const light = mario.getRipjawsLightPosition();
