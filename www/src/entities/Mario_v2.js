@@ -1,4 +1,33 @@
+// GLOBAL OPTIMIZATION CACHE: Prevents GC pauses by creating these objects only once.
+const COLLISION_PROFILES = {
+    SMALL:      { sideInset: 4, topInset: 2, bottomInset: 0, headInset: 4, feetInset: 5 },
+    FOURARMS:   { sideInset: 3, topInset: 3, bottomInset: 0, headInset: 5, feetInset: 7 },
+    HEATBLAST:  { sideInset: 4, topInset: 3, bottomInset: 0, headInset: 6, feetInset: 7 },
+    XLR8:       { sideInset: 6, topInset: 2, bottomInset: 0, headInset: 7, feetInset: 8 },
+    STINKFLY:   { sideInset: 5, topInset: 3, bottomInset: 0, headInset: 6, feetInset: 8 },
+    UPGRADE:    { sideInset: 4, topInset: 2, bottomInset: 0, headInset: 6, feetInset: 6 },
+    WILDMUTT:   { sideInset: 4, topInset: 6, bottomInset: 0, headInset: 6, feetInset: 8 },
+    DIAMONDHEAD:{ sideInset: 4, topInset: 2, bottomInset: 0, headInset: 6, feetInset: 7 },
+    RIPJAWS:    { sideInset: 5, topInset: 3, bottomInset: 0, headInset: 6, feetInset: 7 },
+    GREYMATTER: { sideInset: 3, topInset: 2, bottomInset: 0, headInset: 4, feetInset: 4 },
+    GHOSTFREAK: { sideInset: 5, topInset: 2, bottomInset: 0, headInset: 6, feetInset: 6 }
+};
+
+const FX_PROFILES = {
+    FOURARMS: { aura: 'rgba(255,110,60,0.20)', glow: '#ff6a3a', bobAmp: 1.4, bobSpeed: 200, tiltAmp: 0.02, tiltSpeed: 350, scalePulse: 0.02, scaleSpeed: 300 },
+    HEATBLAST: { aura: 'rgba(255,120,0,0.24)', glow: '#ff6c00', bobAmp: 1.6, bobSpeed: 170, tiltAmp: 0.018, tiltSpeed: 320, scalePulse: 0.025, scaleSpeed: 250 },
+    XLR8: { aura: 'rgba(0,220,255,0.20)', glow: '#00e6ff', bobAmp: 1.0, bobSpeed: 230, tiltAmp: 0.035, tiltSpeed: 190, scalePulse: 0.018, scaleSpeed: 220 },
+    STINKFLY: { aura: 'rgba(170,255,70,0.19)', glow: '#9aff3f', bobAmp: 2.3, bobSpeed: 140, tiltAmp: 0.03, tiltSpeed: 210, scalePulse: 0.02, scaleSpeed: 180 },
+    UPGRADE: { aura: 'rgba(57,255,20,0.20)', glow: '#39ff14', bobAmp: 1.2, bobSpeed: 200, tiltAmp: 0.02, tiltSpeed: 260, scalePulse: 0.02, scaleSpeed: 210 },
+    WILDMUTT: { aura: 'rgba(255,180,80,0.16)', glow: '#ffbe50', bobAmp: 1.3, bobSpeed: 175, tiltAmp: 0.02, tiltSpeed: 300, scalePulse: 0.015, scaleSpeed: 230 },
+    DIAMONDHEAD: { aura: 'rgba(0,255,255,0.18)', glow: '#47ffff', bobAmp: 1.1, bobSpeed: 260, tiltAmp: 0.015, tiltSpeed: 300, scalePulse: 0.015, scaleSpeed: 260 },
+    RIPJAWS: { aura: 'rgba(0,170,255,0.18)', glow: '#00a8ff', bobAmp: 1.8, bobSpeed: 170, tiltAmp: 0.02, tiltSpeed: 230, scalePulse: 0.02, scaleSpeed: 200 },
+    GREYMATTER: { aura: 'rgba(170,255,40,0.18)', glow: '#abff28', bobAmp: 1.0, bobSpeed: 190, tiltAmp: 0.03, tiltSpeed: 220, scalePulse: 0.018, scaleSpeed: 240 },
+    GHOSTFREAK: { aura: 'rgba(200,140,255,0.16)', glow: '#cc8cff', bobAmp: 2.6, bobSpeed: 120, tiltAmp: 0.028, tiltSpeed: 200, scalePulse: 0.022, scaleSpeed: 180 }
+};
+
 export class Mario {
+// ... rest of the file ...
     constructor(x, y, input) {
         this.x = x;
         this.y = y;
@@ -456,20 +485,7 @@ export class Mario {
     }
 
     _getCollisionProfile() {
-        const profiles = {
-            SMALL:      { sideInset: 4, topInset: 2, bottomInset: 0, headInset: 4, feetInset: 5 },
-            FOURARMS:   { sideInset: 3, topInset: 3, bottomInset: 0, headInset: 5, feetInset: 7 },
-            HEATBLAST:  { sideInset: 4, topInset: 3, bottomInset: 0, headInset: 6, feetInset: 7 },
-            XLR8:       { sideInset: 6, topInset: 2, bottomInset: 0, headInset: 7, feetInset: 8 },
-            STINKFLY:   { sideInset: 5, topInset: 3, bottomInset: 0, headInset: 6, feetInset: 8 },
-            UPGRADE:    { sideInset: 4, topInset: 2, bottomInset: 0, headInset: 6, feetInset: 6 },
-            WILDMUTT:   { sideInset: 4, topInset: 6, bottomInset: 0, headInset: 6, feetInset: 8 },
-            DIAMONDHEAD:{ sideInset: 4, topInset: 2, bottomInset: 0, headInset: 6, feetInset: 7 },
-            RIPJAWS:    { sideInset: 5, topInset: 3, bottomInset: 0, headInset: 6, feetInset: 7 },
-            GREYMATTER: { sideInset: 3, topInset: 2, bottomInset: 0, headInset: 4, feetInset: 4 },
-            GHOSTFREAK: { sideInset: 5, topInset: 2, bottomInset: 0, headInset: 6, feetInset: 6 }
-        };
-        return profiles[this.state] || profiles.SMALL;
+        return COLLISION_PROFILES[this.state] || COLLISION_PROFILES.SMALL;
     }
 
     _getCollisionRect() {
@@ -618,19 +634,7 @@ export class Mario {
     }
 
     _getAlienFxProfile(state, now) {
-        const profiles = {
-            FOURARMS: { aura: 'rgba(255,110,60,0.20)', glow: '#ff6a3a', bobAmp: 1.4, bobSpeed: 200, tiltAmp: 0.02, tiltSpeed: 350, scalePulse: 0.02, scaleSpeed: 300 },
-            HEATBLAST: { aura: 'rgba(255,120,0,0.24)', glow: '#ff6c00', bobAmp: 1.6, bobSpeed: 170, tiltAmp: 0.018, tiltSpeed: 320, scalePulse: 0.025, scaleSpeed: 250 },
-            XLR8: { aura: 'rgba(0,220,255,0.20)', glow: '#00e6ff', bobAmp: 1.0, bobSpeed: 230, tiltAmp: 0.035, tiltSpeed: 190, scalePulse: 0.018, scaleSpeed: 220 },
-            STINKFLY: { aura: 'rgba(170,255,70,0.19)', glow: '#9aff3f', bobAmp: 2.3, bobSpeed: 140, tiltAmp: 0.03, tiltSpeed: 210, scalePulse: 0.02, scaleSpeed: 180 },
-            UPGRADE: { aura: 'rgba(57,255,20,0.20)', glow: '#39ff14', bobAmp: 1.2, bobSpeed: 200, tiltAmp: 0.02, tiltSpeed: 260, scalePulse: 0.02, scaleSpeed: 210 },
-            WILDMUTT: { aura: 'rgba(255,180,80,0.16)', glow: '#ffbe50', bobAmp: 1.3, bobSpeed: 175, tiltAmp: 0.02, tiltSpeed: 300, scalePulse: 0.015, scaleSpeed: 230 },
-            DIAMONDHEAD: { aura: 'rgba(0,255,255,0.18)', glow: '#47ffff', bobAmp: 1.1, bobSpeed: 260, tiltAmp: 0.015, tiltSpeed: 300, scalePulse: 0.015, scaleSpeed: 260 },
-            RIPJAWS: { aura: 'rgba(0,170,255,0.18)', glow: '#00a8ff', bobAmp: 1.8, bobSpeed: 170, tiltAmp: 0.02, tiltSpeed: 230, scalePulse: 0.02, scaleSpeed: 200 },
-            GREYMATTER: { aura: 'rgba(170,255,40,0.18)', glow: '#abff28', bobAmp: 1.0, bobSpeed: 190, tiltAmp: 0.03, tiltSpeed: 220, scalePulse: 0.018, scaleSpeed: 240 },
-            GHOSTFREAK: { aura: 'rgba(200,140,255,0.16)', glow: '#cc8cff', bobAmp: 2.6, bobSpeed: 120, tiltAmp: 0.028, tiltSpeed: 200, scalePulse: 0.022, scaleSpeed: 180 }
-        };
-        return profiles[state] || { aura: 'rgba(57,255,20,0.15)', glow: '#39ff14', bobAmp: 1.0, bobSpeed: 200, tiltAmp: 0.015, tiltSpeed: 260, scalePulse: 0.015, scaleSpeed: 250 };
+        return FX_PROFILES[state] || { aura: 'rgba(57,255,20,0.15)', glow: '#39ff14', bobAmp: 1.0, bobSpeed: 200, tiltAmp: 0.015, tiltSpeed: 260, scalePulse: 0.015, scaleSpeed: 250 };
     }
 
     _drawAlienWithFx(ctx, drawFn, state) {

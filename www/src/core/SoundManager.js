@@ -27,6 +27,12 @@ export class SoundManager {
             this.musicGain = this.ctx.createGain();
             this.musicGain.gain.value = 0.06; // Very quiet background
             this.musicGain.connect(this.masterGain);
+            
+            // OPTIMIZATION: Pre-generate a 2-second noise buffer once and cache it!
+            this.noiseBuffer = this.ctx.createBuffer(1, this.ctx.sampleRate * 2, this.ctx.sampleRate);
+            const data = this.noiseBuffer.getChannelData(0);
+            for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+
             this._loadSpeechVoices();
             console.log('🔊 SoundManager initialised');
         };
@@ -103,12 +109,10 @@ export class SoundManager {
     }
 
     _noise(start, dur, gainVal = 0.15, dest = null) {
-        if (!this._ok()) return;
-        const buf = this.ctx.createBuffer(1, this.ctx.sampleRate * dur, this.ctx.sampleRate);
-        const data = buf.getChannelData(0);
-        for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+        if (!this._ok() || !this.noiseBuffer) return;
         const src = this.ctx.createBufferSource();
-        src.buffer = buf;
+        src.buffer = this.noiseBuffer;
+        src.loop = true; // Loop the cached buffer instantly
         const g = this.ctx.createGain();
         g.gain.value = gainVal;
         g.gain.exponentialRampToValueAtTime(0.001, start + dur);
@@ -118,14 +122,11 @@ export class SoundManager {
         src.stop(start + dur);
     }
 
-    // Filtered noise for more organic sounds
     _filteredNoise(start, dur, filterFreq, filterType, gainVal = 0.1) {
-        if (!this._ok()) return;
-        const buf = this.ctx.createBuffer(1, this.ctx.sampleRate * dur, this.ctx.sampleRate);
-        const data = buf.getChannelData(0);
-        for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+        if (!this._ok() || !this.noiseBuffer) return;
         const src = this.ctx.createBufferSource();
-        src.buffer = buf;
+        src.buffer = this.noiseBuffer;
+        src.loop = true;
         const filter = this.ctx.createBiquadFilter();
         filter.type = filterType;
         filter.frequency.value = filterFreq;
