@@ -771,8 +771,13 @@ function loadLevel(index, carryOverState = null) {
     levelRestartFlashActive = false;
 
     const startY = (level.rows - 7) * level.tileSize;
-    // Shifted starting X-coordinate from 100 to 250 so Ben spawns in front of/to the right of the D-pad
-    mario = new Mario(300, startY, input);
+    
+    // Dynamically calculate the precise horizontal center of your phone's starting screen bounds
+    const baseScale = GAME_HEIGHT / level.height;
+    const startingScreenWidth = GAME_WIDTH / baseScale;
+    const centerX = Math.round(startingScreenWidth / 2) - 16; // Center pivot (offsets Mario's width)
+
+    mario = new Mario(centerX, startY, input);
 
     if (carryOverState && carryOverState.hasWatch) {
         mario.hasWatch = true;

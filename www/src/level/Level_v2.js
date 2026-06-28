@@ -57,7 +57,8 @@ export class Level {
                 }
             }
 
-            let curX = 12;
+            // Obstacles, pits, and enemies only start generating after column 35 to leave a clear starting area
+            let curX = 35;
             let mysteryCount = 0;
             const targetMysteryCount = levelIndex === 1 ? 7 : (levelIndex === 4 ? 5 : (levelIndex === 3 ? 10 : 15));
 
@@ -626,14 +627,14 @@ export class Level {
             }
         }
         
-        // Level 2 special: Heatblast unlock
+        // Level 2 special: Heatblast unlock (shifted to x: 800 so it sits in front of Ben's starting screen position)
         if (this.levelIndex === 2) {
-            this.entities.push({ x: 300, y: 150, type: 'heatblast_item' });
+            this.entities.push({ x: 800, y: 150, type: 'heatblast_item' });
         }
         
-        // Level 3 special: XLR8 unlock
+        // Level 3 special: XLR8 unlock (shifted to x: 800 so it sits in front of Ben's starting screen position)
         if (this.levelIndex === 3) {
-            this.entities.push({ x: 300, y: 150, type: 'xlr8_item' });
+            this.entities.push({ x: 800, y: 150, type: 'xlr8_item' });
         }
     }
 
