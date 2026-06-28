@@ -1575,8 +1575,8 @@ function gameLoop(timestamp) {
 
             if (bossCutsceneActive) {
                 if (bossCutscenePhase === 'effect' || bossCutscenePhase === 'zoom_in' || bossCutscenePhase === 'dialog') {
-                    // Zoom in proportionally relative to your device's height scale
-                    targetCamScale = baseHeightScale * 2.2;
+                    // Slight zoom in (reduced multiplier from 2.2 to 1.6 so the entire boss body fits on screen)
+                    targetCamScale = baseHeightScale * 1.6;
                     if (bossCutsceneTarget) {
                         targetCamCX = bossCutsceneTarget.x + bossCutsceneTarget.width / 2;
                         targetCamCY = bossCutsceneTarget.y + bossCutsceneTarget.height / 2;
