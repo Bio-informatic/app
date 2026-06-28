@@ -671,10 +671,10 @@ export class Mario {
         const cx = this.x + this.width / 2;
         const cy = this.y + this.height / 2;
 
-        // 1. Signature Green Flash
+        // 1. Signature Green Flash (Optimized smaller radius to save mobile GPU power)
         const flashRadius = progress < 0.5 
-            ? progress * 400 
-            : (1 - progress) * 400;
+            ? progress * 130 
+            : (1 - progress) * 130;
         
         const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, flashRadius);
         gradient.addColorStop(0, '#FFFFFF');
@@ -686,11 +686,17 @@ export class Mario {
         ctx.arc(cx, cy, flashRadius, 0, Math.PI * 2);
         ctx.fill();
 
-        // 2. Silhouette Blending
-        ctx.globalAlpha = progress < 0.5 ? progress * 2 : (1 - progress) * 2;
+        // 2. Silhouette Blending (Optimized: Removed the heavy 'ctx.filter' drop-shadow!)
         ctx.save();
-        // Draw a "shadow" of the target form
-        ctx.filter = 'brightness(0) drop-shadow(0 0 10px #39FF14)';
+        ctx.globalAlpha = progress < 0.5 ? progress * 2 : (1 - progress) * 2;
+        
+        // Lightweight green ambient glow behind the alien (replaces the heavy blur filter)
+        ctx.fillStyle = 'rgba(57, 255, 20, 0.45)';
+        ctx.beginPath();
+        ctx.arc(cx, cy, this.height * 0.6, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Draw the target alien form normally
         if (this.state === 'HEATBLAST') this.drawHeatblast(ctx);
         else if (this.state === 'FOURARMS') this.drawFourArms(ctx);
         else if (this.state === 'XLR8') this.drawXLR8(ctx);
@@ -704,27 +710,28 @@ export class Mario {
         else this.drawMario(ctx);
         ctx.restore();
 
-        // 3. Shockwaves
+        // 3. Shockwaves (Optimized: Reduced count from 3 to 2 to minimize draw calls)
         ctx.globalAlpha = 1 - progress;
         ctx.strokeStyle = '#39FF14';
-        ctx.lineWidth = 4;
-        for (let i = 0; i < 3; i++) {
-            const waveProgress = (progress + i * 0.3) % 1;
-            const r = waveProgress * 150;
+        ctx.lineWidth = 3;
+        for (let i = 0; i < 2; i++) {
+            const waveProgress = (progress + i * 0.5) % 1;
+            const r = waveProgress * 90; // Sized down to match the new screen limits
             ctx.beginPath();
             ctx.arc(cx, cy, r, 0, Math.PI * 2);
             ctx.stroke();
         }
 
-        // 4. Pixel Particles
+        // 4. Pixel Particles (Optimized: Reduced loop count from 15 to 8)
         ctx.globalAlpha = 1.0;
-        for (let i = 0; i < 15; i++) {
-            const angle = (i / 15) * Math.PI * 2 + (progress * 5);
-            const dist = 30 + progress * 100;
+        const particleCount = 8;
+        for (let i = 0; i < particleCount; i++) {
+            const angle = (i / particleCount) * Math.PI * 2 + (progress * 4);
+            const dist = 20 + progress * 65;
             const px = cx + Math.cos(angle) * dist;
             const py = cy + Math.sin(angle) * dist;
             ctx.fillStyle = i % 2 === 0 ? '#39FF14' : '#FFF';
-            ctx.fillRect(px, py, 4, 4);
+            ctx.fillRect(px, py, 3, 3);
         }
 
         ctx.restore();
