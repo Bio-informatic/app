@@ -2565,7 +2565,8 @@ function gameLoop(timestamp) {
                             if (mario.invulnerableTimer > 0) return;
                             if (mario.state === 'GHOSTFREAK') {
                                 mario.bossHitsTaken = (mario.bossHitsTaken || 0) + 1;
-                                sfx.bump();
+                                // Fixed: replaced the non-existent sfx.bump() with the valid sfx.bossHit()
+                                sfx.bossHit();
                                 screenShake = 20;
                                 if (mario.bossHitsTaken >= 10) {
                                     sfx.death();
