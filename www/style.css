@@ -698,6 +698,33 @@ canvas.level10-theme.fixed {
 .controls-row span {
     color: #FFFFFF;
 }
+/* ===== BOSS CUTSCENE SKIP BUTTON ===== */
+#btn-skip-cutscene {
+    position: absolute;
+    top: calc(20px + env(safe-area-inset-top, 0px));
+    right: calc(20px + env(safe-area-inset-right, 0px));
+    display: none;
+    z-index: 3000;
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: bold;
+    color: #39FF14;
+    background: rgba(10, 16, 12, 0.85);
+    border: 2px solid rgba(57, 255, 20, 0.8);
+    border-radius: 8px;
+    box-shadow: 0 0 15px rgba(57, 255, 20, 0.4), inset 0 0 8px rgba(57, 255, 20, 0.2);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    pointer-events: auto;
+    transition: transform 0.1s ease, background 0.1s ease;
+}
+#btn-skip-cutscene:active {
+    transform: scale(0.92);
+    background: rgba(57, 255, 20, 0.3);
+}
+
 /* ===== TOUCH CONTROLS ===== */
 #touch-controls {
     position: absolute;

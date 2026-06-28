@@ -126,7 +126,21 @@ const btnShopContinuousManual = document.getElementById('btn-shop-continuous-man
 const btnCloseShop = document.getElementById('btn-close-shop');
 const controlsModal = document.getElementById('controls-modal');
 const btnStartGame = document.getElementById('btn-start-game');
+const btnSkipCutscene = document.getElementById('btn-skip-cutscene');
 const devHotspot = document.getElementById('dev-hotspot');
+
+if (btnSkipCutscene) {
+    btnSkipCutscene.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        // Skip the sequence if a cutscene is currently running
+        if (bossCutsceneActive && bossCutscenePhase !== 'zoom_out' && bossCutscenePhase !== 'none') {
+            bossCutscenePhase = 'zoom_out';
+            bossCutsceneTimer = 0;
+            bossCutsceneTextProgress = bossCutsceneText.length;
+            btnSkipCutscene.style.display = 'none';
+        }
+    });
+}
 
 if (devHotspot) {
     let devHotspotTaps = 0;
@@ -931,6 +945,7 @@ function loadLevel(index, carryOverState = null) {
     bossCutsceneVoiceEnded = false;
     bossCutsceneVoiceEndTime = 0;
     bossCutsceneSpeechSynced = false;
+    if (btnSkipCutscene) btnSkipCutscene.style.display = 'none';
     currentCamCX = mario.x + mario.width / 2;
     currentCamCY = level.height - GAME_HEIGHT / 2;
     currentCamScale = 1.0;
@@ -1001,6 +1016,7 @@ function triggerBossCutscene(bossEntity, bossName, text) {
     bossCutsceneVoiceEndTime = 0;
     bossCutsceneSpeechSynced = false;
     bossEntrancePlayed = true;
+    if (btnSkipCutscene) btnSkipCutscene.style.display = 'block';
 }
 
 function entityFullyInsideScreen(entity, camLeft, camTop, camWidth, camHeight) {
@@ -1139,8 +1155,16 @@ function drawBossCutsceneOverlay(ctx) {
         const panelY = letterboxH + 22;
         const panelW = 242;
         const panelH = 136;
-        const leftPanelX = 24 - (1 - detailAlpha) * 44;
-        const rightPanelX = GAME_WIDTH - panelW - 24 + (1 - detailAlpha) * 44;
+        
+        // Calculate the true screen edges factoring in the 0.65 cinematic camera scale
+        const scaledWidth = GAME_WIDTH / 0.65;
+        const scaledLeftEdge = (GAME_WIDTH / 2) - (scaledWidth / 2);
+        const scaledRightEdge = (GAME_WIDTH / 2) + (scaledWidth / 2);
+
+        // Stick the panels exactly to the far sides of the mobile screen
+        const leftPanelX = scaledLeftEdge + 24 - (1 - detailAlpha) * 44;
+        const rightPanelX = scaledRightEdge - panelW - 24 + (1 - detailAlpha) * 44;
+        
         const drawPanelShell = (x, y, w, h, title) => {
             const notch = 13;
             const g = ctx.createLinearGradient(x, y, x + w, y + h);
@@ -1300,15 +1324,16 @@ function drawBossCutsceneOverlay(ctx) {
         ctx.stroke();
 
         // Boss Name Header
+        ctx.textAlign = 'center'; // Set to center!
         ctx.fillStyle = '#00FF66';
         ctx.font = 'bold 18px system-ui, -apple-system, sans-serif';
-        ctx.fillText(`[ ${bossCutsceneName} ]`, boxX + 20, boxY + 32);
+        ctx.fillText(`[ ${bossCutsceneName} ]`, boxX + boxWidth / 2, boxY + 32);
 
         // Typewriter Message
         ctx.fillStyle = '#FFFFFF';
         ctx.font = '16px system-ui, -apple-system, sans-serif';
         const visibleText = bossCutsceneText.substring(0, bossCutsceneTextProgress);
-        wrapText(ctx, visibleText, boxX + 20, boxY + 62, boxWidth - 40, 24);
+        wrapText(ctx, visibleText, boxX + boxWidth / 2, boxY + 62, boxWidth - 40, 24);
 
         // Press Space Prompt
         if (bossCutsceneTextProgress >= bossCutsceneText.length) {
@@ -1316,9 +1341,10 @@ function drawBossCutsceneOverlay(ctx) {
             if (blink) {
                 ctx.fillStyle = '#00FF66';
                 ctx.font = 'bold 12px system-ui, -apple-system, sans-serif';
-                ctx.fillText('PRESS SPACE TO FIGHT', boxX + boxWidth - 170, boxY + boxHeight - 15);
+                ctx.fillText('PRESS SPACE TO FIGHT', boxX + boxWidth / 2, boxY + boxHeight - 15);
             }
         }
+        ctx.textAlign = 'left'; // Always restore default alignment!
         ctx.restore();
     }
 }
@@ -1683,6 +1709,7 @@ function gameLoop(timestamp) {
                     bossCutscenePhase = 'zoom_out';
                     bossCutsceneTimer = 0;
                     input.keys = {};
+                    if (btnSkipCutscene) btnSkipCutscene.style.display = 'none'; // Hide when naturally progressing
                 }
             } else if (bossCutscenePhase === 'zoom_out') {
                 if (bossCutsceneTimer >= 1200) {
