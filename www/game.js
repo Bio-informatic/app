@@ -108,6 +108,8 @@ const btnNext = document.getElementById('btn-next-level');
 const btnRestart = document.getElementById('btn-restart');
 
 const omnitrixIntro = document.getElementById('omnitrix-intro');
+const gameOverModal = document.getElementById('gameover-modal');
+const btnGameOverRestart = document.getElementById('btn-gameover-restart');
 const btnOmnitrixOk = document.getElementById('btn-omnitrix-ok');
 const omnitrixPanel = document.getElementById('omnitrix-panel');
 const alienGrid = document.getElementById('alien-grid');
@@ -896,6 +898,7 @@ function loadLevel(index, carryOverState = null) {
     }
 
     modal.style.display = 'none';
+    if (gameOverModal) gameOverModal.style.display = 'none';
     closeOmnitrixPanel();
     canvas.classList.toggle('level2-theme', index === 2);
     canvas.classList.toggle('level3-theme', index === 3);
@@ -941,6 +944,13 @@ btnRestart.addEventListener('click', () => {
     deathPenalty();
     loadLevel(currentLevelIndex, { hasWatch: mario.hasWatch });
 });
+
+if (btnGameOverRestart) {
+    btnGameOverRestart.addEventListener('click', () => {
+        deathPenalty();
+        loadLevel(currentLevelIndex, { hasWatch: mario.hasWatch });
+    });
+}
 
 function deathPenalty() {
     // 1. Lock and reset the specific alien for this level so they must look for the item again
@@ -3276,15 +3286,15 @@ function gameLoop(timestamp) {
 
         // ── GAME OVER ─────────────────────────
         if (gameState === 'GAMEOVER') {
-            ctx.fillStyle = 'rgba(0,0,0,0.65)';
+            // Draws a red-tinted dark backing over the canvas
+            ctx.fillStyle = 'rgba(12, 4, 6, 0.65)';
             ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-            ctx.fillStyle = '#FF4444';
-            ctx.font = 'bold 60px system-ui, -apple-system, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('GAME OVER', GAME_WIDTH / 2, GAME_HEIGHT / 2);
-            ctx.fillStyle = 'white';
-            ctx.font = '22px system-ui, -apple-system, sans-serif';
-            ctx.fillText('Press Space to Restart', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 50);
+            
+            // Displays your styled HTML Game Over Modal
+            if (gameOverModal && gameOverModal.style.display !== 'flex') {
+                gameOverModal.style.display = 'flex';
+                closeOmnitrixPanel(); // Closes the watch panel automatically if left open
+            }
         }
 
         requestAnimationFrame(gameLoop);

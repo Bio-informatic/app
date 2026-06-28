@@ -51,6 +51,15 @@
             </div>
         </div>
 
+        <!-- Game Over Modal (Warning-Red Glowing Theme) -->
+        <div id="gameover-modal" class="modal-overlay">
+            <div class="modal-content" style="border-color: rgba(255, 58, 58, 0.8) !important; box-shadow: 0 0 var(--modal-border-glow) rgba(255, 58, 58, 0.3) !important;">
+                <h2 style="color: #FF3A3A !important; letter-spacing: 2px;">⚠️ SYSTEM OVERLOAD</h2>
+                <p id="gameover-intro-text" style="color: #ccc; font-size: var(--modal-font-size-text); line-height: 1.6; margin: 0 0 16px;">Ben's vitals have been depleted and the Omnitrix signal has timed out.</p>
+                <button id="btn-gameover-restart" class="btn btn-primary btn-modal" style="border-color: rgba(255, 58, 58, 0.7) !important; color: #FF3A3A !important; background: #0a0505 !important; box-shadow: 0 0 8px rgba(255, 58, 58, 0.15) !important;">↺ RESTART LEVEL</button>
+            </div>
+        </div>
+
         <!-- Level Complete Modal (Re-structured to use uniform overlays and side-by-side buttons) -->
         <div id="level-complete-modal" class="modal-overlay">
             <div class="modal-content">
