@@ -141,6 +141,124 @@ const btnStartGame = document.getElementById('btn-start-game');
 const btnSkipCutscene = document.getElementById('btn-skip-cutscene');
 const devHotspot = document.getElementById('dev-hotspot');
 
+// Start Page Overlays
+const startScreen = document.getElementById('start-screen');
+const btnPlayGame = document.getElementById('btn-play-game');
+const btnShowCodex = document.getElementById('btn-show-codex');
+const btnCloseCodex = document.getElementById('btn-close-codex');
+const btnShowHelp = document.getElementById('btn-show-help');
+const btnCloseHelp = document.getElementById('btn-close-help');
+const codexModal = document.getElementById('codex-modal');
+const helpModal = document.getElementById('help-modal');
+const codexGrid = document.getElementById('codex-grid');
+
+// Hardcoded Level Titles for Display inside the Level Select Layout
+const levelTitles = [
+    '',
+    'Find the Mystery! ❓',
+    'Raise your arms 👐',
+    'Welcome to HELL 🔥',
+    'LIGHT SPEED! ⚡',
+    'The Toxic Sewers 🪰',
+    'The Destroyed World 💻',
+    'The Hidden Senses Jungle 🐺',
+    'Winter is Here! ❄️',
+    'Sea in Desert 🏖️',
+    'Inside the Omnitrix ⌚',
+    'The Last Battle 💀'
+];
+
+function renderLevelSelect() {
+    if (!codexGrid) return;
+    codexGrid.innerHTML = '';
+    
+    for (let i = 1; i <= 11; i++) {
+        const isUnlocked = i <= maxLevelUnlocked;
+        const slot = document.createElement('div');
+        
+        slot.className = 'codex-item';
+        
+        if (isUnlocked) {
+            slot.style.cursor = 'pointer';
+            slot.style.borderColor = 'rgba(57, 255, 20, 0.8)';
+            slot.addEventListener('click', () => {
+                if (codexModal) codexModal.style.display = 'none';
+                if (startScreen) startScreen.style.display = 'none';
+                sfx.collectItem();
+                
+                // Directly warps Mario, giving appropriate alien unlocks [2]
+                window.devWarp(i); 
+            });
+        } else {
+            slot.style.opacity = '0.35';
+            slot.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+        }
+        
+        const subtitle = isUnlocked ? levelTitles[i] : 'REDACTED';
+        slot.innerHTML = `
+            <span class="codex-icon">${isUnlocked ? '🔓' : '🔒'}</span>
+            <div style="display:flex; flex-direction:column; text-align:left;">
+                <b>Level ${i}</b>
+                <span style="font-size:9px; color:#88FF88; white-space:nowrap; max-width:130px; overflow:hidden; text-overflow:ellipsis;">${subtitle}</span>
+            </div>
+        `;
+        codexGrid.appendChild(slot);
+    }
+}
+
+if (btnPlayGame) {
+    btnPlayGame.addEventListener('click', () => {
+        if (startScreen) startScreen.style.display = 'none';
+        sfx.collectItem();
+        
+        if (currentLevelIndex === 1 && !mario.hasWatch) {
+            controlsModal.style.display = 'flex';
+            gameState = 'PAUSED';
+        } else {
+            gameState = 'PLAYING';
+        }
+        
+        sfx.startMusic(currentLevelIndex);
+    });
+}
+
+if (btnShowCodex) {
+    btnShowCodex.addEventListener('click', () => {
+        renderLevelSelect(); // Redraw grid dynamically to reflect new level unlocks!
+        if (codexModal) codexModal.style.display = 'flex';
+    });
+}
+
+if (btnCloseCodex) {
+    btnCloseCodex.addEventListener('click', () => {
+        if (codexModal) codexModal.style.display = 'none';
+    });
+}
+
+if (btnShowHelp) {
+    btnShowHelp.addEventListener('click', () => {
+        if (helpModal) helpModal.style.display = 'flex';
+    });
+}
+
+if (btnCloseHelp) {
+    btnCloseHelp.addEventListener('click', () => {
+        if (helpModal) helpModal.style.display = 'none';
+    });
+}
+
+if (btnSkipCutscene) {
+    btnSkipCutscene.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        if (bossCutsceneActive && bossCutscenePhase !== 'zoom_out' && bossCutscenePhase !== 'none') {
+            bossCutscenePhase = 'zoom_out';
+            bossCutsceneTimer = 0;
+            bossCutsceneTextProgress = bossCutsceneText.length;
+            btnSkipCutscene.style.display = 'none';
+        }
+    });
+}
+
 if (btnSkipCutscene) {
     btnSkipCutscene.addEventListener('pointerdown', (e) => {
         e.preventDefault();
@@ -202,6 +320,9 @@ const ALIENS = [
     { key: '10', name: 'Ghostfreak', icon: '👻', unlocked: false, lives: 25 },
 ];
 let currentLevelIndex = 1;
+
+// OPTIMIZATION: Persistent Level Select State tracking
+let maxLevelUnlocked = parseInt(localStorage.getItem('maxLevelUnlocked') || '1', 10);
 
 function getDefaultBoxEnemyType(levelIndex) {
     if (levelIndex === 3) return 'lava_goomba';
@@ -791,6 +912,10 @@ function loadLevel(index, carryOverState = null) {
     currentLevelIndex = index;
     level = new Level(index);
     
+    // Track and save the highest level unlocked so far in persistence
+    maxLevelUnlocked = Math.max(maxLevelUnlocked, index);
+    localStorage.setItem('maxLevelUnlocked', maxLevelUnlocked.toString());
+    
     // Timer Init
     levelTimeRemaining = LEVEL_TIME_LIMIT_SECONDS;
     levelStartScore = score;
@@ -921,7 +1046,10 @@ function loadLevel(index, carryOverState = null) {
     
     // If first time starting or warped, maybe show controls? 
     // For now, only show controls on the very first start (Level 1)
-    if (index === 1 && !mario.hasWatch) {
+    if (gameState === 'START_MENU') {
+        // OPTIMIZATION: Keep controls popup hidden while the start menu is active!
+        if (controlsModal) controlsModal.style.display = 'none';
+    } else if (index === 1 && !mario.hasWatch) {
         controlsModal.style.display = 'flex';
         gameState = 'PAUSED';
     } else {
@@ -962,9 +1090,12 @@ function loadLevel(index, carryOverState = null) {
     currentCamCY = level.height - GAME_HEIGHT / 2;
     currentCamScale = 1.0;
     lastAlienState = 'SMALL';
-    sfx.startMusic(index);
+    if (gameState !== 'START_MENU') {
+        sfx.startMusic(index);
+    }
 }
 
+gameState = 'START_MENU';
 loadLevel(1);
 
 // ─── Modal Buttons ────────────────────────────
@@ -3182,13 +3313,14 @@ function gameLoop(timestamp) {
         }
 
         // ── HUD ───────────────────────────────
-        const hudX = 18; // Slightly indented to sit cleanly beside the neon framing line
-        const hudY = 38;
-        const hudLineHeight = 16;
-        
-        // Draw a vertical neon-green laser bar on the left (instantly frames the stats like a sci-fi console)
-        ctx.fillStyle = '#39ff14'; // Neon Green
-        ctx.fillRect(8, 38, 3, 28);
+        if (gameState !== 'START_MENU') {
+            const hudX = 18; // Slightly indented to sit cleanly beside the neon framing line
+            const hudY = 38;
+            const hudLineHeight = 16;
+            
+            // Draw a vertical neon-green laser bar on the left (instantly frames the stats like a sci-fi console)
+            ctx.fillStyle = '#39ff14'; // Neon Green
+            ctx.fillRect(8, 38, 3, 28);
 
         ctx.fillStyle = 'white';
         ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
@@ -3208,13 +3340,16 @@ function gameLoop(timestamp) {
         ctx.fillText(`SCORE. ${paddedScore}`, hudX, hudY + hudLineHeight);
         
         ctx.shadowColor = 'transparent';
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 0;
-        ctx.shadowBlur = 0;
-        ctx.textBaseline = 'alphabetic';
-        ctx.shadowOffsetY = 0;
-        ctx.shadowBlur = 0;
-        ctx.textBaseline = 'alphabetic';
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
+            ctx.shadowBlur = 0;
+            ctx.textBaseline = 'alphabetic';
+            ctx.shadowOffsetY = 0;
+            ctx.shadowBlur = 0;
+            ctx.textBaseline = 'alphabetic';
+        }
+
+        // ── Alien Countdown Timer HUD ───────── (HIDDEN)
 
         // ── Alien Countdown Timer HUD ───────── (HIDDEN)
         /*

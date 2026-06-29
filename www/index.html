@@ -20,6 +20,49 @@
         <!-- Skip Cutscene Button -->
         <button id="btn-skip-cutscene" type="button" aria-label="Skip Introduction">SKIP ⏭</button>
 
+        <!-- Starting Menu Screen -->
+        <div id="start-screen" class="modal-overlay" style="display: flex;">
+            <div class="modal-content start-content">
+                <div class="omnitrix-logo" style="font-size: 56px; margin-bottom: 6px; filter: drop-shadow(0 0 15px #39FF14);">⌚</div>
+                <h1 id="start-title">OMNITRIX OUTBREAK</h1>
+                <p id="start-subtitle">Super Mario & Ben 10 Crossover</p>
+                
+                <div class="start-menu-btns">
+                    <button id="btn-play-game" class="btn btn-primary btn-modal btn-start-play">PLAY GAME ▶</button>
+                    <button id="btn-show-codex" class="btn btn-modal">LEVEL SELECT 🗺️</button>
+                    <button id="btn-show-help" class="btn btn-modal">HOW TO PLAY 🎮</button>
+                </div>
+                
+                <div class="start-footer">Jan Informatics • 2026</div>
+            </div>
+        </div>
+
+        <!-- Level Select Modal (Formerly Codex) -->
+        <div id="codex-modal" class="modal-overlay">
+            <div class="modal-content codex-content">
+                <h2 style="margin-bottom: 18px !important;">🗺️ LEVEL SELECT</h2>
+                <div id="codex-grid">
+                    <!-- Loaded dynamically via JavaScript in game.js -->
+                </div>
+                <button id="btn-close-codex" class="btn btn-primary btn-modal" style="width: 120px; margin-top: 10px;">BACK ◀</button>
+            </div>
+        </div>
+
+        <!-- How To Play Sub-Modal -->
+        <div id="help-modal" class="modal-overlay">
+            <div class="modal-content">
+                <h2 style="margin-bottom: 18px !important;">🎮 HOW TO PLAY</h2>
+                <div class="controls-grid">
+                    <div class="controls-row"><b>Move:</b> <span>Arrows (Keyb) | D-Pad (Touch)</span></div>
+                    <div class="controls-row"><b>Jump:</b> <span>Space/Up (Keyb) | JUMP (Touch)</span></div>
+                    <div class="controls-row"><b>Watch Panel:</b> <span>C Key (Keyb) | WATCH (Touch)</span></div>
+                    <div class="controls-row"><b>Use Ability:</b> <span>F Key (Keyb) | ACT (Touch)</span></div>
+                </div>
+                <p style="color: #ccc; font-size: 11px; line-height: 1.5; margin: 10px 0 18px 0;">Find the hidden Mystery Box in Level 1 to acquire your Omnitrix and begin unlocking transformations!</p>
+                <button id="btn-close-help" class="btn btn-primary btn-modal" style="width: 120px;">BACK ◀</button>
+            </div>
+        </div>
+
         <div id="touch-controls" aria-label="Touch controls">
             <div class="touch-cluster touch-cluster-left" aria-label="Movement controls">
                 <!-- Upgraded direction characters to solid geometric controller arrows (conditionally displayed in game.js) -->
