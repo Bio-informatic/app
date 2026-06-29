@@ -51,17 +51,29 @@ let GAME_WIDTH = window.innerWidth;
 let GAME_HEIGHT = window.innerHeight;
 var level, mario;
 
+let lastKnownWidth = 0;
+let lastKnownHeight = 0;
+
 function resizeCanvas() {
-    // Detect your phone's physical pixel density ratio (DPR)
+    const nextWidth = window.innerWidth;
+    const nextHeight = window.innerHeight;
+
+    // OPTIMIZATION: Ignore minor address bar collapses on mobile browsers!
+    // Prevents wiping the graphics buffer mid-game and dropping frames.
+    if (lastKnownWidth > 0 && lastKnownHeight > 0 && Math.abs(nextWidth - lastKnownWidth) < 50 && Math.abs(nextHeight - lastKnownHeight) < 50) {
+        return;
+    }
+
+    lastKnownWidth = nextWidth;
+    lastKnownHeight = nextHeight;
+    GAME_WIDTH = nextWidth;
+    GAME_HEIGHT = nextHeight;
+
     const dpr = window.devicePixelRatio || 1;
-    GAME_WIDTH = window.innerWidth;
-    GAME_HEIGHT = window.innerHeight;
     
-    // Scale the canvas's physical backing store up by the pixel density ratio
     canvas.width = GAME_WIDTH * dpr;
     canvas.height = GAME_HEIGHT * dpr;
 
-    // Explicitly tell the canvas context to keep pixel art textures completely sharp
     ctx.imageSmoothingEnabled = false;
     ctx.mozImageSmoothingEnabled = false;
     ctx.webkitImageSmoothingEnabled = false;

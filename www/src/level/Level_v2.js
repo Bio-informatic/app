@@ -10,6 +10,9 @@ export class Level {
         this.tileSize = 32;
         this.tiles = [];
         this.entities = [];
+        
+        // OPTIMIZATION: Centralized gradient cache to prevent GC leaks inside the render loop
+        this.cachedGradients = {};
         this.levelIndex = levelIndex;
         this.unstableTiles = [];
         this.omnitrixFixed = false;
@@ -815,6 +818,15 @@ export class Level {
         };
     }
 
+    // OPTIMIZATION: Helper to lazily generate and cache gradients
+    getGradient(ctx, key, creatorFn) {
+        if (!this.cachedGradients) this.cachedGradients = {};
+        if (!this.cachedGradients[key]) {
+            this.cachedGradients[key] = creatorFn();
+        }
+        return this.cachedGradients[key];
+    }
+
     // ── Draw ────────────────────────────────────────────────────────
     draw(ctx, mario = null, camX = 0) {
         const t = this.getTheme();
@@ -825,72 +837,90 @@ export class Level {
 
         // Sky
         if (this.levelIndex === 3) {
-            const skyGrad = ctx.createLinearGradient(0, 0, 0, this.height);
-            skyGrad.addColorStop(0, '#0a000d');
-            skyGrad.addColorStop(0.4, '#1b020c');
-            skyGrad.addColorStop(0.7, '#3c0512');
-            skyGrad.addColorStop(0.9, '#600711');
-            skyGrad.addColorStop(1.0, '#901212');
-            ctx.fillStyle = skyGrad;
+            ctx.fillStyle = this.getGradient(ctx, 'sky_L3', () => {
+                const skyGrad = ctx.createLinearGradient(0, 0, 0, this.height);
+                skyGrad.addColorStop(0, '#0a000d');
+                skyGrad.addColorStop(0.4, '#1b020c');
+                skyGrad.addColorStop(0.7, '#3c0512');
+                skyGrad.addColorStop(0.9, '#600711');
+                skyGrad.addColorStop(1.0, '#901212');
+                return skyGrad;
+            });
         } else if (this.levelIndex === 2) {
-            const skyGrad = ctx.createLinearGradient(0, -200, 0, this.height);
-            skyGrad.addColorStop(0, '#05040f');     // Almost black top
-            skyGrad.addColorStop(0.3, '#0e0a22');   // Deep indigo
-            skyGrad.addColorStop(0.6, '#1a1235');   // Dark purple
-            skyGrad.addColorStop(0.85, '#1f1540');  // Muted violet
-            skyGrad.addColorStop(1.0, '#140e28');   // Dark base
-            ctx.fillStyle = skyGrad;
+            ctx.fillStyle = this.getGradient(ctx, 'sky_L2', () => {
+                const skyGrad = ctx.createLinearGradient(0, -200, 0, this.height);
+                skyGrad.addColorStop(0, '#05040f');
+                skyGrad.addColorStop(0.3, '#0e0a22');
+                skyGrad.addColorStop(0.6, '#1a1235');
+                skyGrad.addColorStop(0.85, '#1f1540');
+                skyGrad.addColorStop(1.0, '#140e28');
+                return skyGrad;
+            });
         } else if (this.levelIndex === 4) {
-            const skyGrad = ctx.createLinearGradient(0, -200, 0, this.height);
-            skyGrad.addColorStop(0, '#0a0033'); // Deep starry blue
-            skyGrad.addColorStop(0.4, '#220066'); // Rich purple
-            skyGrad.addColorStop(0.8, '#4411aa'); // Bright purple glow near horizon
-            skyGrad.addColorStop(1.0, '#110033'); // Dark ground base
-            ctx.fillStyle = skyGrad;
+            ctx.fillStyle = this.getGradient(ctx, 'sky_L4', () => {
+                const skyGrad = ctx.createLinearGradient(0, -200, 0, this.height);
+                skyGrad.addColorStop(0, '#0a0033');
+                skyGrad.addColorStop(0.4, '#220066');
+                skyGrad.addColorStop(0.8, '#4411aa');
+                skyGrad.addColorStop(1.0, '#110033');
+                return skyGrad;
+            });
         } else if (this.levelIndex === 5) {
-            const skyGrad = ctx.createLinearGradient(0, -200, 0, this.height);
-            skyGrad.addColorStop(0, '#050a05'); // Pitch black cavern roof
-            skyGrad.addColorStop(0.5, '#0a1a0a'); // Dark green mid
-            skyGrad.addColorStop(0.8, '#153315'); // Glowing toxic base
-            skyGrad.addColorStop(1.0, '#0a1a0a');
-            ctx.fillStyle = skyGrad;
+            ctx.fillStyle = this.getGradient(ctx, 'sky_L5', () => {
+                const skyGrad = ctx.createLinearGradient(0, -200, 0, this.height);
+                skyGrad.addColorStop(0, '#050a05');
+                skyGrad.addColorStop(0.5, '#0a1a0a');
+                skyGrad.addColorStop(0.8, '#153315');
+                skyGrad.addColorStop(1.0, '#0a1a0a');
+                return skyGrad;
+            });
         } else if (this.levelIndex === 7) {
-            const skyGrad = ctx.createLinearGradient(0, 0, 0, this.height);
-            skyGrad.addColorStop(0, '#2AB1FC'); // Top sky blue
-            skyGrad.addColorStop(0.6, '#86D4FF'); // Lighter near horizon
-            skyGrad.addColorStop(1.0, '#DDF3FF'); // Almost white horizon
-            ctx.fillStyle = skyGrad;
+            ctx.fillStyle = this.getGradient(ctx, 'sky_L7', () => {
+                const skyGrad = ctx.createLinearGradient(0, 0, 0, this.height);
+                skyGrad.addColorStop(0, '#2AB1FC');
+                skyGrad.addColorStop(0.6, '#86D4FF');
+                skyGrad.addColorStop(1.0, '#DDF3FF');
+                return skyGrad;
+            });
         } else if (this.levelIndex === 6) {
-            const skyGrad = ctx.createLinearGradient(0, 0, 0, this.height);
-            skyGrad.addColorStop(0, '#7EA6B8'); // Dusty blue
-            skyGrad.addColorStop(0.6, '#C4C9B8'); // Hazy clouds
-            skyGrad.addColorStop(1.0, '#D9CDA4'); // Sand dust at horizon
-            ctx.fillStyle = skyGrad;
+            ctx.fillStyle = this.getGradient(ctx, 'sky_L6', () => {
+                const skyGrad = ctx.createLinearGradient(0, 0, 0, this.height);
+                skyGrad.addColorStop(0, '#7EA6B8');
+                skyGrad.addColorStop(0.6, '#C4C9B8');
+                skyGrad.addColorStop(1.0, '#D9CDA4');
+                return skyGrad;
+            });
         } else if (this.levelIndex === 8) {
-            const skyGrad = ctx.createLinearGradient(0, 0, 0, this.height);
-            skyGrad.addColorStop(0, '#100522'); // Dark roof
-            skyGrad.addColorStop(0.6, '#31104A'); // Ambient purple
-            skyGrad.addColorStop(1.0, '#4B2875'); // Warm ground bounce
-            ctx.fillStyle = skyGrad;
+            ctx.fillStyle = this.getGradient(ctx, 'sky_L8', () => {
+                const skyGrad = ctx.createLinearGradient(0, 0, 0, this.height);
+                skyGrad.addColorStop(0, '#100522');
+                skyGrad.addColorStop(0.6, '#31104A');
+                skyGrad.addColorStop(1.0, '#4B2875');
+                return skyGrad;
+            });
         } else if (this.levelIndex === 10) {
-            const skyGrad = ctx.createLinearGradient(0, 0, 0, this.height);
-            if (this.omnitrixFixed) {
-                skyGrad.addColorStop(0, '#040A04');
-                skyGrad.addColorStop(0.5, '#0A1A0A');
-                skyGrad.addColorStop(1.0, '#0C1F0C');
-            } else {
-                skyGrad.addColorStop(0, '#08090C'); // Very dark steel
-                skyGrad.addColorStop(0.5, '#0E1015'); // Deep charcoal
-                skyGrad.addColorStop(1.0, '#141720'); // Slight warm base
-            }
-            ctx.fillStyle = skyGrad;
+            ctx.fillStyle = this.getGradient(ctx, 'sky_L10', () => {
+                const skyGrad = ctx.createLinearGradient(0, 0, 0, this.height);
+                if (this.omnitrixFixed) {
+                    skyGrad.addColorStop(0, '#040A04');
+                    skyGrad.addColorStop(0.5, '#0A1A0A');
+                    skyGrad.addColorStop(1.0, '#0C1F0C');
+                } else {
+                    skyGrad.addColorStop(0, '#08090C');
+                    skyGrad.addColorStop(0.5, '#0E1015');
+                    skyGrad.addColorStop(1.0, '#141720');
+                }
+                return skyGrad;
+            });
         } else if (this.levelIndex === 11) {
-            const skyGrad = ctx.createLinearGradient(0, 0, 0, this.height);
-            skyGrad.addColorStop(0, '#080E18'); // Deep night
-            skyGrad.addColorStop(0.4, '#0F1A2A'); // Dark blue
-            skyGrad.addColorStop(0.8, '#1A2535'); // Slightly lighter near horizon
-            skyGrad.addColorStop(1.0, '#151C25'); // Dark ground base
-            ctx.fillStyle = skyGrad;
+            ctx.fillStyle = this.getGradient(ctx, 'sky_L11', () => {
+                const skyGrad = ctx.createLinearGradient(0, 0, 0, this.height);
+                skyGrad.addColorStop(0, '#080E18');
+                skyGrad.addColorStop(0.4, '#0F1A2A');
+                skyGrad.addColorStop(0.8, '#1A2535');
+                skyGrad.addColorStop(1.0, '#151C25');
+                return skyGrad;
+            });
         } else {
             ctx.fillStyle = t.sky;
         }
@@ -903,8 +933,13 @@ export class Level {
             const imgH = bgImg.naturalHeight;
             const scale = this.height / imgH;
             const scaledW = imgW * scale;
-            // Draw fixed to the screen, tiling horizontally if necessary
-            for (let x = 0; x < this.width; x += scaledW) {
+            
+            // OPTIMIZATION: Only draw background images that are currently overlapping with the screen viewport!
+            // Instead of tiling blindly to this.width (6400px), we tile dynamically around camX
+            const startX = Math.floor(camX / scaledW) * scaledW;
+            const endX = camX + 2500; // safe buffer for wide landscape phone viewports
+            
+            for (let x = startX; x < endX && x < this.width; x += scaledW) {
                 ctx.drawImage(bgImg, x, 0, scaledW, this.height);
             }
         }
