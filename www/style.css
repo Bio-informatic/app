@@ -1079,3 +1079,101 @@ canvas.level10-theme.fixed {
     color: #88FF88;
     margin-left: auto;
 }
+
+/* ===== IN-GAME OPTIONS DROPDOWN ===== */
+#game-menu-container {
+    position: absolute;
+    top: calc(15px + env(safe-area-inset-top, 0px));
+    right: calc(15px + env(safe-area-inset-right, 0px));
+    z-index: 4000;
+    display: none; /* Managed dynamically in game.js */
+}
+
+#btn-game-menu {
+    padding: 6px 12px;
+    font-size: 11px;
+    font-weight: bold;
+    color: #39FF14;
+    background: rgba(10, 16, 12, 0.85);
+    border: 1.5px solid rgba(57, 255, 20, 0.7);
+    border-radius: 6px;
+    box-shadow: 0 0 10px rgba(57, 255, 20, 0.25);
+    cursor: pointer;
+    text-transform: uppercase;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    letter-spacing: 0.5px;
+}
+
+#game-menu-dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    background: rgba(8, 12, 10, 0.95);
+    border: 1.5px solid rgba(57, 255, 20, 0.8);
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.8), 0 0 15px rgba(57, 255, 20, 0.2);
+    display: none; /* Managed dynamically in game.js */
+    flex-direction: column;
+    width: 170px;
+    overflow: hidden;
+    z-index: 4100;
+}
+
+#game-menu-dropdown button {
+    padding: 10px 14px;
+    font-size: 10px;
+    font-weight: bold;
+    color: #FFFFFF;
+    background: transparent;
+    border: none;
+    border-bottom: 1px dashed rgba(57, 255, 20, 0.15);
+    text-align: left;
+    cursor: pointer;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    letter-spacing: 0.5px;
+    transition: background 0.1s ease, color 0.1s ease;
+}
+
+#game-menu-dropdown button:last-child {
+    border-bottom: none;
+}
+
+#game-menu-dropdown button:hover {
+    background: rgba(57, 255, 20, 0.15);
+    color: #39FF14;
+}
+
+/* ===== ADJUST CONTROLS BANNER & TOUCH GUIDE OUTLINES ===== */
+#adjust-banner {
+    position: absolute;
+    top: calc(15px + env(safe-area-inset-top, 0px));
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(4, 10, 6, 0.95);
+    border: 2px solid rgba(57, 255, 20, 0.8);
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(57, 255, 20, 0.4);
+    padding: 10px 18px;
+    display: none; /* Managed dynamically in game.js */
+    align-items: center;
+    gap: 16px;
+    z-index: 4500;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 10px;
+    font-weight: bold;
+    color: #39FF14;
+    white-space: nowrap;
+}
+
+/* Glowing editable boundary guides during layout mode */
+.touch-cluster.adjust-glowing {
+    outline: 2px dashed #39FF14 !important;
+    box-shadow: 0 0 20px #39FF14 !important;
+    animation: pulse-adjust 1s infinite alternate;
+    cursor: move;
+}
+
+@keyframes pulse-adjust {
+    from { outline-color: rgba(57, 255, 20, 0.3); }
+    to { outline-color: rgba(57, 255, 20, 0.95); }
+}

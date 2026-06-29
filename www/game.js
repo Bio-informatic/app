@@ -152,6 +152,201 @@ const codexModal = document.getElementById('codex-modal');
 const helpModal = document.getElementById('help-modal');
 const codexGrid = document.getElementById('codex-grid');
 
+// Game Dropdown Menu
+const menuContainer = document.getElementById('game-menu-container');
+const btnGameMenu = document.getElementById('btn-game-menu');
+const gameMenuDropdown = document.getElementById('game-menu-dropdown');
+const btnMenuAdjust = document.getElementById('btn-menu-adjust');
+const btnMenuQuit = document.getElementById('btn-menu-quit');
+
+// Adjust Controls Overlay
+const adjustBanner = document.getElementById('adjust-banner');
+const btnSaveLayout = document.getElementById('btn-save-layout');
+const btnResetLayout = document.getElementById('btn-reset-layout');
+
+const clusterLeft = document.querySelector('.touch-cluster-left');
+const clusterRight = document.querySelector('.touch-cluster-right');
+
+// Load saved custom layout coordinates on launch
+function applySavedPositions() {
+    const savedLeftPos = JSON.parse(localStorage.getItem('touchLeftPos'));
+    const savedRightPos = JSON.parse(localStorage.getItem('touchRightPos'));
+    if (savedLeftPos && clusterLeft) {
+        clusterLeft.style.left = savedLeftPos.left;
+        clusterLeft.style.bottom = savedLeftPos.bottom;
+        clusterLeft.style.right = 'auto'; // override default right/left constraints
+    }
+    if (savedRightPos && clusterRight) {
+        clusterRight.style.right = savedRightPos.right;
+        clusterRight.style.bottom = savedRightPos.bottom;
+        clusterRight.style.left = 'auto';
+    }
+}
+applySavedPositions();
+
+if (btnGameMenu) {
+    btnGameMenu.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (gameMenuDropdown) {
+            gameMenuDropdown.style.display = gameMenuDropdown.style.display === 'flex' ? 'none' : 'flex';
+        }
+    });
+}
+
+// Close dropdown if clicking anywhere else
+window.addEventListener('click', () => {
+    if (gameMenuDropdown) gameMenuDropdown.style.display = 'none';
+});
+
+if (btnMenuQuit) {
+    btnMenuQuit.addEventListener('click', () => {
+        if (gameMenuDropdown) gameMenuDropdown.style.display = 'none';
+        sfx.stopMusic();
+        
+        // Hide all active modals
+        if (controlsModal) controlsModal.style.display = 'none';
+        if (modal) modal.style.display = 'none';
+        if (gameOverModal) gameOverModal.style.display = 'none';
+        
+        gameState = 'START_MENU';
+        loadLevel(1); // Load Level 1 behind the scenes silently
+        if (startScreen) startScreen.style.display = 'flex';
+    });
+}
+
+// Drag & Drop Layout Adjust Engine using high-precision pointer events [1]
+let adjustModeActive = false;
+let activeDragElement = null;
+let dragStartX = 0, dragStartY = 0;
+let elemStartX = 0, elemStartY = 0;
+
+if (btnMenuAdjust) {
+    btnMenuAdjust.addEventListener('click', () => {
+        if (gameMenuDropdown) gameMenuDropdown.style.display = 'none';
+        
+        // Pause game so player can position their buttons calmly
+        gameState = 'PAUSED'; 
+        adjustModeActive = true;
+
+        if (adjustBanner) adjustBanner.style.display = 'flex';
+        
+        // Add visual glowing guide outlines to clusters
+        if (clusterLeft) clusterLeft.classList.add('adjust-glowing');
+        if (clusterRight) clusterRight.classList.add('adjust-glowing');
+        
+        // Force touch controls visible so they can align all elements
+        const touchControls = document.getElementById('touch-controls');
+        if (touchControls) touchControls.style.display = 'block';
+    });
+}
+
+function makeElementAdjustable(elem, isRightSide) {
+    if (!elem) return;
+    
+    elem.addEventListener('pointerdown', (e) => {
+        if (!adjustModeActive) return;
+        e.preventDefault();
+        activeDragElement = elem;
+        elem.setPointerCapture(e.pointerId);
+        
+        const rect = elem.getBoundingClientRect();
+        dragStartX = e.clientX;
+        dragStartY = e.clientY;
+        
+        elemStartX = rect.left;
+        elemStartY = window.innerHeight - rect.bottom; // Calculate relative to the bottom
+    });
+
+    elem.addEventListener('pointermove', (e) => {
+        if (!adjustModeActive || activeDragElement !== elem) return;
+        e.preventDefault();
+        const dx = e.clientX - dragStartX;
+        const dy = dragStartY - e.clientY; // Invert delta since bottom increases upwards
+        
+        const newX = elemStartX + dx;
+        const newY = elemStartY + dy;
+        
+        // Clamp layout elements to keep them fully within screen bounds
+        const maxX = window.innerWidth - elem.offsetWidth;
+        const maxY = window.innerHeight - elem.offsetHeight;
+        const clampedX = Math.max(0, Math.min(maxX, newX));
+        const clampedY = Math.max(0, Math.min(maxY, newY));
+
+        if (isRightSide) {
+            const rightDistance = window.innerWidth - (clampedX + elem.offsetWidth);
+            elem.style.right = `${rightDistance}px`;
+            elem.style.left = 'auto';
+        } else {
+            elem.style.left = `${clampedX}px`;
+            elem.style.right = 'auto';
+        }
+        elem.style.bottom = `${clampedY}px`;
+    });
+
+    elem.addEventListener('pointerup', (e) => {
+        if (activeDragElement === elem) {
+            elem.releasePointerCapture(e.pointerId);
+            activeDragElement = null;
+            
+            // Save modified layout to memory
+            if (isRightSide) {
+                localStorage.setItem('touchRightPos', JSON.stringify({
+                    right: elem.style.right,
+                    bottom: elem.style.bottom
+                }));
+            } else {
+                localStorage.setItem('touchLeftPos', JSON.stringify({
+                    left: elem.style.left,
+                    bottom: elem.style.bottom
+                }));
+            }
+        }
+    });
+}
+
+// Bind dragging engine listeners to D-Pad and Action buttons
+makeElementAdjustable(clusterLeft, false);
+makeElementAdjustable(clusterRight, true);
+
+if (btnSaveLayout) {
+    btnSaveLayout.addEventListener('click', () => {
+        adjustModeActive = false;
+        if (adjustBanner) adjustBanner.style.display = 'none';
+        
+        if (clusterLeft) clusterLeft.classList.remove('adjust-glowing');
+        if (clusterRight) clusterRight.classList.remove('adjust-glowing');
+        
+        gameState = 'PLAYING'; // Unpause
+    });
+}
+
+if (btnResetLayout) {
+    btnResetLayout.addEventListener('click', () => {
+        localStorage.removeItem('touchLeftPos');
+        localStorage.removeItem('touchRightPos');
+        
+        // Remove customized inline coordinates and snap back to CSS defaults
+        if (clusterLeft) {
+            clusterLeft.style.left = '';
+            clusterLeft.style.bottom = '';
+            clusterLeft.style.right = '';
+        }
+        if (clusterRight) {
+            clusterRight.style.right = '';
+            clusterRight.style.bottom = '';
+            clusterRight.style.left = '';
+        }
+        
+        adjustModeActive = false;
+        if (adjustBanner) adjustBanner.style.display = 'none';
+        
+        if (clusterLeft) clusterLeft.classList.remove('adjust-glowing');
+        if (clusterRight) clusterRight.classList.remove('adjust-glowing');
+        
+        gameState = 'PLAYING';
+    });
+}
+
 // Hardcoded Level Titles for Display inside the Level Select Layout
 const levelTitles = [
     '',
@@ -3144,6 +3339,11 @@ function gameLoop(timestamp) {
         // Clear the entire physical canvas boundaries
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
+        // Dynamically toggle Options dropdown visibility based on State
+        if (menuContainer) {
+            menuContainer.style.display = (gameState === 'PLAYING' || gameState === 'PAUSED') ? 'block' : 'none';
+        }
+
         ctx.save();
         // Scale the canvas drawings to your phone's native physical resolution (e.g. 2x or 3x)
         const dpr = window.devicePixelRatio || 1;
