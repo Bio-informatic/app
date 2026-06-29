@@ -164,23 +164,25 @@ const adjustBanner = document.getElementById('adjust-banner');
 const btnSaveLayout = document.getElementById('btn-save-layout');
 const btnResetLayout = document.getElementById('btn-reset-layout');
 
-const clusterLeft = document.querySelector('.touch-cluster-left');
-const clusterRight = document.querySelector('.touch-cluster-right');
+const touchButtons = document.querySelectorAll('#touch-controls .touch-button');
 
-// Load saved custom layout coordinates on launch
+// Load saved coordinates for each individual button
 function applySavedPositions() {
-    const savedLeftPos = JSON.parse(localStorage.getItem('touchLeftPos'));
-    const savedRightPos = JSON.parse(localStorage.getItem('touchRightPos'));
-    if (savedLeftPos && clusterLeft) {
-        clusterLeft.style.left = savedLeftPos.left;
-        clusterLeft.style.bottom = savedLeftPos.bottom;
-        clusterLeft.style.right = 'auto'; // override default right/left constraints
-    }
-    if (savedRightPos && clusterRight) {
-        clusterRight.style.right = savedRightPos.right;
-        clusterRight.style.bottom = savedRightPos.bottom;
-        clusterRight.style.left = 'auto';
-    }
+    const savedLayout = JSON.parse(localStorage.getItem('touchButtonsLayout') || '{}');
+    touchButtons.forEach(btn => {
+        const btnId = btn.id || btn.getAttribute('data-touch-key');
+        if (savedLayout[btnId]) {
+            const pos = savedLayout[btnId];
+            if (pos.isRightSide) {
+                btn.style.right = pos.right;
+                btn.style.left = 'auto';
+            } else {
+                btn.style.left = pos.left;
+                btn.style.right = 'auto';
+            }
+            btn.style.bottom = pos.bottom;
+        }
+    });
 }
 applySavedPositions();
 
@@ -209,12 +211,12 @@ if (btnMenuQuit) {
         if (gameOverModal) gameOverModal.style.display = 'none';
         
         gameState = 'START_MENU';
-        loadLevel(1); // Load Level 1 behind the scenes silently
+        loadLevel(1);
         if (startScreen) startScreen.style.display = 'flex';
     });
 }
 
-// Drag & Drop Layout Adjust Engine using high-precision pointer events [1]
+// Drag & Drop Layout Adjust Engine (Individual Button Level) [1]
 let adjustModeActive = false;
 let activeDragElement = null;
 let dragStartX = 0, dragStartY = 0;
@@ -224,125 +226,114 @@ if (btnMenuAdjust) {
     btnMenuAdjust.addEventListener('click', () => {
         if (gameMenuDropdown) gameMenuDropdown.style.display = 'none';
         
-        // Pause game so player can position their buttons calmly
         gameState = 'PAUSED'; 
         adjustModeActive = true;
 
         if (adjustBanner) adjustBanner.style.display = 'flex';
         
-        // Add visual glowing guide outlines to clusters
-        if (clusterLeft) clusterLeft.classList.add('adjust-glowing');
-        if (clusterRight) clusterRight.classList.add('adjust-glowing');
+        // Add visual glowing outlines to all individual buttons!
+        touchButtons.forEach(btn => btn.classList.add('adjust-glowing'));
         
-        // Force touch controls visible so they can align all elements
         const touchControls = document.getElementById('touch-controls');
         if (touchControls) touchControls.style.display = 'block';
     });
 }
 
-function makeElementAdjustable(elem, isRightSide) {
-    if (!elem) return;
+function makeButtonAdjustable(btn) {
+    if (!btn) return;
     
-    elem.addEventListener('pointerdown', (e) => {
+    btn.addEventListener('pointerdown', (e) => {
         if (!adjustModeActive) return;
         e.preventDefault();
-        activeDragElement = elem;
-        elem.setPointerCapture(e.pointerId);
+        activeDragElement = btn;
+        btn.setPointerCapture(e.pointerId);
         
-        const rect = elem.getBoundingClientRect();
+        const rect = btn.getBoundingClientRect();
         dragStartX = e.clientX;
         dragStartY = e.clientY;
         
         elemStartX = rect.left;
-        elemStartY = window.innerHeight - rect.bottom; // Calculate relative to the bottom
+        elemStartY = window.innerHeight - rect.bottom;
     });
 
-    elem.addEventListener('pointermove', (e) => {
-        if (!adjustModeActive || activeDragElement !== elem) return;
+    btn.addEventListener('pointermove', (e) => {
+        if (!adjustModeActive || activeDragElement !== btn) return;
         e.preventDefault();
         const dx = e.clientX - dragStartX;
-        const dy = dragStartY - e.clientY; // Invert delta since bottom increases upwards
+        const dy = dragStartY - e.clientY;
         
         const newX = elemStartX + dx;
         const newY = elemStartY + dy;
         
-        // Clamp layout elements to keep them fully within screen bounds
-        const maxX = window.innerWidth - elem.offsetWidth;
-        const maxY = window.innerHeight - elem.offsetHeight;
+        const maxX = window.innerWidth - btn.offsetWidth;
+        const maxY = window.innerHeight - btn.offsetHeight;
         const clampedX = Math.max(0, Math.min(maxX, newX));
         const clampedY = Math.max(0, Math.min(maxY, newY));
 
+        // Determine side relative to center to preserve scaling rules
+        const isRightSide = clampedX > window.innerWidth / 2;
+
         if (isRightSide) {
-            const rightDistance = window.innerWidth - (clampedX + elem.offsetWidth);
-            elem.style.right = `${rightDistance}px`;
-            elem.style.left = 'auto';
+            const rightDistance = window.innerWidth - (clampedX + btn.offsetWidth);
+            btn.style.right = `${rightDistance}px`;
+            btn.style.left = 'auto';
         } else {
-            elem.style.left = `${clampedX}px`;
-            elem.style.right = 'auto';
+            btn.style.left = `${clampedX}px`;
+            btn.style.right = 'auto';
         }
-        elem.style.bottom = `${clampedY}px`;
+        btn.style.bottom = `${clampedY}px`;
     });
 
-    elem.addEventListener('pointerup', (e) => {
-        if (activeDragElement === elem) {
-            elem.releasePointerCapture(e.pointerId);
+    btn.addEventListener('pointerup', (e) => {
+        if (activeDragElement === btn) {
+            btn.releasePointerCapture(e.pointerId);
             activeDragElement = null;
             
-            // Save modified layout to memory
-            if (isRightSide) {
-                localStorage.setItem('touchRightPos', JSON.stringify({
-                    right: elem.style.right,
-                    bottom: elem.style.bottom
-                }));
-            } else {
-                localStorage.setItem('touchLeftPos', JSON.stringify({
-                    left: elem.style.left,
-                    bottom: elem.style.bottom
-                }));
-            }
+            // Save modified coordinates for this specific button to memory layout
+            const savedLayout = JSON.parse(localStorage.getItem('touchButtonsLayout') || '{}');
+            const btnId = btn.id || btn.getAttribute('data-touch-key');
+            const rect = btn.getBoundingClientRect();
+            const isRightSide = rect.left > window.innerWidth / 2;
+
+            savedLayout[btnId] = {
+                isRightSide: isRightSide,
+                left: btn.style.left,
+                right: btn.style.right,
+                bottom: btn.style.bottom
+            };
+            localStorage.setItem('touchButtonsLayout', JSON.stringify(savedLayout));
         }
     });
 }
 
-// Bind dragging engine listeners to D-Pad and Action buttons
-makeElementAdjustable(clusterLeft, false);
-makeElementAdjustable(clusterRight, true);
+// Bind dragging engine listeners to every individual button
+touchButtons.forEach(btn => makeButtonAdjustable(btn));
 
 if (btnSaveLayout) {
     btnSaveLayout.addEventListener('click', () => {
         adjustModeActive = false;
         if (adjustBanner) adjustBanner.style.display = 'none';
         
-        if (clusterLeft) clusterLeft.classList.remove('adjust-glowing');
-        if (clusterRight) clusterRight.classList.remove('adjust-glowing');
-        
-        gameState = 'PLAYING'; // Unpause
+        touchButtons.forEach(btn => btn.classList.remove('adjust-glowing'));
+        gameState = 'PLAYING';
     });
 }
 
 if (btnResetLayout) {
     btnResetLayout.addEventListener('click', () => {
-        localStorage.removeItem('touchLeftPos');
-        localStorage.removeItem('touchRightPos');
+        localStorage.removeItem('touchButtonsLayout');
         
-        // Remove customized inline coordinates and snap back to CSS defaults
-        if (clusterLeft) {
-            clusterLeft.style.left = '';
-            clusterLeft.style.bottom = '';
-            clusterLeft.style.right = '';
-        }
-        if (clusterRight) {
-            clusterRight.style.right = '';
-            clusterRight.style.bottom = '';
-            clusterRight.style.left = '';
-        }
+        // Remove customized inline coordinates on all buttons to snap back to default CSS D-pad/Triangle layouts
+        touchButtons.forEach(btn => {
+            btn.style.left = '';
+            btn.style.right = '';
+            btn.style.bottom = '';
+        });
         
         adjustModeActive = false;
         if (adjustBanner) adjustBanner.style.display = 'none';
         
-        if (clusterLeft) clusterLeft.classList.remove('adjust-glowing');
-        if (clusterRight) clusterRight.classList.remove('adjust-glowing');
-        
+        touchButtons.forEach(btn => btn.classList.remove('adjust-glowing'));
         gameState = 'PLAYING';
     });
 }
