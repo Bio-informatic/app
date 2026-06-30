@@ -69,6 +69,7 @@ export class Turtumba {
         const cShellDark = '#170924';   // Deep shadow violet
         const cMetal = '#403855';       // Cybernetic purple-steel joint base
         const cMetalLight = '#635782';  // Highlight steel plate
+        const cMetalDark = '#211B2B';   // FIXED: Added missing dark metallic steel color [3]
         const cGem = '#00FF66';         // Glowing emerald / neon green
         const cGemLight = '#DFFFEE';    // Crystal white-green reflection
         const cGemDark = '#009933';     // Deep shadow green
@@ -147,14 +148,14 @@ export class Turtumba {
         if (!isFlashing) ctx.fillStyle = cMetal;
         // Back Foot (Far Left background)
         ctx.fillRect(-38, 12 - walkCycle, 12, 18);
-        ctx.fillStyle = '#1D1A26'; // Gray steel claws
+        ctx.fillStyle = cMetalDark; // Gray steel claws
         ctx.fillRect(-40, 26 - walkCycle, 3, 4);
         ctx.fillRect(-35, 26 - walkCycle, 3, 4);
 
         // Front Foot (Far Right foreground)
         if (!isFlashing) ctx.fillStyle = cMetal;
         ctx.fillRect(16, 12 + walkCycle, 14, 18);
-        ctx.fillStyle = '#1D1A26'; // Claws
+        ctx.fillStyle = cMetalDark; // Claws
         ctx.fillRect(24, 26 + walkCycle, 4, 4);
         ctx.fillRect(18, 26 + walkCycle, 4, 4);
 
@@ -164,7 +165,7 @@ export class Turtumba {
         ctx.fillRect(18, 10 + walkCycle, 8, 6);
 
         // ── 5. SEGMENTED CYBERNETIC NECK & HEAD ──
-        // Segmented hydraulic neck plates
+        // Segmented hydraulic neck plates [3]
         if (!isFlashing) ctx.fillStyle = cMetalDark;
         ctx.fillRect(22, -10 + headBob, 10, 14);
         ctx.fillRect(26, -6 + headBob, 8, 8);
@@ -259,8 +260,8 @@ export class Turtumba {
             drawFacetedGem(gemX, gemY, 12, 5);
         }
 
-        // Tail
-        if (!isFlashing) ctx.fillStyle = cShellDark;
+        // Tail [3]
+        if (!isFlashing) ctx.fillStyle = cMetalDark;
         ctx.beginPath();
         ctx.moveTo(-44, 2);
         ctx.lineTo(-52, 6);
