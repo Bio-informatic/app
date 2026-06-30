@@ -71,9 +71,9 @@ export class Goombaba {
         if (now - this.lastSpawnTime > this.spawnInterval) {
             this.lastSpawnTime = now;
             
-            // Spawns the baby LavaGoomba directly from the lower cauldron furnace hatch [1]
+            // OPTIMIZATION: Spawns the baby LavaGoomba directly from the lower cauldron furnace hatch [1]
             const baby = new LavaGoomba(
-                this.x + 48 - 16, // Centered perfectly on the furnace opening [1]
+                this.x + 60 - 16, // Centered perfectly on the updated cauldron opening [1, 3]
                 this.y + 68       // Spills out from the lower cauldron gate [1]
             );
             baby.vy = -1.5; // Slower upward pop as they spill forward [1]
@@ -118,125 +118,186 @@ export class Goombaba {
         ctx.fill();
         ctx.restore();
 
-        // ── 1. STONE GIANT SHOULDERS & BACK (BASALT) ──
+        // ── 1. DORSAL BACK ROCK SPIKES (Top-Left) ──
         ctx.fillStyle = cBasaltDark;
-        ctx.fillRect(this.x + 8, this.y + 24 + bob, 80, 52); // backing frame
-        
-        // Left heavy arm cradling the pot [1]
-        ctx.fillStyle = cBasalt;
-        ctx.fillRect(this.x + 4, this.y + 40 + bob, 24, 38);
-        ctx.fillStyle = cBasaltDark;
-        ctx.fillRect(this.x + 2, this.y + 54 + bob, 8, 24); // knuckle joints
-
-        // Right heavy arm cradling the pot [1]
-        ctx.fillStyle = cBasalt;
-        ctx.fillRect(this.x + 68, this.y + 40 + bob, 24, 38);
-        ctx.fillStyle = cBasaltDark;
-        ctx.fillRect(this.x + 86, this.y + 54 + bob, 8, 24);
-
-        // ── 2. ACTIVE FLOWING LAVA VEINS (SHOULDERS TO ARMS) ──
-        ctx.strokeStyle = cLava;
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        // Left arm veins
-        ctx.moveTo(this.x + 18, this.y + 36 + bob);
-        ctx.quadraticCurveTo(this.x + 6, this.y + 48 + bob, this.x + 12, this.y + 68 + bob);
-        // Right arm veins
-        ctx.moveTo(this.x + 78, this.y + 36 + bob);
-        ctx.quadraticCurveTo(this.x + 90, this.y + 48 + bob, this.x + 84, this.y + 68 + bob);
-        ctx.stroke();
-
-        ctx.strokeStyle = cLavaLight; // FIXED: changed cBrassLight to cLavaLight
+        ctx.strokeStyle = cBasalt;
         ctx.lineWidth = 1;
+        // Spike 1 (Higher left) [3]
         ctx.beginPath();
-        ctx.moveTo(this.x + 16, this.y + 38 + bob);
-        ctx.quadraticCurveTo(this.x + 8, this.y + 48 + bob, this.x + 12, this.y + 66 + bob);
-        ctx.moveTo(this.x + 80, this.y + 38 + bob);
-        ctx.quadraticCurveTo(this.x + 88, this.y + 48 + bob, this.x + 84, this.y + 66 + bob);
-        ctx.stroke();
+        ctx.moveTo(this.x + 30, this.y + 24 + bob);
+        ctx.lineTo(this.x + 36, this.y + 6 + bob);
+        ctx.lineTo(this.x + 48, this.y + 16 + bob);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+        // Spike 2 (Lower right) [3]
+        ctx.beginPath();
+        ctx.moveTo(this.x + 42, this.y + 20 + bob);
+        ctx.lineTo(this.x + 48, this.y + 10 + bob);
+        ctx.lineTo(this.x + 58, this.y + 18 + bob);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
 
-        // ── 3. STONE GOLEM HEAD & JAGGED CROWN ──
+        // ── 2. HUNCHBACK SHOULDERS & BACK (BASALT) ──
         ctx.fillStyle = cBasaltDark;
         ctx.beginPath();
-        ctx.arc(this.x + 48, this.y + 24 + bob, 20, 0, Math.PI * 2);
+        ctx.moveTo(this.x + 20, this.y + 40 + bob);
+        ctx.lineTo(this.x + 12, this.y + 50 + bob);
+        ctx.lineTo(this.x + 16, this.y + 70 + bob);
+        ctx.lineTo(this.x + 32, this.y + 80 + bob);
+        ctx.lineTo(this.x + 44, this.y + 60 + bob);
+        ctx.lineTo(this.x + 36, this.y + 36 + bob);
+        ctx.closePath();
+        ctx.fill();
+
+        // ── 3. STONE GOLEM HEAD, COLLAR, JAW & CROWN ──
+        ctx.fillStyle = cBasaltDark;
+        ctx.beginPath();
+        ctx.arc(this.x + 56, this.y + 24 + bob, 15, 0, Math.PI * 2);
         ctx.fill();
 
         // Jagged basalt crown spikes on head [1]
         ctx.fillStyle = cBasalt;
         ctx.beginPath();
-        ctx.moveTo(this.x + 36, this.y + 14 + bob);
-        ctx.lineTo(this.x + 40, this.y + 4 + bob);
-        ctx.lineTo(this.x + 44, this.y + 12 + bob);
-        ctx.lineTo(this.x + 48, this.y + 1 + bob);  // center spike
+        ctx.moveTo(this.x + 44, this.y + 14 + bob);
+        ctx.lineTo(this.x + 48, this.y + 4 + bob);
         ctx.lineTo(this.x + 52, this.y + 12 + bob);
-        ctx.lineTo(this.x + 56, this.y + 4 + bob);
-        ctx.lineTo(this.x + 60, this.y + 14 + bob);
+        ctx.lineTo(this.x + 56, this.y + 1 + bob);  // center spike
+        ctx.lineTo(this.x + 60, this.y + 12 + bob);
+        ctx.lineTo(this.x + 64, this.y + 4 + bob);
+        ctx.lineTo(this.x + 68, this.y + 14 + bob);
         ctx.fill();
 
-        // Glowing fierce yellow/orange eyes [1]
+        // Heavy stone rocky jaw collar framing the lower head [3]
+        ctx.fillStyle = cBasaltDark;
+        ctx.fillRect(this.x + 44, this.y + 30 + bob, 24, 8);
+        ctx.fillStyle = cBasalt;
+        ctx.fillRect(this.x + 46, this.y + 32 + bob, 20, 4);
+
+        // Glowing slanted volcanic yellow eyes [1, 3]
         ctx.fillStyle = cLavaLight;
         ctx.beginPath();
-        // Left slanted eye
-        ctx.moveTo(this.x + 34, this.y + 20 + bob);
-        ctx.lineTo(this.x + 44, this.y + 23 + bob);
-        ctx.lineTo(this.x + 36, this.y + 26 + bob);
+        // Left eye
+        ctx.moveTo(this.x + 48, this.y + 19 + bob);
+        ctx.lineTo(this.x + 54, this.y + 21 + bob);
+        ctx.lineTo(this.x + 49, this.y + 24 + bob);
         ctx.fill();
-        // Right slanted eye
+        // Right eye
         ctx.beginPath();
-        ctx.moveTo(this.x + 62, this.y + 20 + bob);
-        ctx.lineTo(this.x + 52, this.y + 23 + bob);
-        ctx.lineTo(this.x + 60, this.y + 26 + bob);
+        ctx.moveTo(this.x + 64, this.y + 19 + bob);
+        ctx.lineTo(this.x + 58, this.y + 21 + bob);
+        ctx.lineTo(this.x + 63, this.y + 24 + bob);
         ctx.fill();
 
-        // ── 4. MOLTEN CLAY CAULDRON (Cradled in hands) ──
+        // ── 4. LEFT ARM (SCREEN LEFT) - THE MASSIVE DOMINANT ARM ──
+        // Drawn as huge craggy basalt rock segments with seams [3]
+        ctx.fillStyle = cBasalt;
+        ctx.beginPath();
+        ctx.moveTo(this.x + 14, this.y + 40 + bob);
+        ctx.lineTo(this.x + 38, this.y + 40 + bob);
+        ctx.lineTo(this.x + 32, this.y + 60 + bob);
+        ctx.lineTo(this.x + 8, this.y + 60 + bob);
+        ctx.closePath(); ctx.fill();
+
+        ctx.fillStyle = cBasaltDark; // Forearm
+        ctx.fillRect(this.x + 8, this.y + 60 + bob, 24, 25);
+        ctx.fillStyle = cBasalt; // Highlights on plates
+        ctx.fillRect(this.x + 10,  this.y + 62 + bob, 20, 21);
+
+        // Black outline seams separating the massive rock segments [3]
+        ctx.strokeStyle = cBasaltDark;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(this.x + 8, this.y + 60 + bob, 24, 25);
+
+        // Craggy fingers clutching the left side of the Cauldron [3]
+        ctx.fillStyle = cBasaltDark;
+        ctx.fillRect(this.x + 28, this.y + 70 + bob, 6, 12);
+        ctx.fillRect(this.x + 26, this.y + 76 + bob, 6, 10);
+
+        // Active glowing orange lava veins cascading down the arm [1]
+        ctx.strokeStyle = cLava;
+        ctx.lineWidth = 3.5;
+        ctx.beginPath();
+        ctx.moveTo(this.x + 30, this.y + 36 + bob);
+        ctx.quadraticCurveTo(this.x + 16, this.y + 48 + bob, this.x + 22, this.y + 70 + bob);
+        ctx.stroke();
+
+        ctx.strokeStyle = cLavaLight; // Core bright center of vein
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(this.x + 28, this.y + 38 + bob);
+        ctx.quadraticCurveTo(this.x + 16, this.y + 48 + bob, this.x + 22, this.y + 68 + bob);
+        ctx.stroke();
+
+        // ── 5. STUBBY COLUMN LEGS & FEET ──
+        // Left Leg [3]
+        ctx.fillStyle = cBasaltDark;
+        ctx.fillRect(this.x + 28, this.y + 80 + bob, 14, 12);
+        ctx.fillStyle = cBasalt;
+        ctx.fillRect(this.x + 24, this.y + 90 + bob, 20, 6);
+        // Right Leg [3]
+        ctx.fillStyle = cBasaltDark;
+        ctx.fillRect(this.x + 64, this.y + 80 + bob, 14, 12);
+        ctx.fillStyle = cBasalt;
+        ctx.fillRect(this.x + 60, this.y + 90 + bob, 20, 6);
+
+        // ── 6. MOLTEN CLAY CAULDRON (Cradled in front) ──
         // Cauldron Body [1]
         ctx.fillStyle = cClayDark;
         ctx.beginPath();
-        ctx.arc(this.x + 48, this.y + 66 + bob, 27, 0, Math.PI * 2);
+        ctx.arc(this.x + 60, this.y + 68 + bob, 23, 0, Math.PI * 2);
         ctx.fill();
         ctx.fillStyle = cClay;
         ctx.beginPath();
-        ctx.arc(this.x + 48, this.y + 66 + bob, 25, 0, Math.PI * 2);
+        ctx.arc(this.x + 60, this.y + 68 + bob, 21, 0, Math.PI * 2);
         ctx.fill();
 
         // Cracked glowing veins on the pottery shell [1]
         ctx.strokeStyle = cLava;
         ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.moveTo(this.x + 32, this.y + 54 + bob);
-        ctx.lineTo(this.x + 36, this.y + 66 + bob);
-        ctx.lineTo(this.x + 28, this.y + 74 + bob);
+        ctx.moveTo(this.x + 48, this.y + 58 + bob);
+        ctx.lineTo(this.x + 52, this.y + 68 + bob);
+        ctx.lineTo(this.x + 46, this.y + 74 + bob);
         ctx.stroke();
 
         // Cauldron rim & interior boiling lava surface [1]
         ctx.fillStyle = cClayDark;
         ctx.beginPath();
-        ctx.ellipse(this.x + 48, this.y + 46 + bob, 21, 6, 0, 0, Math.PI * 2);
+        ctx.ellipse(this.x + 60, this.y + 48 + bob, 18, 5, 0, 0, Math.PI * 2);
         ctx.fill();
         
         ctx.fillStyle = cLavaLight; // Boiling magma liquid inside pot [1]
         ctx.beginPath();
-        ctx.ellipse(this.x + 48, this.y + 46 + bob, 18, 4, 0, 0, Math.PI * 2);
+        ctx.ellipse(this.x + 60, this.y + 48 + bob, 15, 3, 0, 0, Math.PI * 2);
         ctx.fill();
 
         // Magma bubble sparkles
         ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(this.x + 44 + Math.sin(t/150)*4, this.y + 44 + bob, 2, 2);
-        ctx.fillRect(this.x + 52 + Math.cos(t/200)*3, this.y + 45 + bob, 2, 2);
+        ctx.fillRect(this.x + 56 + Math.sin(t/150)*4, this.y + 46 + bob, 2, 2);
+        ctx.fillRect(this.x + 64 + Math.cos(t/200)*3, this.y + 47 + bob, 2, 2);
 
         // Lower furnace hatch/sliding gate [1]
         ctx.fillStyle = cBasaltDark;
-        ctx.fillRect(this.x + 40, this.y + 72 + bob, 16, 16);
+        ctx.fillRect(this.x + 52, this.y + 74 + bob, 16, 14);
         ctx.fillStyle = cLava; // Glowing interior heating chamber [1]
-        ctx.fillRect(this.x + 43, this.y + 75 + bob, 10, 13);
+        ctx.fillRect(this.x + 55, this.y + 77 + bob, 10, 11);
 
         // Open metal grate door hinging downwards [1]
         ctx.fillStyle = cBasaltDark;
-        ctx.fillRect(this.x + 38, this.y + 88 + bob, 20, 4);
+        ctx.fillRect(this.x + 50, this.y + 88 + bob, 20, 4);
         ctx.fillStyle = cBasalt;
-        ctx.fillRect(this.x + 42, this.y + 90 + bob, 12, 2);
+        ctx.fillRect(this.x + 54, this.y + 90 + bob, 12, 2);
 
-        // Heat shimmer rings
+        // ── 7. RIGHT ARM (SCREEN RIGHT) - SMALL SUPPORT ARM ──
+        // Sits on right, clutching cauldron [3]
+        ctx.fillStyle = cBasaltDark;
+        ctx.fillRect(this.x + 74, this.y + 54 + bob, 14, 24);
+        ctx.fillStyle = cBasalt;
+        ctx.fillRect(this.x + 76, this.y + 56 + bob, 10, 20);
+        
+        // Basalt claws hugging right side of pot [3]
+        ctx.fillStyle = cBasaltDark;
+        ctx.fillRect(this.x + 72, this.y + 64 + bob, 6, 12);
+
+        // ── 8. HEAT SHIMMER ATMOSPHERE ──
         ctx.save();
         ctx.strokeStyle = `rgba(255, 160, 20, ${0.22 + auraPulse * 0.15})`;
         ctx.lineWidth = 2;
@@ -250,7 +311,7 @@ export class Goombaba {
 
         ctx.globalAlpha = 1.0;
 
-        // ── Health Bar ───────────────────────
+        // ── 9. HEALTH BAR ──
         const barW = this.width;
         const barH = 8;
         const barX = this.x;
@@ -276,4 +337,3 @@ export class Goombaba {
         ctx.fillText(`${this.hp}/${this.maxHp}`, barX + barW / 2, barY - 2);
         ctx.textAlign = 'left';
     }
-}
