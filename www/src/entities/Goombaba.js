@@ -141,9 +141,9 @@ export class Goombaba {
         // Left arm veins
         ctx.moveTo(this.x + 18, this.y + 36 + bob);
         ctx.quadraticCurveTo(this.x + 6, this.y + 48 + bob, this.x + 12, this.y + 68 + bob);
-        // Right arm veins
+        // Right arm veins (FIXED: changed 'hover' to 'bob') [1]
         ctx.moveTo(this.x + 78, this.y + 36 + bob);
-        ctx.quadraticCurveTo(this.x + 90, this.y + 48 + hover, this.x + 84, this.y + 68 + bob);
+        ctx.quadraticCurveTo(this.x + 90, this.y + 48 + bob, this.x + 84, this.y + 68 + bob);
         ctx.stroke();
 
         ctx.strokeStyle = cBrassLight; // Yellow molten cores inside veins
