@@ -6,7 +6,7 @@ export class Goombaba {
         this.y = y;
         this.width = 96;   // 3x size of normal Goomba
         this.height = 96;
-        this.vx = -1;      // Slow heavy patrol
+        this.vx = -1;      // Slow patrol
         this.vy = 0;
         this.gravity = 0.5;
         this.dead = false;
@@ -71,7 +71,7 @@ export class Goombaba {
         if (now - this.lastSpawnTime > this.spawnInterval) {
             this.lastSpawnTime = now;
             
-            // OPTIMIZATION: Spawns the baby LavaGoomba directly from the lower cauldron furnace hatch! [1]
+            // Spawns the baby LavaGoomba directly from the lower cauldron furnace hatch [1]
             const baby = new LavaGoomba(
                 this.x + 48 - 16, // Centered perfectly on the furnace opening [1]
                 this.y + 68       // Spills out from the lower cauldron gate [1]
@@ -141,12 +141,12 @@ export class Goombaba {
         // Left arm veins
         ctx.moveTo(this.x + 18, this.y + 36 + bob);
         ctx.quadraticCurveTo(this.x + 6, this.y + 48 + bob, this.x + 12, this.y + 68 + bob);
-        // Right arm veins (FIXED: changed 'hover' to 'bob') [1]
+        // Right arm veins
         ctx.moveTo(this.x + 78, this.y + 36 + bob);
         ctx.quadraticCurveTo(this.x + 90, this.y + 48 + bob, this.x + 84, this.y + 68 + bob);
         ctx.stroke();
 
-        ctx.strokeStyle = cBrassLight; // Yellow molten cores inside veins
+        ctx.strokeStyle = cLavaLight; // FIXED: changed cBrassLight to cLavaLight
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(this.x + 16, this.y + 38 + bob);
