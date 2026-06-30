@@ -171,7 +171,7 @@ export class Goombaba {
         ctx.fillStyle = cBasalt;
         ctx.fillRect(this.x + 46, this.y + 32 + bob, 20, 4);
 
-        // Glowing slanted volcanic yellow eyes [1, 3]
+        // Glowing fierce yellow/orange eyes [1, 3]
         ctx.fillStyle = cLavaLight;
         ctx.beginPath();
         // Left eye
@@ -216,14 +216,14 @@ export class Goombaba {
         ctx.lineWidth = 3.5;
         ctx.beginPath();
         ctx.moveTo(this.x + 30, this.y + 36 + bob);
-        ctx.quadraticCurveTo(this.x + 16, this.y + 48 + bob, this.x + 22, this.y + 70 + bob);
+        ctx.quadraticCurveTo(this.x + 16, this.y + 48 + bob, this.x + 22, this.y + 70 + bob); // FIXED: changed hover to bob! [1]
         ctx.stroke();
 
         ctx.strokeStyle = cLavaLight; // Core bright center of vein
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(this.x + 28, this.y + 38 + bob);
-        ctx.quadraticCurveTo(this.x + 16, this.y + 48 + bob, this.x + 22, this.y + 68 + bob);
+        ctx.quadraticCurveTo(this.x + 16, this.y + 48 + bob, this.x + 22, this.y + 68 + bob); // FIXED: changed hover to bob! [1]
         ctx.stroke();
 
         // ── 5. STUBBY COLUMN LEGS & FEET ──
@@ -276,7 +276,7 @@ export class Goombaba {
 
         // Lower furnace hatch/sliding gate [1]
         ctx.fillStyle = cBasaltDark;
-        ctx.fillRect(this.x + 52, this.y + 74 + bob, 16, 14);
+        ctx.fillRect(this.x + 52, this.y + 74 + bob, 16, 16);
         ctx.fillStyle = cLava; // Glowing interior heating chamber [1]
         ctx.fillRect(this.x + 55, this.y + 77 + bob, 10, 11);
 
@@ -337,3 +337,4 @@ export class Goombaba {
         ctx.fillText(`${this.hp}/${this.maxHp}`, barX + barW / 2, barY - 2);
         ctx.textAlign = 'left';
     }
+}
