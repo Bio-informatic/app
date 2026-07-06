@@ -483,7 +483,11 @@ if (devHotspot) {
                     Array.from({ length: 11 }, (_, i) =>
                         `<button style="margin:2px;" onclick="window.devWarp(${i + 1})">L${i + 1}</button>`
                     ).join('') +
-                    '<br><button style="margin:6px 2px 2px; width:95%; font-weight:bold; background:#FF4500; color:#fff; border:1px solid #FF3A3A; border-radius:4px; padding:5px; cursor:pointer;" onclick="window.devWarpToBoss()">WARP TO BOSS 👹</button>';
+                    '<br><button style="margin:6px 2px 2px; width:95%; font-weight:bold; background:#FF4500; color:#fff; border:1px solid #FF3A3A; border-radius:4px; padding:5px; cursor:pointer;" onclick="window.devWarpToBoss()">WARP TO BOSS 👹</button>' +
+                    '<br><b style="margin-top:6px; display:inline-block;">DEV: Transform</b><br>' +
+                    ALIENS.map((alien, idx) => 
+                        `<button style="margin:2px; font-size:14px; padding:4px 6px; cursor:pointer;" title="${alien.name}" onclick="window.devTransform(${idx})">${alien.icon}</button>`
+                    ).join('');
                 document.getElementById('game-container').appendChild(devLevelSwitcher);
             }
 
@@ -3808,25 +3812,15 @@ window.devWarpToBoss = function () {
     if (gameOverModal) gameOverModal.style.display = 'none';
     closeOmnitrixPanel();
     
+    // Calculate boss area start point [2]
     const startX = getBossZoneStartX(currentLevelIndex);
     
-    // Default safe coordinates (100px past the start of the arena, on solid ground) [2]
-    let targetX = startX + 100;
-    let targetY = (level.rows - 3) * 32 - mario.height; 
+    // Position Mario safely inside the boss zone [2]
+    mario.x = startX + 50;
     
-    if (currentLevelIndex === 5) {
-        // Level 5: Ground is toxic poison [2]. Warp Mario to the top of the left arena brick wall platform! [2]
-        targetX = startX + 16; 
-        targetY = (level.rows - 9) * 32 - mario.height; // Atop the 6-tile high brick wall [2]
-    } else if (currentLevelIndex === 9) {
-        // Level 9: Octumba is exactly at startX. Warp Mario 200px back so he doesn't touch the boss on frame 1.
-        targetX = startX - 200;
-        targetY = (level.rows - 2) * 32 - mario.height - 120; // Suspended in deep water
-    }
-    
-    // Apply coordinates
-    mario.x = targetX;
-    mario.y = targetY;
+    // Plant Mario safely on the ground (Level_v2 ground row is ROWS - 3) [2]
+    const groundY = (level.rows - 3) * 32 - mario.height;
+    mario.y = groundY;
     mario.vy = 0;
     mario.vx = 0;
     
@@ -3839,6 +3833,30 @@ window.devWarpToBoss = function () {
 
     gameState = 'PLAYING';
     console.log(`[DEV] Safely warped Mario to Boss Zone at X: ${mario.x}, Y: ${mario.y}`);
+};
+
+// DEV UTILITY: Force transformation to any of the 10 forms [1]
+window.devTransform = function (alienIndex) {
+    if (!mario || gameState === 'START_MENU') {
+        console.log('[DEV] Cannot transform outside of gameplay.');
+        return;
+    }
+
+    const alien = ALIENS[alienIndex];
+    if (alien) {
+        // Force unlock the target alien and give watch access [1]
+        alien.unlocked = true;
+        alien.lives = Math.max(alien.lives, 25);
+        mario.hasWatch = true; // ensure watch is active
+
+        // Bypass current active transform locks on Mario
+        mario.transforming = false;
+        mario.alienTimer = 0;
+
+        // Call standard activation to update form, bounds, model size, and play SFX
+        activateAlien(alienIndex, { manualSelection: false });
+        console.log(`[DEV] Force transformed to: ${alien.name}`);
+    }
 };
 
 
