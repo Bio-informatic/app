@@ -482,7 +482,8 @@ if (devHotspot) {
                 devLevelSwitcher.innerHTML = '<b>DEV: Switch Level</b><br>' +
                     Array.from({ length: 11 }, (_, i) =>
                         `<button style="margin:2px;" onclick="window.devWarp(${i + 1})">L${i + 1}</button>`
-                    ).join('');
+                    ).join('') +
+                    '<br><button style="margin:6px 2px 2px; width:95%; font-weight:bold; background:#FF4500; color:#fff; border:1px solid #FF3A3A; border-radius:4px; padding:5px; cursor:pointer;" onclick="window.devWarpToBoss()">WARP TO BOSS 👹</button>';
                 document.getElementById('game-container').appendChild(devLevelSwitcher);
             }
 
@@ -3780,6 +3781,64 @@ window.devWarp = function (levelNum) {
     gameState = 'PLAYING';
     currentLevelIndex = levelNum;
     loadLevel(currentLevelIndex, { hasWatch: true });
+};
+
+// Helper to mathematically calculate where the boss zone starts for each level [2]
+function getBossZoneStartX(levelIndex) {
+    const cols = levelIndex >= 5 ? 200 : (levelIndex === 4 ? 250 : (levelIndex === 3 ? 200 : 150));
+    let bossZoneStart = cols;
+    if (levelIndex === 2) bossZoneStart = cols - 30;
+    else if (levelIndex === 3) bossZoneStart = cols - 22;
+    else if (levelIndex === 4) bossZoneStart = cols - 52;
+    else if (levelIndex === 5) bossZoneStart = cols - 40;
+    else if (levelIndex === 6) bossZoneStart = cols - 40;
+    else if (levelIndex === 7) bossZoneStart = cols - 45;
+    else if (levelIndex === 8) bossZoneStart = cols - 50;
+    else if (levelIndex === 9) bossZoneStart = cols - 40;
+    else if (levelIndex === 10) bossZoneStart = cols - 50;
+    else if (levelIndex === 11) bossZoneStart = cols - 50;
+    return bossZoneStart * 32; // TS = 32
+}
+
+window.devWarpToBoss = function () {
+    if (!mario || !level) return;
+    
+    // Hide UI overlays
+    document.getElementById('level-complete-modal').style.display = 'none';
+    if (gameOverModal) gameOverModal.style.display = 'none';
+    closeOmnitrixPanel();
+    
+    const startX = getBossZoneStartX(currentLevelIndex);
+    
+    // Default safe coordinates (100px past the start of the arena, on solid ground) [2]
+    let targetX = startX + 100;
+    let targetY = (level.rows - 3) * 32 - mario.height; 
+    
+    if (currentLevelIndex === 5) {
+        // Level 5: Ground is toxic poison [2]. Warp Mario to the top of the left arena brick wall platform! [2]
+        targetX = startX + 16; 
+        targetY = (level.rows - 9) * 32 - mario.height; // Atop the 6-tile high brick wall [2]
+    } else if (currentLevelIndex === 9) {
+        // Level 9: Octumba is exactly at startX. Warp Mario 200px back so he doesn't touch the boss on frame 1.
+        targetX = startX - 200;
+        targetY = (level.rows - 2) * 32 - mario.height - 120; // Suspended in deep water
+    }
+    
+    // Apply coordinates
+    mario.x = targetX;
+    mario.y = targetY;
+    mario.vy = 0;
+    mario.vx = 0;
+    
+    // OPTIMIZATION: Automatically trigger safe transformations so the player doesn't drown or melt [2]
+    if (currentLevelIndex === 5) {
+        mario.transformToStinkfly(); // Instantly fly over the poison!
+    } else if (currentLevelIndex === 9) {
+        mario.transformToRipjaws(); // Instantly swim and breathe in the deep water! [2]
+    }
+
+    gameState = 'PLAYING';
+    console.log(`[DEV] Safely warped Mario to Boss Zone at X: ${mario.x}, Y: ${mario.y}`);
 };
 
 
